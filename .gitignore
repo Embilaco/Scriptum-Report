@@ -7,6 +7,7 @@ tests/01_internal_tests
 tests/8*
 tests/9*
 tests/xx*
+tests/test_debug.py
 */__pycache__
 result_*.docx
 result_*.pptx

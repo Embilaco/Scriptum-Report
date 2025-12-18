@@ -28,6 +28,17 @@
 import sys
 from pathlib import Path
 
+# import os, ipdb
+
+# def debug_hook(exc_type, exc_value, traceback):
+#     if exc_type is KeyboardInterrupt:
+#         sys.__excepthook__(exc_type, exc_value, traceback)
+#         return
+#     print(f"Uncaught exception: {exc_type.__name__}: {exc_value}")
+#     ipdb.post_mortem(traceback)
+
+# if True or os.environ.get('DEBUG'): sys.excepthook = debug_hook
+
 __version__ = "1.2.1"
 version = __version__
 
