@@ -2,6 +2,7 @@
 ~$*
 */.ipynb_checkpoints*
 .env
+.venv
 .vscode
 tests/01_internal_tests
 tests/8*
