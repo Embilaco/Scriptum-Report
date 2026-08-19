@@ -47,14 +47,14 @@ DOCX_SECTION_NAMES = {
     5: 'sub5section',
 }
 
-# NOTE -- reproduced verbatim from the previous definition, including its
-# off-by-one: ``range(max(...))`` stops one short, so 'sub5section' appears
-# in ``names`` but NOT in ``order``. That difference is observable:
-# ``<sub5section:x>`` validates as an absolute address yet is rejected as a
-# relative one, because relative resolution checks ``order``. Kept as-is so
-# that moving these tables changes no behaviour; correcting the depth limit
-# is a separate decision.
-DOCX_SECTION_ORDER = [DOCX_SECTION_NAMES[i] for i in range(max(DOCX_SECTION_NAMES))]
+# ``order`` must list EVERY level in ``names``. It previously read
+# ``range(max(DOCX_SECTION_NAMES))``, which stops one short and silently
+# dropped the deepest level: 'sub5section' validated as an absolute address
+# (checked against ``names``) but was rejected as a relative one (checked
+# against ``order``), and a sub5section structure never registered a
+# sub-anchor on its parent in the docx tree. Derive it from the keys so the
+# two tables cannot disagree again.
+DOCX_SECTION_ORDER = [DOCX_SECTION_NAMES[i] for i in sorted(DOCX_SECTION_NAMES)]
 
 docx_sections = {
     'order': DOCX_SECTION_ORDER,
