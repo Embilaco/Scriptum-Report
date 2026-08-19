@@ -25,6 +25,12 @@ classifiers = [
   "Topic :: Software Development :: Libraries"
 ]
 
+[project.urls]
+Homepage = "https://github.com/Embilaco/Scriptum-Report"
+Repository = "https://github.com/Embilaco/Scriptum-Report"
+Documentation = "https://github.com/Embilaco/Scriptum-Report/blob/main/docs/Intro.md"
+Changelog = "https://github.com/Embilaco/Scriptum-Report/blob/main/CHANGELOG"
+
 [project.optional-dependencies]
 # Running the test suite.
 test = ["pytest>=7.0"]
