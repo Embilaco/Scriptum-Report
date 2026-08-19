@@ -6,7 +6,6 @@
 #
 
 from ..tag.tag import Tag
-from ..rdf.tasks.report_task import ReportTask
 from .base import Element
 from .element_paragraph import ParagraphElement
 
