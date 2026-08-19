@@ -23,7 +23,7 @@ for details on
 
 ### Source
 
-see https://github.com/PyTomE/Scriptum-Report
+see https://github.com/Embilaco/Scriptum-Report
 
 ### Install
 
@@ -48,5 +48,5 @@ please see [`LICENSES/Commercial.md`](LICENSES/Commercial.md).
 
 See [`documentation`](docs/Intro.md) and other files in that folder.
 
-For a start, take the examples found on https://github.com/PyTomE/Scriptum-Report
+For a start, take the examples found on https://github.com/Embilaco/Scriptum-Report
 in the folders of `tests`
