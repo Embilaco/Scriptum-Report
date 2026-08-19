@@ -37,7 +37,6 @@ Supported:
  - `*documenttype`, mandatory, either `docx` or `pptx`  
  - `*documenttitle`, a general document title, defaults to `'Autoreport'`
  - `*dateformat`, when there is a date required, see https://docs.python.org/3/library/datetime.html
- - `*timeformat`, when there is a time required, see https://docs.python.org/3/library/datetime.html
  - `*datetimeformat`, when there is a date and time required, see https://docs.python.org/3/library/datetime.html
  - `*datadir`, instead of having all the input in the current directory use this relative (or absolute - not recommended) address
  - `*nvseparator`, how to split name-value data in files, defaults to `:`, valid for all files

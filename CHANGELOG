@@ -1,3 +1,4 @@
+unreleased - removed *timeformat, a setting from an early version that was never implemented
 1.2.1 - 2025/11/30 - early package fix
 1.2.0 - 2025/11/28 - first PyPi release
 2025/November - LICENSES and distribution

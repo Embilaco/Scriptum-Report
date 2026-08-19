@@ -5,7 +5,6 @@ class SETTINGS:
     version        = 0
     # see: https://docs.python.org/3/library/datetime.html
     dateformat     = '%x'
-    #timeformat    = '%X' # unused
     datetimeformat = '%c'
     datadir        = '.' # for almost all and global data, files etc.
     #dirmode        = False # deprecated, new in version 2, to allow individual datadir in each section or slide

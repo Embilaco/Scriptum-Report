@@ -11,7 +11,6 @@ def test_date_time_strings(tmp_path):
     base.write_text("\n".join([
         "*version=100",
         "*dateformat=%x",
-        "*timeformat = %X",
         "*datetimeformat = %c",
         "*documenttype=docx",
         "section:mysection.subsection:foo",
