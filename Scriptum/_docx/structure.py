@@ -24,7 +24,7 @@ from typing import Any, List, Tuple, Union, TYPE_CHECKING
 from .template import copy_table_before, copy_paragraph_before, add_page_break_before
 
 from ..tag.tag import Tag, getTag
-from ..rdf.reportDataFile import docx_sections
+from ..rdf.namespaces import docx_sections
 from docx.text.paragraph import Paragraph
 from docx.table import Table
 from docx.oxml.table import CT_Tbl

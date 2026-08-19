@@ -8,8 +8,7 @@ from pathlib import Path
 
 MIN_REQUIRED_VERSION = 3
 
-from .._docx import docx_sections
-from .._pptx import pptx_sections
+from .namespaces import SECTION_NAMESPACES
 
 from .common import removeQuotes, getCorrectFile, is_test_debug
 from .settings import SETTINGS
@@ -87,10 +86,8 @@ class ReportDataFile:
             self.settings = SETTINGS(_settings)
             self.root = False
             doctype = self.settings.documenttype
-            if doctype == 'pptx':
-                self.namespace = pptx_sections
-            elif doctype == 'docx':
-                self.namespace = docx_sections
+            if doctype in SECTION_NAMESPACES:
+                self.namespace = SECTION_NAMESPACES[doctype]
 
         #print('***********************',filename,self.settings.documenttype)            
         for i, line in enumerate(baseData):
@@ -370,12 +367,9 @@ class ReportDataFile:
             elif key == 'documenttype':
                 value = value.lower()
                 if not self.settings.documenttype:
-                    if value in ['pptx', 'docx']:
+                    if value in SECTION_NAMESPACES:
                         self.settings.documenttype = value
-                        if value == 'pptx':
-                            self.namespace = pptx_sections
-                        elif value == 'docx':
-                            self.namespace = docx_sections
+                        self.namespace = SECTION_NAMESPACES[value]
                         logs += [LogTask(line)]
                     else:
                         errors += [
