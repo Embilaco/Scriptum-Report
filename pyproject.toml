@@ -25,11 +25,23 @@ classifiers = [
   "Topic :: Software Development :: Libraries"
 ]
 
+[project.optional-dependencies]
+# Running the test suite.
+test = ["pytest>=7.0"]
+# Windows-only finishing: refresh fields/TOC and export PDF via a running Office.
+# Imported conditionally (os.name == 'nt'), so the package works without it.
+windows = ["pywin32>=306"]
+# Richer date parsing. Without it DateValue falls back to a bundled minimal
+# parser that understands fewer formats, so date handling differs between
+# environments unless this is installed.
+dates = ["python-dateutil>=2.8.2"]
+# Everything needed to develop and test this package on Windows.
+dev = ["pytest>=7.0", "pywin32>=306", "python-dateutil>=2.8.2"]
+
 [tool.setuptools]
-script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py", 
+script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py",
                  "scripts/check_pptx.py", "scripts/check_rdf.py" ]
 
 [tool.setuptools.packages.find]
 include = ["Scriptum*", "CHANGELOG", "docs"]
 exclude = ["tests**","tests*","*tests*"]
-
