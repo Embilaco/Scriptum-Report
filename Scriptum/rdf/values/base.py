@@ -1,5 +1,6 @@
 """Base Value implementation and dispatch helpers."""
 
+import ast
 import os
 
 #from .. import common
@@ -112,7 +113,11 @@ class Value:
         else:
             # either integer or float or error
             try:
-                v = eval(value)
+                # literal_eval, never eval: this reaches arbitrary text from a
+                # data file, and eval() executed it. Only a literal number is
+                # wanted here, and anything else falls through to 'invalid'
+                # below, which is visible rather than silent.
+                v = ast.literal_eval(value)
                 if type(v) == int:
                     self.type = 'int'
                     self.object = IntegerValue(v)
