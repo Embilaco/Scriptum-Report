@@ -4,7 +4,7 @@ import sys
 import types
 from datetime import datetime
 
-from _local_test_setup import  *
+from _setup_values import  *
 
 def test_date_time_strings(tmp_path):
     base = tmp_path / "testDateTime.rdf"

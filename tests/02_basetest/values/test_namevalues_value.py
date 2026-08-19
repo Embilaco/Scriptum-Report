@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from _local_test_setup import *
+from _setup_values import *
 
 from Scriptum.rdf.values.namevalues_value import NameValueReader, strToTime # pyright: ignore[reportMissingImports]
 

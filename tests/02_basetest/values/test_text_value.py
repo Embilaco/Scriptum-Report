@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from _local_test_setup import *
+from _setup_values import *
 
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:

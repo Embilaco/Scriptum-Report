@@ -1,4 +1,4 @@
-from _local_test_setup import *
+from _setup_parameter import *
 
 from Scriptum.rdf.values.namevalues_value import NameValueReader, strToTime # pyright: ignore[reportMissingImports]
 

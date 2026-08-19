@@ -2,7 +2,7 @@
 
 import pytest
 
-from _local_test_setup import *  # noqa: F401,F403 - ensure package import setup
+from _setup_values import *  # noqa: F401,F403 - ensure package import setup
 
 from Scriptum.rdf.values.color_value import ColorValue
 

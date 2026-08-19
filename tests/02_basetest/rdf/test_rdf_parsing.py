@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pytest import MonkeyPatch
 
-from _local_test_setup import *
+from _setup_rdf import *
 
 def test_include_combines_tasks(tmp_path: Path):
     child = tmp_path / "child.rdf"

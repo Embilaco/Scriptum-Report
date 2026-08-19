@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from _local_test_setup import *
+from _setup_values import *
 
 # ``ImageValue`` depends on Pillow. Provide a light-weight stub when Pillow is not
 # installed so the module can be imported in isolation.

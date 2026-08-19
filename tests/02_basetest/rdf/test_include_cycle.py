@@ -3,7 +3,7 @@ import sys
 #from pathlib import Path
 #from tempfile import TemporaryDirectory
 
-from _local_test_setup import *
+from _setup_rdf import *
 
 def test_include_cycle(tmp_path):
     p = tmp_path

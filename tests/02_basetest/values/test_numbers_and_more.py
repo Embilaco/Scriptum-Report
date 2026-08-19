@@ -3,7 +3,7 @@
 from pathlib import Path
 import sys
 
-from _local_test_setup import  *
+from _setup_values import  *
 
 def test_counter_formats(tmp_path: Path):
     base = tmp_path / "testCounters.rdf"

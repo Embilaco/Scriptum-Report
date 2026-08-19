@@ -8,7 +8,7 @@ CASE_ROOT = Path(__file__).resolve().parent.parent
 if str(CASE_ROOT) not in sys.path:
     sys.path.append(str(CASE_ROOT)) 
 
-from _local_test_setup import *
+from _setup_pptx_basic import *
 from common_case import CaseConfig, run_pptx_case
 
 def test_document_is_created(tmp_path):

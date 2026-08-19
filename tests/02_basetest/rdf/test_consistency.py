@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 #import types
 #import pytest
-from _local_test_setup import *
+from _setup_rdf import *
 
 # # create stubs for optional dependencies
 # pptx_stub = types.ModuleType('pptx')

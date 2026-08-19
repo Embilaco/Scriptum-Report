@@ -8,7 +8,7 @@ CASE_ROOT = Path(__file__).resolve().parent.parent
 if str(CASE_ROOT) not in sys.path:
     sys.path.append(str(CASE_ROOT)) 
 
-from _local_test_setup import *
+from _setup_examples import *
 
 module_path = Path(__file__).resolve().parent.parent.parent / '02_basetest' / 'common_case.py'
 

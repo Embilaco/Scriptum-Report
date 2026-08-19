@@ -4,7 +4,7 @@ import sys
 import types
 from datetime import datetime
 
-from _local_test_setup import  *
+from _setup_values import  *
 
 def test_length_units(tmp_path):
     base = tmp_path / "testLength.rdf"

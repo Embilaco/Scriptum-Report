@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 
 
-from _local_test_setup import *
+from _setup_rdf import *
 
 def test_marker_behavior(tmp_path):
     src = Path(__file__).parent / "rdf_testMarker.rdf"

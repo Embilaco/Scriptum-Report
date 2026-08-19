@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from _local_test_setup import *
+from _setup_basetest import *
 import Scriptum  # type: ignore
 
 

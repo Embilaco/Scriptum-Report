@@ -3,7 +3,7 @@ import os
 #import types
 from pathlib import Path
 
-from _local_test_setup import *
+from _setup_rdf import *
 
 
 STANDALONE_RDFS = {

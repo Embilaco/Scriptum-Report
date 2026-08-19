@@ -4,7 +4,7 @@ import sys
 import types
 from datetime import datetime
 
-from _local_test_setup import  *
+from _setup_values import  *
 
 def test_tables(monkeypatch: MonkeyPatch, tmp_path: Path):
 
