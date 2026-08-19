@@ -167,9 +167,6 @@ class ReportDataFile:
                 f'rdf version (*version) lower than {MIN_REQUIRED_VERSION} or not set'
             ]
 
-        if self.settings.version < 2 and hasattr(self.settings,'dirmode'):
-            self.errors += ['*dirmode not allowed with version (*version) lower than 2']
-
         if not self.settings.documenttype:
             self.errors += ['*documenttype not set or invalid']
 
@@ -220,7 +217,7 @@ class ReportDataFile:
                 # so everything from here up to the last before the next copy can be copied
                 # this copy operation is most likely only valid for word documents since
                 # in powerpoint there is already some logic to copy by using master template slides
-                # so copy is the base for group + autoGroup in docx below
+                # so copy is what later becomes a duplicated section in docx
                 # for pptx it will be used to just create a new slide
                 
                 self.updateRoot(i, line)

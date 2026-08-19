@@ -27,7 +27,23 @@ def test_color_value_normalization(name, expected_hex, expected_rgb):
     assert color.for_pptx == expected_rgb
 
 
-@pytest.mark.parametrize("invalid", ["", "   ", "not-a-color", "#12345", "#1234567"])
-def test_color_value_invalid_input(invalid):
-    with pytest.raises(ValueError):
-        ColorValue(invalid)
+@pytest.mark.parametrize("invalid", ["", "   ", "not-a-color", "#12345", "#1234567", None])
+def test_color_value_invalid_input_degrades(invalid):
+    """An unusable colour must not abort the run.
+
+    Every other value type answers a bad input with a message that ends up
+    in the document; a colour cannot carry a sentence, so it falls back to a
+    usable value and reports itself as not valid instead of raising.
+    """
+
+    color = ColorValue(invalid)
+
+    assert color.valid is False
+    assert color.content == ColorValue.FALLBACK
+    assert color.for_docx == ColorValue.FALLBACK
+    assert color.for_pptx == (0, 0, 0)
+    assert repr(invalid) in repr(color)
+
+
+def test_color_value_reports_valid_input_as_valid():
+    assert ColorValue("red").valid is True

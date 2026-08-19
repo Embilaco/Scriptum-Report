@@ -7,7 +7,6 @@ class SETTINGS:
     dateformat     = '%x'
     datetimeformat = '%c'
     datadir        = '.' # for almost all and global data, files etc.
-    #dirmode        = False # deprecated, new in version 2, to allow individual datadir in each section or slide
     nvseparator    = ':' # new in version 2
     csvseparator   = ';' # new in version 3
     floatformat    = '7.4f' # new in version 3
@@ -22,7 +21,6 @@ class SETTINGS:
             self.dateformat = settings.dateformat
             self.datetimeformat = settings.datetimeformat
             self.datadir = settings.datadir
-            #self.dirmode = settings.dirmode
             self.nvseparator = settings.nvseparator
             self.csvseparator = settings.csvseparator
             self.floatformat = settings.floatformat

@@ -2,8 +2,7 @@
 
 ## MODULE rdf.reportDataFile PROVIDES 
    class ReportDataFile - reads rdf-files and is the entry to all the rest
-         public functions: group and autoGroup
-      
+
      * This class reads .rdf-file or nested structures of those
      * It extracts "tasks" (list of ReportTask) from each line of that file which contain  itself path,value pairs
      * a path is a location inside the document
