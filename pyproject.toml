@@ -16,7 +16,11 @@ authors = [
 dependencies = [
   "python-docx>=1.2.00",
   "python-pptx>=1.0.00",
-  "Pillow>=10.0.0"
+  "Pillow>=10.0.0",
+  # Report documents are YAML. Read through a loader restricted to the 1.2
+  # core schema -- see Scriptum/rdf/loader/dialect.py for why the default
+  # 1.1 typing is not usable here.
+  "PyYAML>=6.0"
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
