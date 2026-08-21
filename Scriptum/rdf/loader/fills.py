@@ -141,6 +141,9 @@ def _from_scalar(node, selector, source, settings, diagnostics, path):
         diagnostics.error(message, node=node, filename=source.filename,
                           path=path)
 
+    if selector == 'color':
+        return _colour(node, report)
+
     raw = source.value(node)
 
     if raw is None:
@@ -153,13 +156,6 @@ def _from_scalar(node, selector, source, settings, diagnostics, path):
                'you meant the word.')
         return None
 
-    if selector == 'color':
-        if not isinstance(raw, str):
-            report(f'a colour is text, not {raw!r}. Note that "#ff0000" needs '
-                   'quoting, or YAML reads it as a comment.')
-            return None
-        return Value.from_parts('color', ColorValue(raw), tostring=False)
-
     if isinstance(raw, str):
         return Value.from_parts('str', StringValue(raw), tostring=True)
     if isinstance(raw, int):
@@ -170,6 +166,47 @@ def _from_scalar(node, selector, source, settings, diagnostics, path):
 
     report(f'{raw!r} is not a value this format knows')
     return None
+
+
+def _colour(node, report):
+    """A colour is read from the node's **raw text**, not its typed value.
+
+    Under the 1.2 core schema an all-digit hex is an integer: ``123456``
+    arrives as ``123456`` and -- worse -- ``012345`` as ``12345``, the leading
+    zero gone and the colour silently wrong. The node still holds exactly what
+    was written, so reading that makes YAML's typing irrelevant here.
+
+    Which is what lets the ``#`` be dropped. ``ColorValue`` has always treated
+    it as optional, but without this a bare hex would sometimes be a string and
+    sometimes a mangled number, so ``ff0000`` is now simply the way to write
+    one -- and it needs no quoting, where ``#ff0000`` does: unquoted, the
+    ``#`` makes the rest of the line a YAML comment.
+
+    An unrecognised colour is **reported**. ColorValue still degrades to black,
+    because a colour has nowhere to put an explanatory sentence, but the
+    fallback was previously the whole story: a typo produced a black element
+    and nothing anywhere said why. The loader has a diagnostic channel, so it
+    uses it.
+    """
+    written = node.value.strip() if isinstance(node.value, str) else ''
+
+    if not written:
+        report('a colour needs a value. Note that "#ff0000" unquoted is a '
+               'YAML comment -- write ff0000, which needs no quoting.')
+        return None
+
+    colour = ColorValue(written)
+    if not colour.valid:
+        hint = ''
+        if written.lower().startswith('rgb(') and not written.endswith(')'):
+            hint = (' Inside a flow mapping {...} the commas in rgb(...) split '
+                    'it into separate entries, so it must be quoted there.')
+        report(f'{written!r} is not a colour. Write a name (red, steelblue), '
+               'six hex digits with or without "#" (ff0000), or rgb(255,0,0).'
+               f'{hint}')
+        return None
+
+    return Value.from_parts('color', colour, tostring=False)
 
 
 # ---------------------------------------------------------------- mappings

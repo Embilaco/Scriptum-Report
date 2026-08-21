@@ -114,14 +114,80 @@ def test_a_namespaced_colour_target_selects_it_too():
     assert fill.value.type == 'color'
 
 
-def test_an_unquoted_hash_colour_is_told_that_yaml_ate_it():
-    """``color: #ff0000`` is a YAML comment, so the value is null. The
-    diagnostic says so rather than leaving the author staring at an empty
-    element in the finished document."""
+@pytest.mark.parametrize('written, expected', [
+    ('ff0000', 'FF0000'),
+    ('FF0000', 'FF0000'),
+    ("'#ff0000'", 'FF0000'),
+    ('red', 'FF0000'),
+    ('steelblue', '4682B4'),
+    ('rgb(255,0,0)', 'FF0000'),
+    ('rgb(255, 0, 0)', 'FF0000'),
+    ('rgb(0,128,255)', '0080FF'),
+])
+def test_the_ways_a_colour_may_be_written(written, expected):
+    fill = one(f'- color: {written}')
+
+    assert fill.value.object.content == expected
+
+
+@pytest.mark.parametrize('written, expected', [
+    ('123456', '123456'),
+    ('012345', '012345'),
+    ('000000', '000000'),
+])
+def test_an_all_digit_hex_survives_yamls_typing(written, expected):
+    """Read from the node's raw text rather than from its typed value.
+
+    Under the 1.2 core schema ``123456`` is an integer, and ``012345`` is the
+    integer ``12345`` -- the leading zero gone and the colour silently wrong.
+    The node still holds exactly what was written, so reading that makes the
+    typing irrelevant, and is what lets the ``#`` be dropped in *every* case
+    rather than in most of them.
+    """
+    fill = one(f'- color: {written}')
+
+    assert fill.value.object.content == expected
+
+
+def test_the_hash_is_optional_but_costs_a_quote_when_it_is_used():
+    """Unquoted, ``#`` makes the rest of the line a YAML comment, so the value
+    is null -- and by the format's own rule a null value is a container, so
+    what the author gets is a ladder complaint about an element they never
+    wrote. The hint exists because the real mistake is three steps upstream --
+    and it comes from the ladder check rather than from the colour code, which
+    this value never reaches.
+    """
     report = failing('- color: #ff0000')
 
     assert 'YAML comment' in report
-    assert "write '' instead" in report
+    assert 'unless it is quoted' in report
+
+
+@pytest.mark.parametrize('written', ['nosuchcolour', "'#f00'", 'rgb(300,0,0)',
+                                     "'#12345'"])
+def test_an_unrecognised_colour_is_reported_instead_of_silently_black(written):
+    """ColorValue still degrades to black -- a colour has nowhere to put an
+    explanatory sentence -- but that fallback used to be the whole story: a
+    typo produced a black element and nothing anywhere said why. The loader
+    has a diagnostic channel, so it uses it."""
+    report = failing(f'- color: {written}')
+
+    assert 'is not a colour' in report
+    assert 'rgb(255,0,0)' in report
+
+
+def test_a_channel_over_255_is_refused_rather_than_clamped():
+    """A clamped colour is a wrong colour nobody was told about."""
+    assert 'is not a colour' in failing('- color: rgb(256,0,0)')
+
+
+def test_rgb_split_by_a_flow_mapping_is_explained():
+    """``{color: rgb(255,0,0)}`` parses -- silently -- as three entries:
+    ``{'color': 'rgb(255', 0: None, '0)': None}``. Nothing about that says what
+    went wrong, so the diagnostic does."""
+    report = failing('- image:x: {file: a.png, color: rgb(255,0,0)}')
+
+    assert 'flow mapping' in report
 
 
 # ------------------------------------------------------------ source keys
