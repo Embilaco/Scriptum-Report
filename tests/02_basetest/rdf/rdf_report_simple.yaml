@@ -1,0 +1,25 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: ID 4711
+  date:published: 01. August 2020
+  report:version: 1.0
+  report:status: Draft
+
+_content_:
+  - section:title:
+      - report:product_name: A pudding
+      - report:designer_name: Mr. X
+      - report:article: Draft 1
+      - image:mainmodel: {file: pudding.jpg}
+      - text:description: {file: title.txt}
+      - date:creation: {date: now}
+      - author: Thomas
+
+  - section:instruction_base:
+      - text:description: These are the temperatures and instructions
+      - subsection:instruction:
+          - head: Instruction 1

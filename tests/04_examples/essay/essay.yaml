@@ -1,0 +1,85 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+  csvseparator: ';'
+
+_global_:
+  title: From Typewriting to Variable Fonts...
+
+_content_:
+  - section:main:
+      - title: 'From Typewriting to Variable Fonts:'
+      - subtitle: History, Technology, and Contemporary Letter Design
+      - authors: Scriptum, ChatGPT, Google, Wikipedia
+
+      - subsection:intro:
+          - text: {file: essay_intro.txt}
+
+      - subsection:content:
+          - head: Early Experiments and the Birth of the Typewriter
+          - text: {file: essay_birth1.txt}
+          - marker:content:
+              - image:generic: {file: remington1.jpg, description: 'The Sholes and Glidden (1876) - later Remington #1'}
+              - image:generic: {file: remington2.jpg, description: 'Remington #2 with a shift key'}
+              - text:generic: {file: essay_birth2.txt}
+
+      - subsection:content:
+          - head: Standardization, Visible Writing, and Social Effects
+          - text: {file: essay_std1.txt}
+          - marker:content:
+              - text:generic: {file: essay_std2.txt}
+
+      - subsection:content:
+          - head: The Rise of Electric Typewriters
+          - text: {file: essay_rise1.txt}
+          - marker:content:
+              - text:generic: {file: essay_rise2.txt}
+              - image:generic: {file: ibmselectric.png, description: IBM Selectric II}
+              - text:generic: {file: essay_rise3.txt}
+
+      - subsection:content:
+          - head: From Word Processors to Digital Keyboards
+          - text: {file: essay_word1.txt}
+          - marker:content:
+              - image:generic: {file: word1.png, description: Microsoft Word 1.0 for DOS (1983)}
+              - text:generic: {file: essay_word2.txt}
+
+      - subsection:content:
+          - head: Digital Typewriting and the Evolution of Fonts
+          - text: {file: essay_digital1.txt}
+          - marker:content:
+              - text:generic: {file: essay_digital2.txt}
+              - image:generic: {file: robotomono.png, description: 'Mono spaced font - source: Google fonts'}
+
+      - subsection:content:
+          - head: 'Variable Fonts: A New Frontier in Letter Design'
+          - text: {file: essay_vfont1.txt}
+          - marker:content:
+              - image:generic: {file: styles.png, description: 'Different styles on a complex font - source: Google fonts'}
+              - text:generic: {file: essay_vfont2.txt}
+
+      - subsection:content:
+          - head: Color Fonts and Multicolored Letterforms
+          - text: {file: essay_cfont1.txt}
+          - marker:content:
+              - text:generic: {file: essay_cfont2.txt}
+              - image:generic: {file: emoji.png, description: 'EMOJI Font - Source: Google Fonts'}
+
+      - subsection:content:
+          - head: Contemporary Typographic Trends
+          - text: {file: essay_contemp.txt}
+
+      - subsection:content:
+          - head: The Continuing Influence of Typewriting
+          - text: {file: essay_influence.txt}
+
+  - section:facts:
+      - head: Selected Facts and Comparisons
+      - marker:content:
+          - table:blue: {file: timeline.csv, description: {from: row1}}
+          - table:blue: {file: technologies.csv, description: {from: row1}}
+
+  - section:conclusion:
+      - text: {file: essay_conclusion.txt}
+      - image:conclude: {file: scriptum_on_the_desk.png}

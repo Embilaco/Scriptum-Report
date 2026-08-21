@@ -1,0 +1,61 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: ID 4711
+  date:published: 01. August 2020
+  report:version: 1.0
+  report:status: Draft
+
+_content_:
+  - section:title:
+      - report:product_name: A pudding
+      - report:designer_name: Mr. X
+      - report:reason: A pudding in space 1
+      - image:mainmodel: {file: pudding.png}
+      - text:description: {file: title.txt}
+      - date:creation: {date: now}
+      - author: Thomas
+
+  - section:instructions:
+      - text:description: These are the general instructions
+      - image:inline: {file: rocket.png, description: prepare a rocket}
+      - table:inline: {file: instructionsrocket.csv, description: rocket checks}
+
+      - subsection:condition:
+          - head: Cooking Basics
+          - text:description: You should have at least some knowledge about cooking...
+
+      - subsection:instruction:
+          - head: Cooking Instruction 1
+          - text:description: Get your favorite pudding recipe
+          - marker:content:
+              - image:generic: {file: recipe1.png, description: instruction one}
+
+      - subsection:instruction:
+          - head: Cooking Instruction 2
+          - text:description: If the first instruction fails, take this one
+          - marker:content:
+              - image:generic: {file: recipe2.png, description: instruction two}
+
+      - subsection:instruction:
+          - head: Cool it
+          - text:description: Get a fridge, implement it into the rocket, and put the pudding into the fridge
+          - marker:content:
+              - image:generic: {file: fridge.png, description: old fridge, height: 5cm}
+              - text:generic: {file: fridge.txt}
+              - _include_: 'instruction*.yaml'
+
+  - section:tools:
+      - table:tools: {file: tools.csv}
+      - _include_: 'tool*.yaml'
+
+  - section:preparations:
+      - text:description: How to serve a pudding in space
+      - whatever: This is the end the preps...
+      - _include_: 'preparation*.yaml'
+
+  - section:testplans:
+      - _include_: 'testplan*.yaml'

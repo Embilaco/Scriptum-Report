@@ -61,6 +61,7 @@ no matter where the author wrote it. The old "settings must come first" rule
 retires with nothing to replace it.
 """
 
+import os
 from pathlib import Path
 
 from ..namespaces import SECTION_NAMESPACES
@@ -108,6 +109,10 @@ class DocumentHeader:
 #
 # Each takes the constructed value and returns what to store, or ``None`` after
 # recording why not. They never raise: diagnostics accumulate.
+#
+# ``base`` is the directory of the document being read. Only ``_directory``
+# uses it, but every validator takes it so the table stays a plain lookup with
+# no special case for the one key that resolves a path.
 
 def _kind_of(value):
     if isinstance(value, bool):
@@ -121,7 +126,7 @@ def _kind_of(value):
     return f'{value!r}'
 
 
-def _integer(key, value, report):
+def _integer(key, value, report, base):
     # bool is a subclass of int, and `version: true` is not a version.
     if isinstance(value, bool) or not isinstance(value, int):
         report(f'{key} must be a whole number, not {_kind_of(value)}')
@@ -129,7 +134,7 @@ def _integer(key, value, report):
     return value
 
 
-def _text(key, value, report):
+def _text(key, value, report, base):
     if not isinstance(value, str):
         report(f'{key} must be text, not {_kind_of(value)}. '
                f'Quote it if that is what you meant.')
@@ -137,7 +142,7 @@ def _text(key, value, report):
     return value
 
 
-def _single_character(key, value, report):
+def _single_character(key, value, report, base):
     if not isinstance(value, str):
         report(f'{key} must be a single character, not {_kind_of(value)}')
         return None
@@ -147,8 +152,8 @@ def _single_character(key, value, report):
     return value
 
 
-def _version(key, value, report):
-    number = _integer(key, value, report)
+def _version(key, value, report, base):
+    number = _integer(key, value, report, base)
     if number is None:
         return None
     if number < MIN_REQUIRED_VERSION:
@@ -158,8 +163,8 @@ def _version(key, value, report):
     return number
 
 
-def _documenttype(key, value, report):
-    text = _text(key, value, report)
+def _documenttype(key, value, report, base):
+    text = _text(key, value, report, base)
     if text is None:
         return None
     lowered = text.lower()
@@ -170,13 +175,15 @@ def _documenttype(key, value, report):
     return lowered
 
 
-def _directory(key, value, report):
-    text = _text(key, value, report)
+def _directory(key, value, report, base):
+    text = _text(key, value, report, base)
     if text is None:
         return None
     # Backslashes are accepted so a Windows-shaped path in a document still
     # resolves; Path normalises the rest.
     path = Path(text.replace('\\', '/'))
+    if not path.is_absolute() and base:
+        path = Path(base) / path
     if not path.exists():
         report(f'{key} {text!r} does not exist')
         return None
@@ -215,6 +222,11 @@ def read_settings(node, source, diagnostics, path=(SETTINGS_KEY,)):
             node=node, filename=source.filename, path=path)
         return settings
 
+    # A path in the settings block is relative to the document, exactly as an
+    # include path is: a report should not mean something different depending
+    # on where the process was launched from.
+    base = os.path.dirname(source.filename or '')
+
     provided = set()
     for key, key_node, value_node in items(node, source, diagnostics, path):
         # Keys are lowercased like every other key in the format. The text
@@ -237,7 +249,7 @@ def read_settings(node, source, diagnostics, path=(SETTINGS_KEY,)):
             report(f'{name} must be a single value, not {describe(value_node)}')
             continue
 
-        accepted = SCHEMA[name](name, source.value(value_node), report)
+        accepted = SCHEMA[name](name, source.value(value_node), report, base)
         provided.add(name)
         if accepted is not None:
             setattr(settings, name, accepted)

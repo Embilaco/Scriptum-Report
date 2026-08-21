@@ -1,0 +1,87 @@
+_scriptum_:
+  version: 4
+  documenttype: pptx
+  dateformat: '%d. %b %Y'
+  datetimeformat: '%d. %b %Y -- %H:%M:%S'
+  datadir: ./data
+  documenttitle: This is a bloody test document
+
+_global_:
+  date_name: {date: '%d. %b %Y/Luke Skywalker'}
+  reference: REF-X47
+  revision: 1234567
+  created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}
+  date:today: {date: today, format: '%d. %b %Y'}
+  datesim: {parfile: SomeParameters.nv, parameter: Modified}
+
+_content_:
+  - TitleSlide:
+      - title: Test report
+      - subtitle: 'Project: 4711'
+      - image:main_model: {file: screw.png}
+
+  - TaskProjectDefinition:
+      - image:model_icon: {file: screw.png}
+      - manu: who builds it
+      - plat: where to built in
+      - hierarchy: "don't know"
+      - proj_ver: '42'
+      - prod_ver: '238612'
+      - group: Group X
+      - manager: The manager
+      - proj_no: '0815'
+      - glob_no: '4711'
+      - sop: '???'
+      - mod_ver: '-40'
+      - items: many
+      - belongs: belongs to you
+      - plant: where built
+      - report_no: N6676
+      - name:surname1: The initiator
+      - name:surname2: The designer
+      - name:surname3: The project manager
+      - name:surname4: Calc. done by
+      - name:surname5: The testplan manager
+      - dep:phone1: his number
+      - dep:phone2: her number
+      - dep:phone3: its number
+      - dep:phone4: wrong number
+      - dep:phone5: who cares
+      - rf1: x
+      - rf2: ''
+      - marker:content:
+          - p:custom1:
+              parfile: SomeParameters.nv
+              parameter: Description
+              left: 1cm
+              top: 1cm
+          - p:footnote:
+              parfile: SomeParameters.nv
+              parameter: Title
+              left: 2cm
+              top: 3cm
+
+  - TitleContent:
+      - title: Test A report
+      - plant: Northpole
+      - marker:content:
+          - table:small: {file: table3.csv, description: {from: row1}}
+
+  - TitleContent:
+      - title: Test B report
+      - plant: Southpole
+      - marker:content:
+          - image:generic: {file: bootseal2.png, description: a strange part, height: 2cm}
+          - image:history:
+              file: bootseal2.png
+              left: 13cm
+              top: 2.5in
+              description: the same strange part
+
+  - Material:
+      - title: Test C report
+      - plant: Honululu
+      - marker:content:
+          - text:insert: {file: dolor.txt, info: Moore, more: Roger}
+
+  - BackCover:

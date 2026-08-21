@@ -1,0 +1,3 @@
+- text:green: {file: dolor.txt}
+- text:green: {file: bootseal.txt}
+- text:green: {file: donotexist.txt}

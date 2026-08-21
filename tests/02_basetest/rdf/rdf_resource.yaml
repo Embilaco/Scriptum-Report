@@ -1,0 +1,40 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_content_:
+  - section:instruction_bc:
+      - subsection:instruction:
+          - parameter: {parfile: foo.nv, parameter: Hello world parameter}
+          - head: Pressure Instruction 1
+          - marker:content:
+              - image:generic: {file: instruction1.png, description: instruction one}
+              - image:generic: {file: instruction2.png, description: instruction two}
+              - image:generic: {file: instruction3.png, description: instruction three}
+              - image:generic: {file: bc1.png, description: fixed axisymmetric}
+              - text:generic: {file: dolor.txt}
+      - subsection:instruction:
+          - marker:content:
+              - image:generic: {file: bc1.png, description: fixed axisymmetric}
+              - text:generic: {file: dolor.txt}
+      - subsection:instruction:
+
+  - section:preparations:
+      - subsection:preparation:
+          - preparation:id: AC-1
+          - text:description: Static answer
+          - subsubsection:prereq:
+              - text:description: Restartcase 5
+              - marker:content:
+                  - table:left: {file: steps.txt, description: 'hi ho...'}
+          - subsubsection:step:
+              - step:id: 1
+              - text:description: preinstruction
+              - marker:content:
+                  - table:generic: {file: miscdata.csv, description: {from: row1}}
+          - subsubsection:step:
+              - step:id: 2
+              - text:description: instruction
+              - marker:content:
+                  - table:generic: {file: timevalue.csv, description: {from: row1}}

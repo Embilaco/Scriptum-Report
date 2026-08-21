@@ -1,0 +1,25 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  image:allover: {file: camera.png, height: 8mm}
+  image:header: {file: pudding.jpg, height: 1cm}
+
+_content_:
+  - section:one:
+      - image:main: {file: pudding.jpg}
+      - image:footer: {file: pudding.jpg, height: 1.5cm}
+
+  - section:two:
+      - image:inline: {file: camera.png, description: cheese}
+      - image:existing: {file: bootseal2.png, description: 'what else?'}
+      - marker:content:
+          - image:generic: {file: load1.png, description: load one}
+          - image:generic: {file: history.png, description: 'historic...'}
+          - image:lonely: {file: load1.png}
+          - image:lonely: {file: load1.png}
+          - icon:rocket: a
+          - image:small: {file: history.png, description: 'small historic...'}
+          - image:small: {file: load1.png, description: load one again}

@@ -1,0 +1,108 @@
+_scriptum_:
+  version: 4
+  documenttype: pptx
+  dateformat: '%d. %b %Y'
+  datetimeformat: '%d. %b %Y -- %H:%M:%S'
+  datadir: ./data
+  documenttitle: This is a bloody test document
+
+_global_:
+  date_name: {date: '%d. %b %Y/Luke Skywalker'}
+  reference: REF-X47
+  revision: 1234567
+  created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}
+  date:today: {date: today, format: '%d. %b %Y'}
+  datesim: {parfile: SomeParameters.nv, parameter: Modified}
+
+_content_:
+  - TitleSlide:
+      - title: Test report
+      - subtitle: 'Project: 4711'
+      - image:main_model: {file: pudding.jpg}
+
+  - TaskProjectDefinition:
+      - image:model_icon: {file: pudding.jpg}
+      - manu: who serves it
+      - plat: where to serve in
+      - hierarchy: "don't know"
+      - proj_ver: '42'
+      - prod_ver: '238612'
+      - group: Group X
+      - manager: The manager
+      - proj_no: '0815'
+      - glob_no: '4711'
+      - sop: '???'
+      - mod_ver: '-40'
+      - items: many
+      - belongs: belongs to you
+      - plant: where built
+      - report_no: N6676
+      - name:surname1: The cook
+      - name:surname2: The designer
+      - name:surname3: The ...
+      - name:surname4: Prep. done by
+      - name:surname5: The testplan manager
+      - dep:phone1: his number
+      - dep:phone2: her number
+      - dep:phone3: its number
+      - dep:phone4: wrong number
+      - dep:phone5: who cares
+      - rf1: x
+      - rf2: ''
+      - marker:content:
+          - p:heading:
+              parfile: SomeParameters.nv
+              parameter: MenuDescription
+              left: 1cm
+              top: 1cm
+
+  - Material:
+      - title: Details on the tool used
+      - plant: "a tiny complex\nsort of\nwhatever"
+      - marker:content:
+          - p:default: {text: there might be some explanation, top: .5cm}
+      - marker:table:
+          - table:blue: {file: tools.csv}
+
+  - ResultsGeneral:
+
+  - ResultsGeneral:
+      - title: This is a result
+      - what: 'what is shown:'
+      - plant: "a tiny complex\nsort of\nwhatever"
+      - marker:content:
+          - image:picture:
+              file: picture.png
+              left: 1cm
+              top: .5cm
+              description: This is a picture
+
+  - ResultsGeneral:
+      - title: This is a video
+      - what: test video display
+      - marker:content:
+          - video:generic:
+              file: harmonic.mp4
+              image:poster: {file: harmonic.gif}
+              description: a video
+          - p:code:
+              parfile: SomeParameters.nv
+              parameter: What the ....?
+              left: 14cm
+          - p:default:
+              text: there might be a lengthy text or so
+              left: 14cm
+              top: 2cm
+              color: green
+      - plant: "a tiny complex\nsort of\nwhatever"
+
+  - ResultsTwoBlocks:
+      - title: two results, side by side
+      - what: multiple results
+      - plant: "a tiny complex\nsort of\nwhatever"
+      - marker:left:
+          - image:generic: {file: pudding1a.png, description: This is a pudding}
+      - marker:right:
+          - image:generic: {file: pudding1b.png, description: This is a pudding as well}
+
+  - BackCover:

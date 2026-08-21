@@ -1,0 +1,9 @@
+- subsubsection:ingredients:
+    - text:description: to buy
+    - marker:content:
+        - table:generic: {file: ingredients1.csv, description: {from: row1}}
+
+- subsubsection:ingredients:
+    - text:description: to use
+    - marker:content:
+        - table:generic: {file: ingredients2.csv, description: {from: row1}}

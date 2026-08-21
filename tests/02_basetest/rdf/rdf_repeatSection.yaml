@@ -1,0 +1,21 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+
+_content_:
+  - section:a:
+      - subsection:instruction:
+          - subsubsection:test:
+              - head: Some heading
+          - head: Some heading
+          - subsubsection:test:
+      - subsection:instruction:
+          - head: Temperatures
+      - subsection:instruction:
+          - head: Some heading
+
+  - section:b:
+      - head: S b
+      - subsection:instruction:
+          - subsubsection:test:
+              - head: Some heading
