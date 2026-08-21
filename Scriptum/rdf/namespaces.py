@@ -34,6 +34,15 @@ A namespace table has three keys:
     When true, the segment at depth *n* must use ``names[n]`` (Word). When
     false, bare names are accepted too (PowerPoint, where a slide is
     addressed by its layout name).
+``always_copy``
+    Whether the template holds blueprints only. PowerPoint's holds layouts, so
+    every mention of one means a new slide and the reuse question never
+    arises. Word's holds real sections, so the first instance of an address
+    fills the block already there and only later ones are clones.
+
+    This is a property of the *format*, not of the ladder, which is why it is
+    its own key rather than being inferred from ``mandatory`` -- the two happen
+    to agree today and there is no reason they must.
 """
 
 # --------------------------------------------------------------- docx
@@ -60,6 +69,7 @@ docx_sections = {
     'order': DOCX_SECTION_ORDER,
     'names': DOCX_SECTION_NAMES,
     'mandatory': True,
+    'always_copy': False,
 }
 
 # --------------------------------------------------------------- pptx
@@ -74,6 +84,7 @@ pptx_sections = {
     'order': PPTX_SECTION_ORDER,
     'names': PPTX_SECTION_NAMES,
     'mandatory': False,
+    'always_copy': True,
 }
 
 # ----------------------------------------------------------- registry
@@ -87,7 +98,8 @@ SECTION_NAMESPACES = {
 }
 
 
-def register_documenttype(documenttype, order, names, mandatory=True):
+def register_documenttype(documenttype, order, names, mandatory=True,
+                          always_copy=False):
     """Make a new ``*documenttype`` known to the rdf parser.
 
     Intended for a back end that adds a format -- it registers its address
@@ -103,6 +115,7 @@ def register_documenttype(documenttype, order, names, mandatory=True):
         'order': list(order),
         'names': dict(names),
         'mandatory': bool(mandatory),
+        'always_copy': bool(always_copy),
     }
     return SECTION_NAMESPACES[documenttype]
 

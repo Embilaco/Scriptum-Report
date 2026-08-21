@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+# coding: utf-8
+#
+# part of:
+#   S C R I P T U M
+#
+
+"""Turning the entry tree into the task list a back end runs.
+
+A task is what a back end consumes: an address, a value, and what to do with
+them. This module is the last step of loading, and it decides three things.
+
+Order
+-----
+Tasks come out in **document order**, a container before its own children,
+which is the order the text format emitted them in and the order both back
+ends iterate. PPTX carries a current-slide position through the list, so this
+is not merely tidy.
+
+Global fills come **last**, always. The text format put them wherever the
+author wrote ``global`` -- usually first -- so each back end had to run two
+passes and remember to skip them in the first. Putting them at the end makes
+"applied last" a property of the list rather than a rule every consumer
+re-implements.
+
+Apply or copy
+-------------
+For Word, **instance 1 fills the block the template already contains and later
+instances are clones**. That is the settled rule, and the id now decides it:
+the text format got the same answer by renaming a repeat to ``foo_c002`` and
+then checking whether the name had changed.
+
+For PowerPoint, **every instance is a copy**. Its template holds layouts, not
+slides, so there is no first instance sitting there to fill and the reuse
+question never arises. That difference is declared in the namespace table as
+``always_copy`` rather than inferred from ``mandatory``: the two agree today
+and there is no reason they must.
+
+Adds
+----
+A fill inside a marker is an ``add``: it materialises a new element from the
+template element its address names and places it at the marker. A fill outside
+one targets something the template already contains. That split is unchanged.
+
+What this does not do
+---------------------
+Make the back ends read any of it. The addresses are the new four-slot form,
+so an addressbook keyed on the old names will not match -- that, and the
+mechanics of materialising instance 2 in a Word document, are directive
+``e577f6adf2e4``. The shape the back ends work with is deliberately preserved:
+a task still carries a segment list that joins with ``.``, so this is a
+matching problem and not an interface redesign.
+"""
+
+from ..namespaces import SECTION_NAMESPACES
+from ..tasks import ReportTask
+from ..values import Value
+from .document import GLOBAL_KEY
+from .entries import Container, Fill, Marker
+
+#: ``path[0]`` of a global task. The back ends recognise a global by this, as
+#: they recognised the text format's by ``'global'``; the spelling follows the
+#: document key so the two cannot drift apart.
+GLOBAL_ROOT = GLOBAL_KEY
+
+
+def emit(entries, settings, globals_=()):
+    """Build the task list from a walked document.
+
+    *entries* is the ``_content_`` tree, *globals_* the ``_global_`` fills.
+    """
+    ladder = SECTION_NAMESPACES.get(settings.documenttype) or {}
+    always_copy = bool(ladder.get('always_copy'))
+
+    tasks = []
+    _emit_entries(entries, always_copy, tasks)
+    tasks.extend(_global_task(fill) for fill in globals_)
+    return tasks
+
+
+def _emit_entries(entries, always_copy, tasks):
+    for entry in entries:
+        if isinstance(entry, Container):
+            tasks.append(_container_task(entry, always_copy))
+            _emit_entries(entry.children, always_copy, tasks)
+        elif isinstance(entry, Marker):
+            # A marker emits nothing of its own: it is a position, and the
+            # things placed there carry its name in `where`.
+            _emit_entries(entry.children, always_copy, tasks)
+        elif isinstance(entry, Fill):
+            tasks.append(_fill_task(entry))
+
+
+def _container_task(entry, always_copy):
+    """One structural operation: fill the template's block, or clone it.
+
+    ``myAddress`` includes the container itself, so ``[:-1]`` is its parent and
+    ``[-1]`` the element being applied or created -- which is what the docx
+    side reads when it looks for somewhere to put a copy.
+    """
+    address = list(entry.canonical_path) + [entry.address.canonical]
+    what = 'copy' if (always_copy or entry.address.id != 1) else 'apply'
+
+    return ReportTask.from_parts(
+        myAddress=address,
+        # The text format set path to the current root, which included the
+        # element being opened. Kept, because the back ends index on it.
+        path=address,
+        target='',
+        value=Value.from_parts('newsection', '', tostring=False),
+        what=what,
+    )
+
+
+def _fill_task(entry):
+    """A value for one target, or an add when the fill sits in a marker."""
+    return ReportTask.from_parts(
+        myAddress=list(entry.canonical_path) + [entry.address.canonical],
+        path=list(entry.canonical_path),
+        # The template name, not the instance: this is the tag to look for.
+        target=entry.address.puretag,
+        value=entry.value,
+        what='add' if entry.marker else '',
+        where=entry.marker or '',
+        actions=entry.actions,
+    )
+
+
+def _global_task(fill):
+    """A fill applied everywhere, matched on ``target`` alone.
+
+    No id and no path: a global fill is not an instance but a rule about every
+    instance, and matching by ``puretag`` is exactly what lets it reach clones
+    -- which the old ``_cNNN`` renaming silently prevented, since a renamed
+    clone no longer equalled the name the global was addressed at.
+    """
+    return ReportTask.from_parts(
+        myAddress=[GLOBAL_ROOT, fill.address.puretag],
+        path=[GLOBAL_ROOT],
+        target=fill.address.puretag,
+        value=fill.value,
+        actions=fill.actions,
+    )
+
+
+__all__ = ['emit', 'GLOBAL_ROOT']

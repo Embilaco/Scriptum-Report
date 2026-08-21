@@ -22,6 +22,57 @@ class ReportTask:
 
         cls._debug = bool(enabled)
 
+    @classmethod
+    def from_parts(cls, myAddress, path, target, value,
+                   what='', where='', actions=None):
+        """Build a task whose address is already decided.
+
+        ``__init__`` below splits a line of text and then calls ``checkPath``,
+        which walks a process-global tree and renames a repeated element to
+        ``foo_c002``. A YAML document has no line to split, and its instance
+        numbers were assigned by the loader while it walked -- from the
+        document's own nesting, which is what ``checkPath`` was reconstructing
+        from a flat file. So neither step runs here.
+
+        The addresses are the canonical four-slot form, which keeps the shape
+        the back ends already work with: a list of segments, joined with ``.``
+        for an addressbook lookup, ``[0]`` the section, ``[:-1]`` the parent,
+        ``[-1]`` the element itself.
+
+        ``target`` and ``myAddress[-1]`` now say different things, which is the
+        point. ``target`` is the **template name** -- the tag written in the
+        .docx or .pptx -- and ``myAddress[-1]`` is the **instance address**.
+        The old scheme gave the first instance the same string for both and
+        renamed only the rest, so two different things shared one name by
+        accident of being first.
+
+        ``_serial`` is class state here as it is for ``__init__``: one root
+        document per interpreter is the standing rule.
+        """
+
+        cls._serial += 1
+
+        task = cls.__new__(cls)
+        task.serial = cls._serial
+        task.myAddress = list(myAddress)
+        task.path = list(path)
+        task.target = target
+        task.value = value
+        task.what = what
+        task.where = where
+        task.actions = dict(actions) if actions else {}
+        task.length = 1
+        # The id decides copy-versus-apply now, so nothing is left for
+        # checkPath's "downgrade a copy that turned out to be the first".
+        task.copyifrequired = False
+        task.modified = bool(what or where or task.actions)
+        task.finaltarget = task.myAddress[-1] if task.myAddress else ''
+
+        if task.actions:
+            task.value.applyActions(task.actions)
+
+        return task
+
     def __init__(self, root=[], line: str = '', settings={}, **modifier):
         """Create a new task.
 
