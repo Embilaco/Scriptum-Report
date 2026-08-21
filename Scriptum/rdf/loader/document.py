@@ -76,6 +76,10 @@ SETTINGS_KEY = '_scriptum_'
 GLOBAL_KEY = '_global_'
 CONTENT_KEY = '_content_'
 
+#: Legal wherever an entry is legal, so it is not a top-level key. Its position
+#: places the content it pulls in.
+INCLUDE_KEY = '_include_'
+
 #: Everything legal at the top level of a root document.
 RESERVED_TOP_LEVEL = (SETTINGS_KEY, GLOBAL_KEY, CONTENT_KEY)
 
@@ -349,6 +353,7 @@ def _expect_mapping(node, key, source, diagnostics):
 
 __all__ = [
     'DocumentHeader', 'MIN_REQUIRED_VERSION', 'SCHEMA',
-    'SETTINGS_KEY', 'GLOBAL_KEY', 'CONTENT_KEY', 'RESERVED_TOP_LEVEL',
+    'SETTINGS_KEY', 'GLOBAL_KEY', 'CONTENT_KEY', 'INCLUDE_KEY',
+    'RESERVED_TOP_LEVEL',
     'read_root', 'read_fragment', 'read_settings',
 ]
