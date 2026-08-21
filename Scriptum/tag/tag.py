@@ -73,7 +73,13 @@ class Tag:
             elif len(ns_name) == 3:
                 self.ns, self.name, self.child = ns_name
             else:
-                self.tagtype == 'invalid:ns_name'
+                # This branch was written with '==' instead of '=', which made
+                # it a no-op: a tag with four or more colon-separated segments
+                # was accepted as a valid 'simple' tag, with ns, name and child
+                # all left as None, and then quietly matched nothing instead of
+                # being reported. The address grammar has three segments at
+                # most, so anything longer is an error and has to say so.
+                self.tagtype = 'invalid:ns_name'
             
             args = {}
             if [ c for c in NOT_ALLOWED_IN_ARGS if c in ''.join(tagcontent[1:]) ]:
