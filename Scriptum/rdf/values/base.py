@@ -23,6 +23,32 @@ from ..common import getCorrectFile, removeQuotes, is_test_debug
 class Value:
     """Store the value with all arguments."""
 
+    @classmethod
+    def from_parts(cls, type, object, tostring, subtype=None):
+        """Build a Value whose type is already known, with no string parsing.
+
+        ``__init__`` below infers a type by matching prefixes in a line of
+        text, because a ``.rdf`` line offered it nothing else to go on. A YAML
+        document states its type structurally instead -- ``{file: pudding.jpg}``
+        under an ``image:`` target -- so the loader decides, and this builds
+        the result.
+
+        That is also why every delimiter collision in the old value grammar
+        goes away with the delimiters: nothing here splits on ``+``, ``=`` or
+        ``:``, so ``file: a+b.png`` is an ordinary path and nothing is dropped
+        after a second ``=``.
+
+        When the text format goes, ``__init__``'s parsing goes with it and this
+        becomes the only way a Value is made.
+        """
+        value = cls.__new__(cls)
+        value.type = type
+        value.object = object
+        value.subtype = subtype
+        value.tostring = tostring
+        value.content = None
+        return value
+
     def __init__(self, value: str, settings, target=None):
         lvalue = value.lower()
         self.type = 'unknown'

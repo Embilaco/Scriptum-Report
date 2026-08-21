@@ -1,10 +1,12 @@
 """Addresses: the short form an author writes, and its four internal slots.
 
 The point of four *positional* slots is that position decides meaning and
-content never has to. All-digit names stay legal, a child added on the Word
-side later slots in without disturbing the id, and the template address is
-recovered by dropping the last field -- which works only because the id is
-always last and always an integer.
+content never has to: a child added on the Word side later slots in without
+disturbing the id, and the template address is recovered by dropping the last
+field -- which works only because the id is always last and always an integer.
+
+One content rule survives that anyway, deliberately: every segment begins with
+a letter, because a tag has to for the scanner to find it.
 """
 
 from __future__ import annotations
@@ -94,32 +96,34 @@ def test_an_address_is_lowercased_but_a_value_is_not():
     assert address.puretag == 'report:product_name'
 
 
-def test_an_all_digit_name_is_legal():
-    """Position decides meaning, so no rule about what a *name* may contain is
-    needed. A name that looks like a number is still a name."""
-    address, diagnostics = parse('figure:2024')
+def test_a_digit_inside_a_segment_is_fine():
+    address, diagnostics = parse('figure:y2024')
 
     assert not diagnostics, diagnostics.report()
-    assert address.name == '2024'
+    assert address.name == 'y2024'
 
 
-def test_an_address_cannot_begin_with_a_digit_even_though_a_name_can():
-    """Two rules on the map look contradictory and are not.
+@pytest.mark.parametrize('written', ['2024', 'figure:2024', 'table:t:2024'])
+def test_no_segment_may_begin_with_a_digit_wherever_it_sits(written):
+    """One rule for every position, decided deliberately.
 
-    *Address grammar* says an address cannot start with a number; *Elements
-    are sequences* says all-digit names stay legal. Both hold, of different
-    segments -- and the dividing line is not taste, it is what a document
-    template can hold. The tag scanner's pattern opens ``[a-z]+``, so
-    ``<figure:2024/>`` is found and ``<2024/>`` is not (measured against
-    ``getTag``). An address that cannot be written as a tag could never match
-    anything.
+    The tag scanner's pattern opens ``[a-z]+``, so only the tag's *first*
+    character strictly has to be a letter: measured against ``getTag``,
+    ``<2024/>`` is not found while ``<figure:2024/>`` is. Enforcing only that
+    would make a *name* able to be all digits while an *address* could not
+    begin with one -- the same spelling legal in one position and not another.
+
+    So the rule is applied to every segment instead. It supersedes *Elements
+    are sequences*' claim that all-digit names stay legal: positional slots
+    remove the *need* for a content rule, they do not make one a bad idea
+    where the surrounding machinery has limits of its own.
     """
-    address, diagnostics = parse('2024')
+    address, diagnostics = parse(written)
 
     assert address is None
     report = diagnostics.report()
-    assert 'must begin with a letter' in report
-    assert 'A later segment may be all digits' in report
+    assert 'Every segment begins with a letter' in report
+    assert '"y2024" and "figure:y2024" work' in report
 
 
 # ---------------------------------------------------------- what is refused
@@ -152,20 +156,12 @@ def test_a_segment_takes_only_letters_digits_underscore_and_hyphen(written):
     assert 'not a valid segment' in diagnostics.report()
 
 
-@pytest.mark.parametrize('written', ['2024', '1st:thing'])
-def test_the_first_segment_cannot_start_with_a_digit(written):
-    address, diagnostics = parse(written)
-
-    assert address is None
-    assert 'must begin with a letter' in diagnostics.report()
-
-
 @pytest.mark.parametrize('written', ['figure:_x', 'figure:-x', 'figure:x:-y'])
 def test_no_segment_opens_with_an_underscore_or_a_hyphen(written):
     address, diagnostics = parse(written)
 
     assert address is None
-    assert 'not opening with' in diagnostics.report()
+    assert 'begins with a letter' in diagnostics.report()
 
 
 @pytest.mark.parametrize('written', ['_scriptum_', '_include_', '_anything'])

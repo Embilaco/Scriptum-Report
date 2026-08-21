@@ -18,7 +18,7 @@ import pytest
 
 from Scriptum.rdf.loader import (CONTENT_KEY, Diagnostics, GLOBAL_KEY,
                                  SETTINGS_KEY, YamlSource, read_fragment,
-                                 read_root)
+                                 read_global, read_root)
 
 MINIMAL = """
 _scriptum_:
@@ -160,13 +160,23 @@ def test_a_repeated_global_address_is_rejected():
     keys to the last without a word. That objection does not reach here only
     because this loader never lets PyYAML construct a mapping: it walks the
     node graph, where the repeat is still visible.
+
+    Enforced where the block is actually walked, in ``read_global``, rather
+    than a second time in ``read_root`` -- which would report it twice.
     """
-    _, diagnostics = read(f"""{MINIMAL}
+    diagnostics = Diagnostics()
+    document = f"""{MINIMAL}
 {GLOBAL_KEY}:
   report:id: ID 4711
   report:status: Draft
   report:id: ID 0815
-""")
+"""
+    source = YamlSource.from_text(document.encode('utf-8'), 'doc.yaml',
+                                  diagnostics)
+    header = read_root(source, diagnostics)
+    assert not diagnostics, diagnostics.report()
+
+    read_global(header.global_node, source, header.settings, diagnostics)
 
     report = diagnostics.report()
     assert "duplicate key 'report:id'" in report

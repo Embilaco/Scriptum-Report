@@ -49,7 +49,6 @@ having been part of a path.
 
 What this module does not do yet
 --------------------------------
-Values stay as nodes: turning them into ``Value`` objects is the next slice.
 ``_include_`` is recognised and recorded unresolved, so a document containing
 one parses and nothing silently drops it, but splicing belongs with the include
 rules.
@@ -58,7 +57,8 @@ rules.
 from ..namespaces import SECTION_NAMESPACES
 from . import addresses
 from .addresses import Address
-from .document import CONTENT_KEY, INCLUDE_KEY
+from . import fills
+from .document import CONTENT_KEY, GLOBAL_KEY, INCLUDE_KEY
 from .nodes import describe, is_mapping, is_null, is_sequence, items, sequence
 
 
@@ -109,11 +109,17 @@ class Marker(Entry):
 class Fill(Entry):
     """A target and its value. An *add* when :attr:`marker` is set."""
 
-    __slots__ = ('value_node',)
+    __slots__ = ('value_node', 'value', 'actions')
 
-    def __init__(self, address, node, path, value_node, marker=None):
+    def __init__(self, address, node, path, value_node, value, actions,
+                 marker=None):
         super().__init__(address, node, path, marker)
         self.value_node = value_node
+        #: The built :class:`~Scriptum.rdf.values.Value`.
+        self.value = value
+        #: Modifier name -> Value, already applied to :attr:`value` for the
+        #: types that read them.
+        self.actions = actions
 
 
 class Include(Entry):
@@ -145,24 +151,24 @@ def read_content(content_node, source, settings, diagnostics):
     if ladder is None:
         return []
 
-    return _read_sequence(content_node, source, ladder, diagnostics,
+    return _read_sequence(content_node, source, ladder, settings, diagnostics,
                           depth=0, path=(), display=(CONTENT_KEY,),
                           counters={}, marker=None)
 
 
-def _read_sequence(node, source, ladder, diagnostics, depth, path, display,
-                   counters, marker):
+def _read_sequence(node, source, ladder, settings, diagnostics, depth, path,
+                   display, counters, marker):
     entries = []
     for item in sequence(node):
-        entry = _read_entry(item, source, ladder, diagnostics, depth, path,
-                            display, counters, marker)
+        entry = _read_entry(item, source, ladder, settings, diagnostics, depth,
+                            path, display, counters, marker)
         if entry is not None:
             entries.append(entry)
     return entries
 
 
-def _read_entry(node, source, ladder, diagnostics, depth, path, display,
-                counters, marker):
+def _read_entry(node, source, ladder, settings, diagnostics, depth, path,
+                display, counters, marker):
 
     def report(message, at=node, where=display):
         diagnostics.error(message, node=at, filename=source.filename, path=where)
@@ -200,16 +206,16 @@ def _read_entry(node, source, ladder, diagnostics, depth, path, display,
 
     if address.is_marker:
         return _read_marker(address, node, value_node, key_node, source, ladder,
-                            diagnostics, depth, path, here, counters, marker,
-                            is_container)
+                            settings, diagnostics, depth, path, here, counters,
+                            marker, is_container)
 
     if is_container:
         return _read_container(address, node, value_node, key_node, source,
-                               ladder, diagnostics, depth, path, here,
-                               counters, marker)
+                               ladder, settings, diagnostics, depth, path,
+                               here, counters, marker)
 
-    return _read_fill(address, node, value_node, key_node, source, diagnostics,
-                      path, display, here, counters, marker)
+    return _read_fill(address, node, value_node, key_node, source, settings,
+                      diagnostics, path, display, here, counters, marker)
 
 
 def _read_include(value_node, key_node, source, diagnostics, path, display,
@@ -228,7 +234,7 @@ def _read_include(value_node, key_node, source, diagnostics, path, display,
 
 
 def _read_marker(address, node, value_node, key_node, source, ladder,
-                 diagnostics, depth, path, display, counters, marker,
+                 settings, diagnostics, depth, path, display, counters, marker,
                  is_container):
 
     def report(message, at=key_node):
@@ -250,7 +256,7 @@ def _read_marker(address, node, value_node, key_node, source, ladder,
         return None
 
     children = [] if is_null(value_node) else _read_sequence(
-        value_node, source, ladder, diagnostics, depth, path, display,
+        value_node, source, ladder, settings, diagnostics, depth, path, display,
         counters, marker=address.puretag)
 
     # No id: a marker is a reference to a position in the template, not an
@@ -259,7 +265,8 @@ def _read_marker(address, node, value_node, key_node, source, ladder,
 
 
 def _read_container(address, node, value_node, key_node, source, ladder,
-                    diagnostics, depth, path, display, counters, marker):
+                    settings, diagnostics, depth, path, display, counters,
+                    marker):
 
     def report(message, at=key_node):
         diagnostics.error(message, node=at, filename=source.filename,
@@ -275,7 +282,7 @@ def _read_container(address, node, value_node, key_node, source, ladder,
 
     numbered = _next_id(address, counters)
     children = [] if is_null(value_node) else _read_sequence(
-        value_node, source, ladder, diagnostics, depth + 1,
+        value_node, source, ladder, settings, diagnostics, depth + 1,
         path + (numbered,), display,
         # A fresh counter map: numbering is scoped to the parent path, so
         # section:a and section:c each count their own subsection:b.
@@ -284,8 +291,8 @@ def _read_container(address, node, value_node, key_node, source, ladder,
     return Container(numbered, key_node, path, children, marker)
 
 
-def _read_fill(address, node, value_node, key_node, source, diagnostics, path,
-               parent_display, display, counters, marker):
+def _read_fill(address, node, value_node, key_node, source, settings,
+               diagnostics, path, parent_display, display, counters, marker):
     if not path:
         diagnostics.error(
             f'{address.puretag} is a fill and needs a container around it. '
@@ -294,7 +301,15 @@ def _read_fill(address, node, value_node, key_node, source, diagnostics, path,
             node=key_node, filename=source.filename, path=parent_display)
         return None
 
-    return Fill(_next_id(address, counters), key_node, path, value_node, marker)
+    value, actions = fills.read(value_node, fills.selector_for(address), source,
+                                settings, diagnostics, display)
+    if value is None:
+        # Whatever was wrong is already reported. Dropping the entry keeps the
+        # rest of the walk reporting on the document rather than on the hole.
+        return None
+
+    return Fill(_next_id(address, counters), key_node, path, value_node, value,
+                actions, marker)
 
 
 # -------------------------------------------------------------- the rules
@@ -318,8 +333,17 @@ def _check_ladder(address, depth, ladder, value_node, report):
     written = f'{address.namespace!r}' if address.namespace else 'no namespace'
     hint = ''
     if is_null(value_node):
-        hint = (' An entry with no value is an empty container; to fill '
-                "something with an empty string, write '' instead.")
+        # Overwhelmingly this is a fill whose value went missing rather than a
+        # container someone meant to leave empty -- and a value opening with
+        # '#' is the commonest way for it to go missing, YAML reading the rest
+        # of the line as a comment.
+        hint = (' An entry with no value is an empty container. To fill '
+                "something with an empty string, write '' instead -- and note "
+                'that a value starting with "#" is a YAML comment unless it '
+                'is quoted.')
+    elif is_sequence(value_node):
+        hint = (' A sequence value is a body, so this reads as a container. '
+                "A fill's value is a scalar or a mapping.")
     report(f'{address.puretag} is at depth {depth}, where the namespace must '
            f'be {expected!r}, but it has {written}. '
            f'The ladder is: {" > ".join(order)}.{hint}')
@@ -338,6 +362,45 @@ def _next_id(address, counters):
     return address.numbered(counters[key])
 
 
+def read_global(global_node, source, settings, diagnostics):
+    """Read the ``_global_`` mapping into fills applied last, everywhere.
+
+    **No ids.** A global fill is not an instance, it is a rule applied to every
+    instance: ``global`` matches on ``puretag`` alone -- deliberately, since
+    that is what lets it reach clones -- so numbering one would name something
+    the match ignores. Markers are refused here for the mirror-image reason: a
+    marker names a position inside one element, and there is no one element.
+    """
+    if global_node is None:
+        return []
+
+    result = []
+    for key, key_node, value_node in items(global_node, source, diagnostics,
+                                           (GLOBAL_KEY,)):
+        address = addresses.parse(key, key_node, source, diagnostics,
+                                  (GLOBAL_KEY,))
+        if address is None:
+            continue
+
+        if address.is_marker:
+            diagnostics.error(
+                f'{address.puretag} names a position inside one element, and '
+                f'{GLOBAL_KEY} applies to every element. Put the marker in '
+                f'{CONTENT_KEY}, where there is an element for it to be in.',
+                node=key_node, filename=source.filename, path=(GLOBAL_KEY,))
+            continue
+
+        value, actions = fills.read(value_node, fills.selector_for(address),
+                                    source, settings, diagnostics,
+                                    (GLOBAL_KEY, key))
+        if value is None:
+            continue
+
+        result.append(Fill(address, key_node, (), value_node, value, actions))
+
+    return result
+
+
 # ------------------------------------------------------------- traversal
 
 def walk(entries):
@@ -354,5 +417,5 @@ def walk(entries):
 
 __all__ = [
     'Entry', 'Container', 'Marker', 'Fill', 'Include',
-    'read_content', 'walk', 'Address',
+    'read_content', 'read_global', 'walk', 'Address',
 ]

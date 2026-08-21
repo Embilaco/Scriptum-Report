@@ -24,6 +24,8 @@ what follows is only the map of this package.
     What an author writes, and the four slots it completes to.
 ``entries``
     ``_content_`` walked into a tree: containers, markers, fills and includes.
+``fills``
+    A fill's value and its modifiers, built as ``Value`` objects.
 
 Like everything else in ``rdf`` this package is a leaf: it imports PyYAML and
 its own siblings, and nothing from the rest of Scriptum. See the layering test.
@@ -43,7 +45,8 @@ from .document import (
     read_root,
     read_settings,
 )
-from .entries import Container, Entry, Fill, Include, Marker, read_content, walk
+from .entries import (Container, Entry, Fill, Include, Marker, read_content,
+                      read_global, walk)
 from .nodes import YamlSource
 
 __all__ = [
@@ -51,7 +54,7 @@ __all__ = [
     'YamlSource', 'DocumentHeader',
     'read_root', 'read_fragment', 'read_settings',
     'Address', 'Entry', 'Container', 'Marker', 'Fill', 'Include',
-    'read_content', 'walk',
+    'read_content', 'read_global', 'walk',
     'MIN_REQUIRED_VERSION', 'RESERVED_TOP_LEVEL',
     'SETTINGS_KEY', 'GLOBAL_KEY', 'CONTENT_KEY', 'INCLUDE_KEY',
 ]

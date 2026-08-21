@@ -288,13 +288,10 @@ def read_root(source, diagnostics):
 
     global_node = _expect_mapping(sections.get(GLOBAL_KEY), GLOBAL_KEY,
                                   source, diagnostics)
-    if global_node is not None:
-        # Walked for its diagnostics alone: a global fill reaches every tag of
-        # its name, so a repeated address is a contradiction rather than a
-        # second instance. Checking it here is what makes the uniqueness the
-        # mapping shape claims a uniqueness the loader actually enforces --
-        # the entries themselves are read later, with the rest of the content.
-        items(global_node, source, diagnostics, path=(GLOBAL_KEY,))
+    # The uniqueness the mapping shape claims is enforced when the block is
+    # walked, in entries.read_global: nodes.items reports a repeated key rather
+    # than letting it collapse to the last, which is the whole reason a mapping
+    # is safe here at all. Checking it twice would report it twice.
     content_node = _expect_sequence(sections.get(CONTENT_KEY), CONTENT_KEY,
                                     source, diagnostics)
 

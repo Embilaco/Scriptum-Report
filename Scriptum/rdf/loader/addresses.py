@@ -48,24 +48,28 @@ field. ``_`` is an ordinary name character: a template legitimately called
 
 import re
 
-#: A segment after lowercasing: letters, digits, ``_`` and ``-``, and never
-#: opening with ``_`` or ``-``.
-SEGMENT = re.compile(r'^[a-z0-9][a-z0-9_-]*$')
-
-#: The **first** segment carries one more rule: it must begin with a letter.
+#: A segment after lowercasing. **Every** segment begins with a letter, then
+#: letters, digits, ``_`` and ``-``.
 #:
-#: This is not a style preference, it is what the document template can hold.
-#: The tag scanner's pattern begins ``[a-z]+``, so the first character of a tag
-#: must be a letter -- ``<figure:2024/>`` is found and ``<2024/>`` is not
-#: (measured, not read). An address that cannot be written as a tag is an
-#: address nothing can ever match.
+#: The leading letter is not a style preference, it is what a document template
+#: can hold. The tag scanner's pattern opens ``[a-z]+``, so the first character
+#: of a tag must be a letter: measured against ``getTag``, ``<2024/>`` is not
+#: found at all. An address that cannot be written as a tag could never match
+#: anything.
 #:
-#: It also reconciles two rules that look contradictory. *Address grammar* says
-#: an address cannot start with a number; *Elements are sequences* says all-digit
-#: names stay legal, because positional slots remove the need for any rule about
-#: what a segment may contain. Both are true, of different segments: a **name**
-#: may be all digits, an **address** may not begin with one.
-FIRST_SEGMENT = re.compile(r'^[a-z][a-z0-9_-]*$')
+#: **The rule is applied to every segment, not only the first.** The scanner
+#: alone would permit ``<figure:2024/>``, since only the tag's opening
+#: character has to be a letter -- so a *name* could be all digits while an
+#: *address* could not begin with one. That is a rule whose answer depends on
+#: where you are standing, and the same spelling would be legal in one position
+#: and not another. One rule for every segment is the robust choice: ``2024``
+#: and ``figure:2024`` are both refused, ``y2024`` and ``figure:y2024`` both
+#: work.
+#:
+#: This supersedes *Elements are sequences*' claim that all-digit names stay
+#: legal. Positional slots do remove the *need* for a content rule; they do not
+#: make one a bad idea where the surrounding machinery has its own limits.
+SEGMENT = re.compile(r'^[a-z][a-z0-9_-]*$')
 
 #: Namespace of a marker entry. Spelled plainly rather than ``_marker_``
 #: because it names a ``<marker:name/>`` tag the document template contains --
@@ -173,21 +177,19 @@ def parse(text, node, source, diagnostics, path=()):
                'assigned by the loader and is never written.')
         return None
 
-    for position, segment in enumerate(segments):
+    for segment in segments:
         if not segment:
             report(f'{text!r} has an empty segment. Empty slots are internal; '
                    'an authored address writes only the segments it has.')
             return None
         if not SEGMENT.match(segment):
-            report(f'{segment!r} in {text!r} is not a valid segment: letters, '
-                   'digits, "_" and "-", and not opening with "_" or "-".')
-            return None
-        if position == 0 and not FIRST_SEGMENT.match(segment):
-            report(f'an address must begin with a letter, and {text!r} begins '
-                   'with a digit. A document template could not hold it: the '
-                   'tag scanner requires a tag to start with a letter, so '
-                   '<figure:2024/> is found and <2024/> is not. A later '
-                   'segment may be all digits.')
+            report(f'{segment!r} in {text!r} is not a valid segment. Every '
+                   'segment begins with a letter, then letters, digits, "_" '
+                   'and "-": "y2024" and "figure:y2024" work, "2024" and '
+                   '"figure:2024" do not. A tag has to start with a letter for '
+                   'the scanner to find it, and the rule is the same in every '
+                   'position so that one spelling cannot be legal in one place '
+                   'and not another.')
             return None
 
     if len(segments) == 1:
