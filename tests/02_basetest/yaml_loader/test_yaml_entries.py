@@ -15,7 +15,7 @@ import textwrap
 
 import pytest
 
-from Scriptum.rdf.loader import (Container, Diagnostics, Fill, Include, Marker,
+from Scriptum.rdf.loader import (Container, Diagnostics, Fill, Marker,
                                  YamlSource, read_content, read_root, walk)
 
 
@@ -431,47 +431,6 @@ def test_a_fill_outside_a_marker_is_not_an_add():
     assert tree[0].children[0].marker is None
 
 
-# --------------------------------------------------------------- includes
-
-def test_an_include_is_recorded_with_its_position():
-    tree, diagnostics = read("""
-        - section:tool:
-            - _include_: 'tools-*.yaml'
-    """)
-
-    assert not diagnostics, diagnostics.report()
-    include, = tree[0].children
-    assert isinstance(include, Include)
-    assert include.pattern == 'tools-*.yaml'
-    assert include.marker is None
-
-
-def test_an_include_inside_a_marker_remembers_the_marker():
-    """Position places the content. In the text format an ``@`` inside an
-    included file changed the *caller's* marker and left it changed; here the
-    include either sits in the marker's sequence or it does not."""
-    tree, diagnostics = read("""
-        - section:a:
-            - subsection:b:
-                - marker:content:
-                    - _include_: 'more-*.yaml'
-    """)
-
-    assert not diagnostics, diagnostics.report()
-    include, = tree[0].children[0].children[0].children
-    assert include.marker == 'marker:content'
-
-
-@pytest.mark.parametrize('value', ['[a, b]', '{a: b}', "''"])
-def test_an_include_needs_one_path_or_glob(value):
-    _, diagnostics = read(f"""
-        - section:a:
-            - _include_: {value}
-    """)
-
-    assert '_include_' in diagnostics.report()
-
-
 # -------------------------------------------------------------- traversal
 
 def test_walk_yields_every_entry_in_document_order():
@@ -488,7 +447,7 @@ def test_walk_yields_every_entry_in_document_order():
     """)
 
     assert not diagnostics, diagnostics.report()
-    seen = [e.address.puretag if e.address else 'include' for e in walk(tree)]
+    seen = [e.address.puretag for e in walk(tree)]
     assert seen == ['section:a', 'head', 'subsection:b', 'head',
                     'marker:content', 'image:generic', 'section:c', 'head']
 

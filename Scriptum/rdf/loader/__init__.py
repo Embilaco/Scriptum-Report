@@ -23,7 +23,8 @@ what follows is only the map of this package.
 ``addresses``
     What an author writes, and the four slots it completes to.
 ``entries``
-    ``_content_`` walked into a tree: containers, markers, fills and includes.
+    ``_content_`` walked into a tree of containers, markers and fills, with
+    includes spliced in place.
 ``fills``
     A fill's value and its modifiers, built as ``Value`` objects.
 
@@ -45,15 +46,16 @@ from .document import (
     read_root,
     read_settings,
 )
-from .entries import (Container, Entry, Fill, Include, Marker, read_content,
-                      read_global, walk)
+from .entries import (Container, Entry, Fill, Marker, MAX_INCLUDE_DEPTH,
+                      read_content, read_global, walk)
 from .nodes import YamlSource
 
 __all__ = [
     'Diagnostic', 'Diagnostics', 'DocumentError', 'Position',
     'YamlSource', 'DocumentHeader',
     'read_root', 'read_fragment', 'read_settings',
-    'Address', 'Entry', 'Container', 'Marker', 'Fill', 'Include',
+    'Address', 'Entry', 'Container', 'Marker', 'Fill',
+    'MAX_INCLUDE_DEPTH',
     'read_content', 'read_global', 'walk',
     'MIN_REQUIRED_VERSION', 'RESERVED_TOP_LEVEL',
     'SETTINGS_KEY', 'GLOBAL_KEY', 'CONTENT_KEY', 'INCLUDE_KEY',

@@ -47,19 +47,23 @@ same tag -- and it does not scope numbering: adds inside it count against the
 enclosing container, which is what ``checkPath`` does today, markers never
 having been part of a path.
 
-What this module does not do yet
---------------------------------
-``_include_`` is recognised and recorded unresolved, so a document containing
-one parses and nothing silently drops it, but splicing belongs with the include
-rules.
+Includes splice
+---------------
+``_include_`` contributes its file's entries in its own position, read with
+this walk's depth, path, counters and marker. A fragment therefore has no
+absolute form to jump with: it lands where it was asked for, which is what
+makes it reusable in more than one place.
 """
 
+import glob
+import os
+
 from ..namespaces import SECTION_NAMESPACES
-from . import addresses
+from . import addresses, fills
 from .addresses import Address
-from . import fills
-from .document import CONTENT_KEY, GLOBAL_KEY, INCLUDE_KEY
-from .nodes import describe, is_mapping, is_null, is_sequence, items, sequence
+from .document import CONTENT_KEY, GLOBAL_KEY, INCLUDE_KEY, read_fragment
+from .nodes import (YamlSource, describe, is_mapping, is_null, is_sequence,
+                    items, sequence)
 
 
 class Entry:
@@ -122,20 +126,40 @@ class Fill(Entry):
         self.actions = actions
 
 
-class Include(Entry):
-    """A path or glob, recorded unresolved. Carries no address."""
-
-    __slots__ = ('pattern',)
-
-    def __init__(self, pattern, node, path, marker=None):
-        super().__init__(None, node, path, marker)
-        self.pattern = pattern
-
-    def __repr__(self):
-        return f'Include({self.pattern!r})'
-
-
 # --------------------------------------------------------------- the walk
+
+
+class _Context:
+    """What stays the same across one file's entries.
+
+    Carried as one object rather than six parameters because an include adds
+    two more -- the stack of files currently open, and how deep the nesting
+    goes -- and threading those through every walk function by hand is how a
+    parameter gets passed in the wrong order.
+    """
+
+    __slots__ = ('source', 'ladder', 'settings', 'diagnostics', 'open_files',
+                 'include_depth')
+
+    def __init__(self, source, ladder, settings, diagnostics, open_files=(),
+                 include_depth=0):
+        self.source = source
+        self.ladder = ladder
+        self.settings = settings
+        self.diagnostics = diagnostics
+        #: Absolute paths of the files whose entries enclose this one.
+        self.open_files = tuple(open_files)
+        self.include_depth = include_depth
+
+    def within(self, source, filename):
+        """A context for a file included from this one."""
+        return _Context(source, self.ladder, self.settings, self.diagnostics,
+                        self.open_files + (filename,), self.include_depth + 1)
+
+    def error(self, message, node, path):
+        self.diagnostics.error(message, node=node,
+                               filename=self.source.filename, path=path)
+
 
 def read_content(content_node, source, settings, diagnostics):
     """Walk a ``_content_`` sequence into a list of entries.
@@ -151,34 +175,39 @@ def read_content(content_node, source, settings, diagnostics):
     if ladder is None:
         return []
 
-    return _read_sequence(content_node, source, ladder, settings, diagnostics,
-                          depth=0, path=(), display=(CONTENT_KEY,),
-                          counters={}, marker=None)
+    context = _Context(source, ladder, settings, diagnostics,
+                       open_files=(_absolute(source.filename),))
+    return _read_sequence(content_node, context, depth=0, path=(),
+                          display=(CONTENT_KEY,), counters={}, marker=None)
 
 
-def _read_sequence(node, source, ladder, settings, diagnostics, depth, path,
-                   display, counters, marker):
+def _read_sequence(node, context, depth, path, display, counters, marker):
     entries = []
     for item in sequence(node):
-        entry = _read_entry(item, source, ladder, settings, diagnostics, depth,
-                            path, display, counters, marker)
-        if entry is not None:
-            entries.append(entry)
+        result = _read_entry(item, context, depth, path, display, counters,
+                             marker)
+        if result is None:
+            continue
+        # An include splices: it contributes its file's entries here, in its
+        # own position, rather than a node of its own.
+        if isinstance(result, list):
+            entries.extend(result)
+        else:
+            entries.append(result)
     return entries
 
 
-def _read_entry(node, source, ladder, settings, diagnostics, depth, path,
-                display, counters, marker):
+def _read_entry(node, context, depth, path, display, counters, marker):
 
     def report(message, at=node, where=display):
-        diagnostics.error(message, node=at, filename=source.filename, path=where)
+        context.error(message, at, where)
 
     if not is_mapping(node):
         report(f'an entry is a mapping of one address to its value, not '
                f'{describe(node)}')
         return None
 
-    pairs = items(node, source, diagnostics, display)
+    pairs = items(node, context.source, context.diagnostics, display)
     if not pairs:
         # items() has already said why (duplicate key, or a key that is not
         # text). An empty mapping reaches here with nothing said.
@@ -195,51 +224,33 @@ def _read_entry(node, source, ladder, settings, diagnostics, depth, path,
     here = display + (key,)
 
     if key.lower() == INCLUDE_KEY:
-        return _read_include(value_node, key_node, source, diagnostics,
-                             path, here, marker)
+        return _read_include(value_node, key_node, context, depth, path, here,
+                             counters, marker)
 
-    address = addresses.parse(key, key_node, source, diagnostics, display)
+    address = addresses.parse(key, key_node, context.source,
+                              context.diagnostics, display)
     if address is None:
         return None
 
     is_container = is_sequence(value_node) or is_null(value_node)
 
     if address.is_marker:
-        return _read_marker(address, node, value_node, key_node, source, ladder,
-                            settings, diagnostics, depth, path, here, counters,
-                            marker, is_container)
+        return _read_marker(address, value_node, key_node, context, depth, path,
+                            here, counters, marker, is_container)
 
     if is_container:
-        return _read_container(address, node, value_node, key_node, source,
-                               ladder, settings, diagnostics, depth, path,
-                               here, counters, marker)
+        return _read_container(address, value_node, key_node, context, depth,
+                               path, here, counters, marker)
 
-    return _read_fill(address, node, value_node, key_node, source, settings,
-                      diagnostics, path, display, here, counters, marker)
-
-
-def _read_include(value_node, key_node, source, diagnostics, path, display,
-                  marker):
-    if is_sequence(value_node) or is_mapping(value_node):
-        diagnostics.error(
-            f'{INCLUDE_KEY} takes one path or glob, not {describe(value_node)}',
-            node=value_node, filename=source.filename, path=display)
-        return None
-    pattern = source.value(value_node)
-    if not isinstance(pattern, str) or not pattern.strip():
-        diagnostics.error(f'{INCLUDE_KEY} needs a path or glob to include',
-                          node=value_node, filename=source.filename, path=display)
-        return None
-    return Include(pattern.strip(), key_node, path, marker)
+    return _read_fill(address, value_node, key_node, context, path, display,
+                      here, counters, marker)
 
 
-def _read_marker(address, node, value_node, key_node, source, ladder,
-                 settings, diagnostics, depth, path, display, counters, marker,
-                 is_container):
+def _read_marker(address, value_node, key_node, context, depth, path, display,
+                 counters, marker, is_container):
 
     def report(message, at=key_node):
-        diagnostics.error(message, node=at, filename=source.filename,
-                          path=display)
+        context.error(message, at, display)
 
     if not is_container:
         report(f'{address.puretag} is a marker: its value is the sequence of '
@@ -256,34 +267,31 @@ def _read_marker(address, node, value_node, key_node, source, ladder,
         return None
 
     children = [] if is_null(value_node) else _read_sequence(
-        value_node, source, ladder, settings, diagnostics, depth, path, display,
-        counters, marker=address.puretag)
+        value_node, context, depth, path, display, counters,
+        marker=address.puretag)
 
     # No id: a marker is a reference to a position in the template, not an
     # instance in the output, and two entries naming it mean the same place.
     return Marker(address, key_node, path, children, marker)
 
 
-def _read_container(address, node, value_node, key_node, source, ladder,
-                    settings, diagnostics, depth, path, display, counters,
-                    marker):
+def _read_container(address, value_node, key_node, context, depth, path,
+                    display, counters, marker):
 
     def report(message, at=key_node):
-        diagnostics.error(message, node=at, filename=source.filename,
-                          path=display)
+        context.error(message, at, display)
 
     if marker is not None:
         report(f'{address.puretag} is a container, and a marker adds elements '
                f'rather than levels. Move it out of {marker}.')
         return None
 
-    if not _check_ladder(address, depth, ladder, value_node, report):
+    if not _check_ladder(address, depth, context.ladder, value_node, report):
         return None
 
     numbered = _next_id(address, counters)
     children = [] if is_null(value_node) else _read_sequence(
-        value_node, source, ladder, settings, diagnostics, depth + 1,
-        path + (numbered,), display,
+        value_node, context, depth + 1, path + (numbered,), display,
         # A fresh counter map: numbering is scoped to the parent path, so
         # section:a and section:c each count their own subsection:b.
         counters={}, marker=None)
@@ -291,18 +299,18 @@ def _read_container(address, node, value_node, key_node, source, ladder,
     return Container(numbered, key_node, path, children, marker)
 
 
-def _read_fill(address, node, value_node, key_node, source, settings,
-               diagnostics, path, parent_display, display, counters, marker):
+def _read_fill(address, value_node, key_node, context, path, parent_display,
+               display, counters, marker):
     if not path:
-        diagnostics.error(
+        context.error(
             f'{address.puretag} is a fill and needs a container around it. '
             f'{CONTENT_KEY} holds the elements of the document; a value goes '
-            'inside one of them.',
-            node=key_node, filename=source.filename, path=parent_display)
+            'inside one of them.', key_node, parent_display)
         return None
 
-    value, actions = fills.read(value_node, fills.selector_for(address), source,
-                                settings, diagnostics, display)
+    value, actions = fills.read(value_node, fills.selector_for(address),
+                                context.source, context.settings,
+                                context.diagnostics, display)
     if value is None:
         # Whatever was wrong is already reported. Dropping the entry keeps the
         # rest of the walk reporting on the document rather than on the hole.
@@ -310,6 +318,122 @@ def _read_fill(address, node, value_node, key_node, source, settings,
 
     return Fill(_next_id(address, counters), key_node, path, value_node, value,
                 actions, marker)
+
+
+# ------------------------------------------------------------- includes
+
+#: How deep an include may nest. A cap catches a fan-out that is not a cycle
+#: but is still a mistake; the number is the one the text format used.
+MAX_INCLUDE_DEPTH = 10
+
+
+def _read_include(value_node, key_node, context, depth, path, display,
+                  counters, marker):
+    """Splice a fragment's entries here. Returns a list, possibly empty.
+
+    **Position places the content.** The fragment is read where the entry sits,
+    with this walk's depth, path, counters and marker -- which is the whole of
+    "a fragment is relative to its inclusion point". It has no absolute form to
+    jump with, so it lands where it was asked for and nowhere else.
+
+    That is the largest behavioural change from ``&include``. Today a fragment
+    can restate any absolute path: ``rdf_big_tool01.rdf`` opens
+    ``section:tool.subsection:tool`` and ``rdf_big_preparation01sub.rdf`` opens
+    a ``subsubsection:`` three levels below the file that included it. Under
+    nesting they carry only their own level and the caller decides where it
+    attaches -- which is what makes a fragment reusable in more than one place,
+    the stated purpose of includes.
+
+    Sharing ``counters`` is what makes including one fragment twice work: the
+    second copy continues the numbering, so its elements are distinct
+    instances rather than duplicates of the first.
+    """
+    if is_sequence(value_node) or is_mapping(value_node):
+        context.error(
+            f'{INCLUDE_KEY} takes one path or glob, not {describe(value_node)}',
+            value_node, display)
+        return None
+
+    pattern = context.source.value(value_node)
+    if not isinstance(pattern, str) or not pattern.strip():
+        context.error(f'{INCLUDE_KEY} needs a path or glob to include',
+                      value_node, display)
+        return None
+    pattern = pattern.strip()
+
+    if context.include_depth >= MAX_INCLUDE_DEPTH:
+        context.error(
+            f'includes nest more than {MAX_INCLUDE_DEPTH} deep, which is a '
+            'mistake rather than a structure', value_node, display)
+        return None
+
+    filenames = _resolve(pattern, context, value_node, display)
+    if not filenames:
+        return None
+
+    spliced = []
+    for filename in filenames:
+        spliced.extend(
+            _read_one_include(filename, pattern, context, value_node, depth,
+                              path, display, counters, marker))
+    return spliced
+
+
+def _resolve(pattern, context, node, display):
+    """Filenames for *pattern*, sorted. Reports and returns ``[]`` on failure.
+
+    Relative to **the directory of the file doing the including**, so a set of
+    fragments moves as a unit and a document does not depend on where the
+    process happens to be running. ``&include`` resolved against the working
+    directory, which made a report's meaning depend on how it was launched.
+    """
+    base = os.path.dirname(_absolute(context.source.filename))
+    joined = pattern if os.path.isabs(pattern) else os.path.join(base, pattern)
+
+    if any(character in pattern for character in '*?['):
+        # Sorted, because glob returns filesystem order, which Python does not
+        # guarantee -- and because order defines instance identity, the same
+        # inputs could otherwise produce different addresses on different
+        # machines, with nothing reporting it.
+        matches = sorted(glob.glob(joined))
+        if not matches:
+            context.error(f'{pattern!r} matched no files', node, display)
+            return []
+        return matches
+
+    if not os.path.exists(joined):
+        context.error(f'cannot find {pattern!r}', node, display)
+        return []
+    return [joined]
+
+
+def _read_one_include(filename, pattern, context, node, depth, path, display,
+                      counters, marker):
+    absolute = _absolute(filename)
+
+    if absolute in context.open_files:
+        # A *stack*, not a set of everything seen: a file is a cycle only while
+        # it is still open. Including one fragment twice as siblings is the
+        # reuse the format exists for, and the text format's shared visited set
+        # refused it -- the second include reported a cycle that was not one.
+        context.error(f'{pattern!r} includes itself: {absolute}', node, display)
+        return []
+
+    source = YamlSource.from_path(filename, context.diagnostics)
+    if source is None:
+        return []
+
+    fragment = read_fragment(source, context.diagnostics)
+    if fragment is None:
+        return []
+
+    inner = context.within(source, absolute)
+    return _read_sequence(fragment, inner, depth, path, display, counters,
+                          marker)
+
+
+def _absolute(filename):
+    return os.path.normcase(os.path.abspath(filename))
 
 
 # -------------------------------------------------------------- the rules
@@ -416,6 +540,6 @@ def walk(entries):
 
 
 __all__ = [
-    'Entry', 'Container', 'Marker', 'Fill', 'Include',
-    'read_content', 'read_global', 'walk', 'Address',
+    'Entry', 'Container', 'Marker', 'Fill',
+    'read_content', 'read_global', 'walk', 'Address', 'MAX_INCLUDE_DEPTH',
 ]

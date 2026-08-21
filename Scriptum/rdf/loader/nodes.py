@@ -180,7 +180,13 @@ def items(node, source, diagnostics, path=()):
     for key_node, value_node in pairs(node):
         key = source.value(key_node) if is_scalar(key_node) else None
         if key is None or not isinstance(key, str):
-            diagnostics.error('a key must be plain text',
+            # An all-digit key is the common case and the confusing one: YAML
+            # types it as a number, so it never reaches the rule that would
+            # have explained itself. Say what to do about it here.
+            written = key_node.value if is_scalar(key_node) else None
+            hint = f' Quote it if you meant the text {written!r}.' if written \
+                else ''
+            diagnostics.error(f'a key must be plain text.{hint}',
                               node=key_node, filename=source.filename, path=path)
             continue
         if key in seen:
