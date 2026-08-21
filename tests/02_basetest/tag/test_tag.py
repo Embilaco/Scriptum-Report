@@ -153,3 +153,81 @@ def test_an_argument_without_a_value_is_kept_as_none():
     tag = createTag('subsection:instruction breakbefore')
 
     assert tag.args == {'breakbefore': None}
+
+
+# ------------------------------------------------- instances and addresses
+
+def test_a_tag_with_no_id_is_instance_one():
+    """What lets a pristine template be read without editing it: every block
+    in one is the first of its kind."""
+    assert createTag('head').instance == 1
+    assert createTag('subsection:instruction template').instance == 1
+
+
+def test_the_id_argument_is_the_instance():
+    assert createTag('head id=2').instance == 2
+    assert createTag('image:generic id=7').instance == 7
+
+
+def test_a_mistyped_id_reads_as_one_rather_than_raising():
+    """This is a document somebody typed into Word. A wrong number should not
+    stop the run before the diagnostics that would explain it."""
+    assert createTag('head id=two').instance == 1
+    assert createTag('head id').instance == 1
+
+
+@pytest.mark.parametrize('written, canonical', [
+    ('head', ':head::1'),
+    ('head id=2', ':head::2'),
+    ('subsection:instruction', 'subsection:instruction::1'),
+    ('table:default:description', 'table:default:description:1'),
+    ('subsection:instruction template breakbefore', 'subsection:instruction::1'),
+])
+def test_the_canonical_address_of_a_tag(written, canonical):
+    assert createTag(written).canonical == canonical
+
+
+def test_a_single_segment_tag_leaves_the_namespace_slot_empty():
+    """``<head/>`` sets namespace and name to the same word, which duplicates
+    the value and makes "is there a namespace?" unanswerable. The slots keep
+    them apart, so it is ``:head::1`` and never ``head:head::1``."""
+    tag = createTag('head')
+
+    assert (tag.ns, tag.name) == ('head', 'head')
+    assert tag.canonical.startswith(':head:')
+
+
+def test_setting_an_instance_leaves_the_puretag_alone():
+    """The whole point of the id being an argument.
+
+    ``global`` matches on ``puretag``, so renaming a clone made every clone
+    invisible to it. An argument leaves the name where the template wrote it.
+    """
+    tag = createTag('subsection:instruction template breakbefore')
+
+    tag.setInstance(3)
+
+    assert tag.puretag == 'subsection:instruction'
+    assert tag.canonical == 'subsection:instruction::3'
+    assert 'id=3' in tag.tagtext
+    assert 'breakbefore' in tag.tagtext, 'other arguments survive'
+
+
+def test_a_numbered_tag_rescans_to_the_same_address():
+    """The rewritten text goes back into the document and is scanned again, so
+    the round trip has to hold."""
+    tag = createTag('subsection:instruction template')
+    tag.setInstance(4)
+
+    rescanned = getTag(f'<{tag.tagtext}>')[0]
+
+    assert rescanned.canonical == 'subsection:instruction::4'
+    assert rescanned.instance == 4
+
+
+def test_renumbering_replaces_the_id_rather_than_appending_one():
+    tag = createTag('head id=2')
+    tag.setInstance(5)
+
+    assert tag.tagtext.count('id=') == 1
+    assert tag.canonical == ':head::5'

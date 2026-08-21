@@ -152,7 +152,42 @@ def test_a_container_task_carries_itself_in_its_address():
     copy = [t for t in tasks if not t.target][-1]
     assert copy.myAddress == ['section:a::1', 'subsection:b::1']
     assert copy.myAddress[:-1] == ['section:a::1']
-    assert copy.path == copy.myAddress
+
+
+def test_path_is_the_template_address_and_myaddress_the_instance():
+    """The split the text format already had, and the reason a copy could find
+    its blueprint at all: it set ``path`` from the *un-renamed* current root
+    while ``myAddress`` carried the ``_cNNN`` name.
+
+    ``findTemplate`` looks up ``path``; the addressbook is keyed on
+    ``myAddress``. Collapsing the two would leave a clone unable to say what it
+    is a clone *of*.
+    """
+    tasks = tasks_of("""
+        _content_:
+          - section:a:
+              - subsection:b:
+                  - head: one
+              - subsection:b:
+                  - head: two
+    """)
+
+    clone = [t for t in tasks if t.what == 'copy'][0]
+    assert clone.path == ['section:a', 'subsection:b']
+    assert clone.myAddress == ['section:a::1', 'subsection:b::2']
+
+
+def test_a_fills_path_is_its_ancestors_as_template_names():
+    tasks = tasks_of("""
+        _content_:
+          - section:a:
+              - subsection:b:
+                  - head: x
+    """)
+
+    fill = [t for t in tasks if t.target][0]
+    assert fill.path == ['section:a', 'subsection:b']
+    assert fill.myAddress == ['section:a::1', 'subsection:b::1', ':head::1']
 
 
 def test_a_structural_task_carries_a_newsection_value():

@@ -98,25 +98,34 @@ def _container_task(entry, always_copy):
     ``[-1]`` the element being applied or created -- which is what the docx
     side reads when it looks for somewhere to put a copy.
     """
-    address = list(entry.canonical_path) + [entry.address.canonical]
     what = 'copy' if (always_copy or entry.address.id != 1) else 'apply'
 
     return ReportTask.from_parts(
-        myAddress=address,
-        # The text format set path to the current root, which included the
-        # element being opened. Kept, because the back ends index on it.
-        path=address,
+        myAddress=list(entry.canonical_path) + [entry.address.canonical],
+        # `path` is the **template** address and `myAddress` the **instance**
+        # one -- which is the split the text format already had, and the reason
+        # a copy could find its blueprint at all: it set `path` from the
+        # un-renamed current root while `myAddress` carried the _cNNN name.
+        # `findTemplate` looks up `path`; the addressbook is keyed on
+        # `myAddress`.
+        path=_template_path(entry),
         target='',
         value=Value.from_parts('newsection', '', tostring=False),
         what=what,
     )
 
 
+def _template_path(entry):
+    """Ancestors and self as template names -- no instance numbers."""
+    return [address.puretag for address in entry.path] + [entry.address.puretag]
+
+
 def _fill_task(entry):
     """A value for one target, or an add when the fill sits in a marker."""
     return ReportTask.from_parts(
         myAddress=list(entry.canonical_path) + [entry.address.canonical],
-        path=list(entry.canonical_path),
+        # Ancestors as template names, matching the text format's `root`.
+        path=[address.puretag for address in entry.path],
         # The template name, not the instance: this is the tag to look for.
         target=entry.address.puretag,
         value=entry.value,
