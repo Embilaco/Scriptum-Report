@@ -111,6 +111,30 @@ class StructuredElement:
             self.isTemplate = True
         #print(tag.args,path,self.isTemplate)
 
+    def claimSubAnchor(self, firstElement):
+        """Mark a child structure as taken, and everything ahead of it too.
+
+        ``subAnchors`` holds the opening paragraph of each ladder-type child in
+        document order, and a clone is inserted before the first one still in
+        the list. Removing **only** the claimed child left any *earlier*
+        blueprint the document never used sitting at the front -- so the next
+        clone went in before it, upstream of the very block it was meant to
+        follow. The unused blueprint is pruned later, by which time the clone is
+        already in the wrong place.
+
+        Reproduced on two of the shipped templates; see *A clone can land above
+        the instance it follows* on the DOCX board.
+
+        Anything at or before the claimed child cannot be a valid insertion
+        point for content that comes after it, so all of it goes. A child that
+        is no longer listed is not an error: a document may use blocks in an
+        order the template does not hold them in, and the first such use
+        already dropped the ones ahead of it.
+        """
+        if firstElement not in self.subAnchors:
+            return
+        self.subAnchors = self.subAnchors[self.subAnchors.index(firstElement) + 1:]
+
     def explore(self):
 
         substructure = []

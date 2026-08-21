@@ -195,16 +195,22 @@ class ManagedDocx:
                         # this happens always befor we do 'copy' a new section below!
                         parent = root.addressbook.get('.'.join(t.myAddress[:-1]),None)
                         if not parent:
-                            print('\naddress is', t.myAddress)
-                            print('t is',t)
-                            print('parent is',parent)
-                            print('addressbook\n', root.addressbook)
-                        
-                        #print('remove one anchor from', parent)
+                            print(f'WARNING: No such parent structure: '
+                                  f'{(".".join(t.myAddress[:-1]))}')
+                            continue
+
                         struct = parent.findExact(t.myAddress)
+                        if not struct:
+                            print(f'WARNING: Nothing to apply at '
+                                  f'{(".".join(t.myAddress))}')
+                            continue
+
+                        # Claims this child *and everything ahead of it*, so a
+                        # later clone cannot be inserted upstream of the block
+                        # it follows -- see StructuredElement.claimSubAnchor.
                         firstElement = struct[0][1].structure[0][1]
-                        parent.subAnchors.remove(firstElement)
-                        
+                        parent.claimSubAnchor(firstElement)
+
                         continue
 
                     if t.what == 'add':
