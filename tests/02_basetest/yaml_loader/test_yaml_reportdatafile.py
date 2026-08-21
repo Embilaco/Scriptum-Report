@@ -80,7 +80,6 @@ def test_an_rdf_still_goes_down_the_text_path(tmp_path):
     rdf = ReportDataFile(document)
 
     assert not rdf.errors
-    assert rdf.logs, 'the text reader mirrors the assembled file into logs'
     assert not any('::' in a for t in rdf.tasks for a in t.myAddress)
 
 
@@ -112,13 +111,17 @@ def test_a_missing_file_is_reported_rather_than_silently_empty(tmp_path):
     assert 'cannot read' in str(caught.value)
 
 
-def test_logs_are_empty_for_a_yaml_document(tmp_path):
-    """``logs`` mirrors an assembled *text* file line by line. A YAML document
-    has no such assembly -- an include is spliced into a tree rather than
-    pasted into a stream -- so there is nothing to mirror."""
+def test_neither_reader_keeps_a_log(tmp_path):
+    """``logs`` mirrored an assembled *text* file line by line, for debugging.
+
+    A YAML document has no such assembly -- an include is spliced into a tree
+    rather than pasted into a stream -- and the loader's diagnostics say more
+    than the mirror ever did: file, line, column and the path through the
+    document. Nothing outside the parser ever read it.
+    """
     document = write(tmp_path, 'report.yaml', DOCUMENT)
 
-    assert ReportDataFile(document).logs == []
+    assert not hasattr(ReportDataFile(document), 'logs')
 
 
 def test_the_translated_corpus_loads_through_the_facade(tmp_path):
@@ -134,3 +137,27 @@ def test_the_translated_corpus_loads_through_the_facade(tmp_path):
     assert not rdf.errors
     assert len(rdf.tasks) > 50
     assert rdf.tasks[-1].path == ['_global_']
+
+
+def test_an_unknown_setting_is_an_error_in_the_text_format_too(tmp_path):
+    """The consequence of dropping the log, and the right one.
+
+    An unrecognised ``*key`` used to be written to the log as an ignored entry
+    while the parse carried on -- the tolerance that hid ``*timeformat`` for
+    years. With no log that ignore would be completely silent, so it is now an
+    error naming what is known, which is what the YAML schema already did.
+    """
+    document = write(tmp_path, 'report.rdf', """
+        *version=3
+        *documenttype=docx
+        *timeformat='%H:%M'
+        section:a
+        .head='Title'
+    """)
+
+    with pytest.raises(Exception) as caught:
+        ReportDataFile(document)
+
+    report = str(caught.value)
+    assert 'Unknown setting *timeformat' in report
+    assert 'documenttitle' in report, 'the message lists what is known'

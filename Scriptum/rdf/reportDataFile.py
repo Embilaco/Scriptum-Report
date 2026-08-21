@@ -19,7 +19,7 @@ from .namespaces import SECTION_NAMESPACES
 from .common import removeQuotes, getCorrectFile, is_test_debug
 from .settings import SETTINGS
 from .values import Value
-from .tasks import LogTask, ReportTask
+from .tasks import ReportTask
 
 _test_debug = is_test_debug()
 
@@ -32,9 +32,7 @@ class ReportDataFile:
                  _root=['___init___'], _mark='', _settings=None,
                  _visited=None):
         """open and read the data and all the subdatas from other files as well
-        and create
-        - ReportTasks inside self.tasks
-        - LogTasks inside self.logs for debugging and other purposes
+        and create ReportTasks inside self.tasks.
 
         A ``.yaml`` document is read by :mod:`Scriptum.rdf.loader` instead; see
         :meth:`_readYaml`. Everything below is the text format, which the YAML
@@ -42,7 +40,6 @@ class ReportDataFile:
         """
 
         self.errors = []
-        self.logs = []
         self.tasks = []
         self.root=None
 
@@ -85,11 +82,6 @@ class ReportDataFile:
         self._currentmark = _mark
         self.namespace = {'order': [], 'mandatory': True, 'names': {}}
 
-        if not self._testmode_:
-            self.logs += [
-                LogTask(f'start file {os.path.normpath(self.source)!r}', comment=True)
-            ]
-
         if _root == ['___init___']:
             # the very first open: define settings
             self.settings = SETTINGS()
@@ -112,8 +104,7 @@ class ReportDataFile:
             # i is used to report line numbers in case or errors
             line=line.strip()
             if not line or line.startswith('#'):
-                # skip comments and empty lines, but log as is
-                self.logs += [line]
+                # skip comments and empty lines
                 continue
             
             firstchar = line[0].lower()
@@ -169,9 +160,8 @@ class ReportDataFile:
             ###################################################################
             # MAIN DATA SCAN
             elif firstchar.isalpha() or firstchar in '.@+&*':
-                task, log, error = self.extractWork(firstchar, line, i)
+                task, error = self.extractWork(firstchar, line, i)
                 self.tasks += task
-                self.logs += log
                 self.errors += error
                 
             else:
@@ -191,21 +181,12 @@ class ReportDataFile:
             # we cannot work with invalid rdf-files
             raise Exception('\n'.join(self.errors))
             
-        if not self._testmode_:
-            self.logs += [
-                LogTask(f'end file {os.path.normpath(self.source)!r}', comment=True)
-            ]
-        #print(self.logs[-3:])
         
     def _readYaml(self, filename, debug):
         """Read a YAML report document through :mod:`Scriptum.rdf.loader`.
 
         The public surface a back end uses is ``tasks``, ``settings`` and
         ``errors``, and all three are filled the same way they are for a
-        ``.rdf``. What is *not* filled is ``logs``: it mirrors an assembled
-        text file line by line, and a YAML document has no such assembly --
-        an include is spliced into a tree rather than pasted into a stream.
-
         ``errors`` is populated *and* the exception re-raised, so a caller can
         read the whole set either way. It carries every diagnostic rather than
         the first, which is the same all-or-nothing rule the text reader has at
@@ -234,7 +215,6 @@ class ReportDataFile:
 
     def extractWork(self, firstchar, line, i):
         tasks = []
-        logs = []
         errors = []
 
         # "key=value" is supported
@@ -282,7 +262,6 @@ class ReportDataFile:
                     else:
                         tasks += [ReportTask(root=self._currentroot, line='=newsection:', what='copy', ifrequired=True)]
 
-            logs += [LogTask(line)]
         
         ###################################################################
         # . indicates usually a task, maybe a longer root
@@ -304,7 +283,6 @@ class ReportDataFile:
                 self.updateRoot(i,line)
                 tasks += [ReportTask(root=self._currentroot,line='=newsection:', what='copy')]
 
-            logs += [LogTask(line)]
         
         ###################################################################
         # @ means: do something at this marker, like add new content '+' (see next)
@@ -312,14 +290,12 @@ class ReportDataFile:
         elif firstchar == '@':
             # set currentmark
             self._currentmark = line[1:].lower()
-            logs += [LogTask(line)]
     
         ###################################################################
         elif firstchar == '+':
             # use currentmark    
             tasks += self.taskSplitter(root=self._currentroot, line=line[1:], 
                                        what='add', where=self._currentmark)
-            logs += [LogTask(line)]
         
         ###################################################################
         elif firstchar == '&':
@@ -350,13 +326,7 @@ class ReportDataFile:
                             #print(self._currentroot)
                             ReportDataFile._depth -= 1
                             tasks += newRdf.tasks
-                            logs += newRdf.logs
                             errors += newRdf.errors
-                            # after return we need to reset currentpath and currenmark for the log!
-                            logs += [LogTask('# reset root and mark when we come back from included files')]
-                            logs += [LogTask('.'.join(self._currentroot))]
-                            if self._currentmark:
-                                logs += [LogTask('@'+self._currentmark)]
                     else:
                         errors += [f'&include fails to find file {incfile!r}']
                 elif toinclude.lower().startswith('loopfiles'):
@@ -380,13 +350,7 @@ class ReportDataFile:
                                                 _visited=self._visited)
                         ReportDataFile._depth -= 1
                         tasks += newRdf.tasks
-                        logs += newRdf.logs
                         errors += newRdf.errors
-                        # after return we need to reset currentpath and currenmark for the log!
-                        logs += [LogTask('# reset root and mark when we come back from included files')]
-                        logs += [LogTask('.'.join(self._currentroot))]
-                        if self._currentmark:
-                            logs += [LogTask('@'+self._currentmark)]
                     
             else:
                 errors += [f'Meaning of line {i+1} in file {self.source!r} not defined']
@@ -408,18 +372,16 @@ class ReportDataFile:
                     errors += [
                         f'Cannot read rdf version lower than {MIN_REQUIRED_VERSION}, see line {i+1} in file {self.source!r}'
                     ]
-                    return [],[],errors
+                    return [], errors
                 if self.settings.version == 0:
                     # set only once
                     self.settings.version = int(value)
-                    logs += [LogTask(line)]
             elif key == 'documenttype':
                 value = value.lower()
                 if not self.settings.documenttype:
                     if value in SECTION_NAMESPACES:
                         self.settings.documenttype = value
                         self.namespace = SECTION_NAMESPACES[value]
-                        logs += [LogTask(line)]
                     else:
                         errors += [
                             f'No idea how to define *documenttype which is {value!r}'
@@ -430,7 +392,6 @@ class ReportDataFile:
                 #print('PATH', os.getcwd(), value)
                 if value.exists():
                     self.settings.datadir = value
-                    logs += [LogTask(line)]
                 else:
                     errors += [
                         f'Non existing *datadir {value!r} defined in {self.source!r}'
@@ -439,12 +400,19 @@ class ReportDataFile:
                 if key.startswith('date') or key == 'documenttitle':
                     value = removeQuotes(value.strip())
                 self.settings.__setattr__(key,value)
-                logs += [LogTask(line)]
             else:
-                logs += [LogTask('Ignored entry: '+line, comment=True)]
+                # Was written to the log as an ignored entry and the parse
+                # carried on -- the tolerance that hid *timeformat for years.
+                # With the log gone that ignore would be completely silent, so
+                # it says so instead, as the YAML schema already does.
+                known = ', '.join(sorted(SETTINGS.allowed + ['documenttype']))
+                errors += [
+                    f'Unknown setting *{key} at line {i+1} of file '
+                    f'{self.source!r}. Known: {known}'
+                ]
 
         ###################################################################
-        return tasks, logs, errors
+        return tasks, errors
 
     def updateRoot(self, i, line):
         """check and update whether line can be a root and is within the valid namespace
@@ -557,9 +525,6 @@ class ReportDataFile:
                 else:
                     r += [f'# *{k}={self.settings.__getattribute__(k)}']
         
-        for t in self.logs:
-            r += [str(t)]
-
         return '\n'.join(r)
 
     def inspect(self):

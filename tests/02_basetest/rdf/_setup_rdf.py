@@ -26,15 +26,6 @@ THIS_DIR = Path(__file__).resolve().parent
 import Scriptum.rdf.reportDataFile as rdf_module # pyright: ignore[reportMissingImports]
 from Scriptum.rdf.settings import SETTINGS # pyright: ignore[reportMissingImports]
 
-# Replace logging with a stub to avoid issues during tests
-class DummyLog:
-    def __init__(self, task, comment=False):
-        self.fullLine = str(task)
-    def __repr__(self):
-        return self.fullLine
-
-rdf_module.LogTask = DummyLog
-
 rdf_module._test_debug = True
 
 def parse_with_root(path: Path):
