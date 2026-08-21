@@ -8,6 +8,12 @@ from pathlib import Path
 
 MIN_REQUIRED_VERSION = 3
 
+#: Extensions read as YAML. The code keeps its names -- this is still the
+#: report data file -- but the extension changes, because it is the one name
+#: tools read: highlighting, folding and validation all key off it, and for a
+#: format whose structure is carried by indentation that is not cosmetic.
+YAML_SUFFIXES = ('.yaml', '.yml')
+
 from .namespaces import SECTION_NAMESPACES
 
 from .common import removeQuotes, getCorrectFile, is_test_debug
@@ -26,15 +32,26 @@ class ReportDataFile:
                  _root=['___init___'], _mark='', _settings=None,
                  _visited=None):
         """open and read the data and all the subdatas from other files as well
-        and create 
+        and create
         - ReportTasks inside self.tasks
         - LogTasks inside self.logs for debugging and other purposes
+
+        A ``.yaml`` document is read by :mod:`Scriptum.rdf.loader` instead; see
+        :meth:`_readYaml`. Everything below is the text format, which the YAML
+        one supersedes.
         """
 
         self.errors = []
         self.logs = []
         self.tasks = []
         self.root=None
+
+        # Only a root open can be YAML: the parameters below carry an *rdf*
+        # include's inherited context, and a YAML include is spliced by the
+        # loader without coming back through here.
+        if _root == ['___init___'] and str(filename).lower().endswith(YAML_SUFFIXES):
+            self._readYaml(filename, debug)
+            return
 
         if _visited is None:
             _visited = set()
@@ -180,6 +197,41 @@ class ReportDataFile:
             ]
         #print(self.logs[-3:])
         
+    def _readYaml(self, filename, debug):
+        """Read a YAML report document through :mod:`Scriptum.rdf.loader`.
+
+        The public surface a back end uses is ``tasks``, ``settings`` and
+        ``errors``, and all three are filled the same way they are for a
+        ``.rdf``. What is *not* filled is ``logs``: it mirrors an assembled
+        text file line by line, and a YAML document has no such assembly --
+        an include is spliced into a tree rather than pasted into a stream.
+
+        ``errors`` is populated *and* the exception re-raised, so a caller can
+        read the whole set either way. It carries every diagnostic rather than
+        the first, which is the same all-or-nothing rule the text reader has at
+        the root.
+        """
+        from .loader import DocumentError, load
+
+        self.source = os.path.abspath(filename)
+        self.root = True
+        ReportTask.set_debug(debug)
+
+        # The same process-global reset a root open does below. One root
+        # document per interpreter is the standing rule either way.
+        ReportTask._allPaths = {}
+        ReportTask._newPaths = {}
+        ReportDataFile._global_settings = {}
+
+        try:
+            document = load(filename)
+        except DocumentError as error:
+            self.errors = [str(entry) for entry in error.diagnostics]
+            raise
+
+        self.tasks = document.tasks
+        self.settings = document.settings
+
     def extractWork(self, firstchar, line, i):
         tasks = []
         logs = []
