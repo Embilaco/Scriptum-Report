@@ -1,38 +1,43 @@
-"""Generate the same report from its ``.rdf`` and its ``.yaml`` and compare.
+"""What each fixture's ``.yaml`` generates, against what its ``.rdf`` did.
 
-This is the safety net for the last piece of the migration, and it exists
-because of what the DOCX board now warns about placement: a mistake there
-produces a document that is **plausible and wrong** rather than one that fails.
-The clone-ordering defect fixed in `b1a4afd` lived in shipped code for years
-with a green suite, because every case test asserts only that a file was
-written and is not empty.
+This is the safety net for the last piece of the migration. Every docx case
+test asserts only that a file was written and is not empty, which is how the
+clone-ordering defect fixed in `b1a4afd` lived in shipped code for years with a
+green suite. This reads the finished documents back instead.
 
-So this reads the finished documents back. If the corpus translation is
-faithful and the back end resolves the new addresses, the two documents say the
-same things in the same order.
+Why a stored reference rather than a live comparison
+----------------------------------------------------
+It began by generating both sides in one run. That stopped working the moment
+``StructuredElement.path`` became canonical: the text parser emits
+``section:title`` where the tree now says ``section:title::1``, so the *old*
+side degrades and there is nothing left to compare against.
+
+So the reference is captured instead. ``expected/*.json`` is what each ``.rdf``
+generated at `44267a8`, the last commit before the tree changed. That decouples
+the check from a parser which is on its way out -- when the text format goes,
+these keep working.
 
 What is compared
 ----------------
 The sequence of non-empty paragraph texts, then every table cell, with runs of
 digits collapsed to ``#``. The collapsing is for dates: a fixture using
-``date:now`` is evaluated once per generation, and the two runs can straddle a
-second. Everything the comparison is actually for -- a paragraph missing, an
+``date:now`` is evaluated when the document is built, and the reference was
+built on another day. What the comparison exists for -- a paragraph missing, an
 extra one, two in the wrong order -- survives it.
 
 One trap this had to avoid
 --------------------------
-Both readers keep **process-global state**, and one root document per
-interpreter is the standing rule. Generating twice in one test breaks it unless
-the state is reset in between, and a previous session was misled by exactly
-that. :func:`reset` does it explicitly rather than relying on the suite's
-autouse fixture, because the reset has to happen *between* the two generations
-and not merely around the test.
+The reader keeps **process-global state** and one root document per interpreter
+is the standing rule, so :func:`reset` clears it before each generation rather
+than relying on the suite's autouse fixture. A previous session was misled by
+exactly that.
 """
 
 from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import re
 import shutil
@@ -47,10 +52,11 @@ from Scriptum.rdf.reportDataFile import ReportDataFile
 from Scriptum.rdf.tasks import ReportTask
 
 TESTS_ROOT = Path(__file__).resolve().parents[2]
+EXPECTED = Path(__file__).resolve().parent / 'expected'
 DIGITS = re.compile(r'\d+')
 
 #: (case directory relative to tests/, fixture stem, template file)
-DOCX_CASES = [
+CASES = [
     ('02_basetest/docx_basic/simple', 'word_simple', 'template.docx'),
     ('02_basetest/docx_basic/images', 'word_images', 'template_image.docx'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'template_table.docx'),
@@ -59,17 +65,16 @@ DOCX_CASES = [
     ('04_examples/essay', 'essay', 'essay.docx'),
 ]
 
-#: Why the YAML side does not match yet. Removing this and the xfail marker is
-#: the last step of the migration.
+#: Why none of them match yet. Removing this and the marker is the last step.
 NOT_WIRED = (
     'StructuredElement.path and the addressbook are keyed on template names, '
-    'so a task carrying the four-slot form finds nothing: the run reports '
-    '"cannot find section: section:x::1" and fills nothing'
+    'so a task carrying the four-slot form finds nothing and the run fills '
+    'nothing, saying "cannot find section: section:x::1"'
 )
 
 
 def reset():
-    """Clear the process-global state both readers keep between two runs."""
+    """Clear the process-global state the reader keeps between generations."""
     ReportTask._serial = 0
     ReportTask._tree = {}
     ReportTask._allPaths = {}
@@ -83,7 +88,7 @@ def prepare(case):
     work = Path(tempfile.mkdtemp())
     source = TESTS_ROOT / case
 
-    for pattern in ('*.rdf', '*.yaml', '*.docx'):
+    for pattern in ('*.yaml', '*.docx'):
         for path in source.glob(pattern):
             shutil.copy(path, work)
 
@@ -93,7 +98,7 @@ def prepare(case):
     return work
 
 
-def generate(work, document_name, template, output):
+def generate(work, document_name, template, output='out.docx'):
     """Build one document. Returns what the run printed, for diagnosis."""
     os.chdir(work)
     reset()
@@ -115,75 +120,77 @@ def spoken(path):
     return [DIGITS.sub('#', line) for line in said if line]
 
 
-def difference(left, right):
-    """A readable account of the first place the two documents diverge."""
-    for index, (a, b) in enumerate(zip(left, right)):
+def reference(stem):
+    return json.loads((EXPECTED / f'{stem}.json').read_text(encoding='utf-8'))
+
+
+def difference(expected, got):
+    """A readable account of the first place the two diverge."""
+    for index, (a, b) in enumerate(zip(expected, got)):
         if a != b:
             return (f'first difference at line {index}:\n'
-                    f'  rdf : {a!r}\n'
-                    f'  yaml: {b!r}')
-    if len(left) != len(right):
-        longer, name = (left, 'rdf') if len(left) > len(right) else (right, 'yaml')
-        extra = longer[min(len(left), len(right)):][:5]
-        return f'{name} says {abs(len(left) - len(right))} more line(s): {extra}'
+                    f'  expected: {a[:120]!r}\n'
+                    f'  got     : {b[:120]!r}')
+    if len(expected) != len(got):
+        longer, name = ((expected, 'the reference') if len(expected) > len(got)
+                        else (got, 'this run'))
+        extra = longer[min(len(expected), len(got)):][:4]
+        return (f'{name} says {abs(len(expected) - len(got))} more line(s): '
+                f'{[line[:60] for line in extra]}')
     return 'no difference'
 
 
-# --------------------------------------------------------- the harness works
+def compare(case, stem, template):
+    work = prepare(case)
+    printed = generate(work, f'{stem}.yaml', template)
+    got = spoken(work / 'out.docx')
+    expected = reference(stem)
+    complaints = [line for line in printed.splitlines()
+                  if 'ERROR' in line or 'WARNING' in line]
+    return expected, got, complaints
 
-@pytest.mark.parametrize('case, stem, template', DOCX_CASES)
-def test_the_rdf_side_produces_a_document_that_says_something(case, stem, template):
-    """Without this, a broken harness would make every comparison below xfail
-    for the wrong reason and look like a known gap."""
+
+# ------------------------------------------------------- the harness works
+
+def test_every_case_has_a_reference():
+    """A missing reference would make a comparison vacuous."""
+    for case, stem, template in CASES:
+        assert (EXPECTED / f'{stem}.json').is_file(), stem
+        assert len(reference(stem)) > 3, stem
+
+
+def test_generating_the_same_document_twice_says_the_same_thing():
+    """Self-test of the comparison, including the digit collapsing: if this
+    fails the harness is measuring its own noise rather than the translation."""
+    case, stem, template = CASES[0]
     work = prepare(case)
 
-    generate(work, f'{stem}.rdf', template, 'out.docx')
-
-    assert len(spoken(work / 'out.docx')) > 3
-
-
-def test_comparing_a_document_with_itself_matches():
-    """Self-test of the comparison, including the digit collapsing: a document
-    generated twice from the same source must compare equal, or the harness is
-    measuring its own noise rather than the translation."""
-    case, stem, template = DOCX_CASES[0]
-    work = prepare(case)
-
-    generate(work, f'{stem}.rdf', template, 'once.docx')
-    generate(work, f'{stem}.rdf', template, 'twice.docx')
+    generate(work, f'{stem}.yaml', template, 'once.docx')
+    generate(work, f'{stem}.yaml', template, 'twice.docx')
 
     assert spoken(work / 'once.docx') == spoken(work / 'twice.docx')
 
 
-def test_the_comparison_notices_a_missing_line():
-    """And a self-test of the difference report itself."""
+def test_the_difference_report_notices_what_it_should():
     assert 'first difference at line 1' in difference(['a', 'b'], ['a', 'c'])
     assert 'more line(s)' in difference(['a', 'b'], ['a'])
     assert difference(['a'], ['a']) == 'no difference'
 
 
-# ------------------------------------------------------------ the comparison
+# ---------------------------------------------------------- the comparison
 
-@pytest.mark.parametrize('case, stem, template', DOCX_CASES)
+@pytest.mark.parametrize('case, stem, template', CASES)
 @pytest.mark.xfail(strict=True, reason=NOT_WIRED)
-def test_the_yaml_document_says_what_the_rdf_document_says(case, stem, template):
+def test_the_yaml_document_says_what_the_rdf_document_said(case, stem, template):
     """The last step of the migration makes these pass.
 
     ``strict=True`` on purpose: when the back end starts resolving the new
     addresses these begin passing, and a strict xfail turns that into a
-    failure -- which is the only reliable way for the change to announce
-    itself rather than being noticed months later.
+    failure -- the only reliable way for the change to announce itself
+    rather than being noticed months later.
     """
-    work = prepare(case)
+    expected, got, complaints = compare(case, stem, template)
 
-    generate(work, f'{stem}.rdf', template, 'from_rdf.docx')
-    printed = generate(work, f'{stem}.yaml', template, 'from_yaml.docx')
-
-    from_rdf = spoken(work / 'from_rdf.docx')
-    from_yaml = spoken(work / 'from_yaml.docx')
-
-    complaints = [line for line in printed.splitlines()
-                  if 'ERROR' in line or 'WARNING' in line]
-    assert from_rdf == from_yaml, (
-        f'{difference(from_rdf, from_yaml)}\n'
-        f'the yaml run said: {complaints[:3]}')
+    assert got == expected, (
+        difference(expected, got)
+        + chr(10) + 'the run said: ' + repr(complaints[:3]))
