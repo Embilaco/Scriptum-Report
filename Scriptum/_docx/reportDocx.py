@@ -80,6 +80,9 @@ class ManagedDocx:
         else:
             # this will return one and is used in each single task
             root = self.sections.byName(what[0])
+            if not root:
+                print(f'WARNING: cannot find section {what[0]!r}')
+                return
             parent = root.addressbook.get('.'.join(what[:-1]),None)
             if parent:
                 found = parent.findExact(what)
