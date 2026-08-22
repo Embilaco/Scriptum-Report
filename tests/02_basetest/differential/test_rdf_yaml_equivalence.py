@@ -51,6 +51,7 @@ import tempfile
 from pathlib import Path
 
 import docx
+import pptx
 import pytest
 
 import Scriptum
@@ -88,6 +89,20 @@ TEMPLATE_MISMATCH = (
     'the template needs the matching tag rename'
 )
 
+#: PowerPoint has not been through the wiring the docx side went through, so
+#: its references are captured and waiting rather than passing. Capturing them
+#: **first** is the point: they record what the text format produced while it
+#: still can, and the .rdf path is the only thing that can produce them.
+PPTX_PENDING = [
+    ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
+    ('04_examples/pptreport', 'powerpoint_input', 'template.pptx'),
+]
+
+PPTX_NOT_WIRED = (
+    'the pptx back end still resolves template names, not four-slot addresses; '
+    'the run produces a presentation but fills only part of it'
+)
+
 
 def reset():
     """Clear the process-global state the reader keeps between generations."""
@@ -106,7 +121,7 @@ def prepare(case):
 
     # Files only, so `expected/` stays where it is: the reference is what the
     # run is checked against, not an input to it.
-    for pattern in ('*.yaml', '*.docx'):
+    for pattern in ('*.yaml', '*.docx', '*.pptx'):
         for path in source.glob(pattern):
             shutil.copy(path, work)
 
@@ -116,26 +131,59 @@ def prepare(case):
     return work
 
 
-def generate(work, document_name, template, output='out.docx'):
-    """Build one document. Returns what the run printed, for diagnosis."""
+def generate(work, document_name, template, output=None):
+    """Build one document. Returns what the run printed, for diagnosis.
+
+    The two back ends are driven differently and always have been: Word
+    typesets a document that already exists, PowerPoint *assembles* one from
+    layouts and then drops the placeholder slide it started from. The steps
+    here mirror ``common_case.run_docx_case`` and ``run_pptx_case``.
+    """
+    powerpoint = template.endswith('.pptx')
+    output = output or ('out.pptx' if powerpoint else 'out.docx')
+
     os.chdir(work)
     reset()
     with contextlib.redirect_stdout(io.StringIO()) as printed:
         rdf = ReportDataFile(document_name)
-        managed = Scriptum.ManagedDocx(template, rdf)
-        managed.typesetting(rdf)
+        if powerpoint:
+            managed = Scriptum.ManagedPptx(template)
+            managed.artist(rdf, directfill=True, globalfill=True,
+                           cleardust=True, setproperties=True)
+            managed.remove_slide(0)
+        else:
+            managed = Scriptum.ManagedDocx(template, rdf)
+            managed.typesetting(rdf)
         managed.save(output)
     return printed.getvalue()
 
 
 def spoken(path):
     """What the finished document says, in order, dates neutralised."""
+    said = _slides(path) if str(path).endswith('.pptx') else _paragraphs(path)
+    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
+
+
+def _paragraphs(path):
     document = docx.Document(path)
     said = [p.text.strip() for p in document.paragraphs]
     for table in document.tables:
         for row in table.rows:
             said.extend(cell.text.strip() for cell in row.cells)
-    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
+    return said
+
+
+def _slides(path):
+    said = []
+    for slide in pptx.Presentation(path).slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for paragraph in shape.text_frame.paragraphs:
+                    said.append(''.join(run.text for run in paragraph.runs).strip())
+            if shape.has_table:
+                for row in shape.table.rows:
+                    said.extend(cell.text.strip() for cell in row.cells)
+    return said
 
 
 def reference_path(case, stem):
@@ -173,7 +221,7 @@ def difference(expected, got):
 def compare(case, stem, template):
     work = prepare(case)
     printed = generate(work, f'{stem}.yaml', template)
-    got = spoken(work / 'out.docx')
+    got = spoken(work / ('out.pptx' if template.endswith('.pptx') else 'out.docx'))
     expected = reference(case, stem)
     complaints = [line for line in printed.splitlines()
                   if 'ERROR' in line or 'WARNING' in line]
@@ -184,7 +232,7 @@ def compare(case, stem, template):
 
 def test_every_case_has_a_reference():
     """A missing reference would make a comparison vacuous."""
-    for case, stem, template in CASES + PENDING:
+    for case, stem, template in CASES + PENDING + PPTX_PENDING:
         assert reference_path(case, stem).is_file(), \
             f'{stem}: no reference at {reference_path(case, stem)}'
         assert len(reference(case, stem)) > 3, stem
@@ -198,7 +246,7 @@ def test_no_reference_is_left_behind():
     """
     on_disk = {path.resolve() for path in TESTS_ROOT.rglob('expected/*.json')}
     claimed = {reference_path(case, stem).resolve()
-               for case, stem, _ in CASES + PENDING}
+               for case, stem, _ in CASES + PENDING + PPTX_PENDING}
 
     assert on_disk == claimed, f'orphaned: {sorted(on_disk - claimed)}'
 
@@ -241,6 +289,25 @@ def test_the_yaml_document_says_what_the_rdf_document_said(case, stem, template)
 @pytest.mark.xfail(strict=True, reason=TEMPLATE_MISMATCH)
 def test_the_case_whose_template_disagrees_with_the_ladder(case, stem, template):
     """Strict, so that renaming the tag in the template announces itself."""
+    expected, got, complaints = compare(case, stem, template)
+
+    assert got == expected, (
+        difference(expected, got)
+        + chr(10) + 'the run said: ' + repr(complaints[:3]))
+
+
+@pytest.mark.parametrize('case, stem, template', PPTX_PENDING)
+@pytest.mark.xfail(strict=True, reason=PPTX_NOT_WIRED)
+def test_the_pptx_cases(case, stem, template):
+    """Captured before the pptx back end is touched, which is the whole point.
+
+    A reference is only worth having if it records the behaviour being
+    replaced, and only the text format can produce that. Wiring pptx first and
+    capturing afterwards would have recorded the new behaviour as its own
+    baseline -- a snapshot of whatever came out, agreeing with itself.
+
+    Strict, so that wiring pptx announces itself by failing here for passing.
+    """
     expected, got, complaints = compare(case, stem, template)
 
     assert got == expected, (
