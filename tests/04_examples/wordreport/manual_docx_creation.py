@@ -7,7 +7,7 @@
 #
 import Scriptum
 
-rdf = Scriptum.ReportDataFile('word_input.rdf')
+rdf = Scriptum.ReportDataFile('word_input.yaml')
 
 document = Scriptum.ManagedDocx('template.docx')
 document.typesetting(
