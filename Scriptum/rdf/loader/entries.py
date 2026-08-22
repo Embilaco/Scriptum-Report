@@ -266,13 +266,17 @@ def _read_marker(address, value_node, key_node, context, depth, path, display,
                'position; nesting a second inside it names no place at all.')
         return None
 
+    # A marker addresses **instance 1** of its tag: the template holds one,
+    # and two entries naming it mean the same place. It is numbered so it can
+    # be looked up like anything else -- what it does not do is *count*, so a
+    # second marker entry is still instance 1.
+    numbered = address.numbered(1)
+
     children = [] if is_null(value_node) else _read_sequence(
         value_node, context, depth, path, display, counters,
-        marker=address.puretag)
+        marker=numbered.canonical)
 
-    # No id: a marker is a reference to a position in the template, not an
-    # instance in the output, and two entries naming it mean the same place.
-    return Marker(address, key_node, path, children, marker)
+    return Marker(numbered, key_node, path, children, marker)
 
 
 def _read_container(address, value_node, key_node, context, depth, path,

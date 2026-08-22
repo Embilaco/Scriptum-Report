@@ -4,6 +4,11 @@ from ..values import Value
 
 count_string = '_c%03d'
 
+#: ``path[0]`` of a task that fills everywhere rather than at one address.
+#: A back end recognises a global task by this. It follows the document
+#: key so the two cannot drift apart.
+GLOBAL_ROOT = '_global_'
+
 
 class ReportTask:
     """A task is mostly one line in a rdf file with an instruction what to do."""

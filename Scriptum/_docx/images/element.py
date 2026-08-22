@@ -87,21 +87,9 @@ class DocImageBlockElement(StructuredElement):
             ]
 
         if newname:
-            if self.subtype == "structure":
-                obj = newElements[0]
-                tag = obj.tags[0]
-                obj.replaceTag(tag, f"<{newname}>")
-                tag.rewriteTag(newname)
-
-                obj = newElements[-1]
-                tag = obj.tags[-1]
-                obj.replaceTag(tag, f"</{newname}>")
-                tag.rewriteTag(newname)
-            else:
-                obj = newElements[0]
-                tag = obj.tags[0]
-                obj.replaceTag(tag, f"<{newname}/>")
-                tag.rewriteTag(newname)
+            from ..template import numberTag
+            numberTag(newElements[0], newElements[0].tags[0], newname,
+                      selfclosing=self.subtype != "structure")
 
         newUnfoldedElements = []
         for element in newElements:

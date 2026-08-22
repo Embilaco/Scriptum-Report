@@ -111,15 +111,8 @@ class DocTableBlockElement(StructuredElement):
                 ]
 
         if newname:
-            obj = newElements[0]
-            tag = obj.tags[0]
-            obj.replaceTag(tag, f"<{newname}>")
-            tag.rewriteTag(newname)
-
-            obj = newElements[-1]
-            tag = obj.tags[-1]
-            obj.replaceTag(tag, f"</{newname}>")
-            tag.rewriteTag(newname)
+            from ..template import numberTag
+            numberTag(newElements[0], newElements[0].tags[0], newname)
 
         newUnfoldedElements = []
         for element in newElements:

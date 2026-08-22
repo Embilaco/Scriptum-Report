@@ -133,7 +133,7 @@ def test_an_include_inside_a_marker_adds_at_that_marker(tmp_path):
     assert not diagnostics, diagnostics.report()
     added = tree[0].children[0].children[0].children[0]
     assert isinstance(added, Fill)
-    assert added.marker == 'marker:content'
+    assert added.marker == 'marker:content::1'
 
 
 def test_a_fragment_may_include_another(tmp_path):

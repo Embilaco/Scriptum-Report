@@ -23,7 +23,7 @@ from typing import Any, List, Tuple, Union, TYPE_CHECKING
 
 from .template import copy_table_before, copy_paragraph_before, add_page_break_before
 
-from ..tag.tag import Tag, getTag
+from ..tag.tag import Tag, getTag, puretagOf
 from ..rdf.namespaces import docx_sections
 from docx.text.paragraph import Paragraph
 from docx.table import Table
@@ -73,7 +73,11 @@ class StructuredElement:
         self.name = tag.name
         self.structure = []
         self.type = tag.ns
-        self.path = path+[f'{tag.ns}:{tag.name}']
+        # The canonical four-slot address, so the addressbook is keyed on
+        # the same thing a task carries. A tag with no id argument is
+        # instance 1, which is what lets a pristine template be read
+        # without editing it: every block in one is the first of its kind.
+        self.path = path + [tag.canonical]
 
         # tags and active elements
         # main
@@ -106,7 +110,9 @@ class StructuredElement:
         # is it marked as a template?
         self.isTemplate = 'template' in tag.args
         
-        if len(path) > 0 and path[0] == 'section:template':
+        # Compared as a template name: the path carries instance numbers
+        # now, so path[0] reads 'section:template::1'.
+        if len(path) > 0 and puretagOf(path[0]) == 'section:template':
             # all is a template from here on
             self.isTemplate = True
         #print(tag.args,path,self.isTemplate)
@@ -162,7 +168,7 @@ class StructuredElement:
                         _newStructure.structure = [(etag,elem)]
                         self.structure += [('image',_newStructure)]
                     elif self.type == 'section' and self.name == 'template':
-                        elem.path = self.path+[etag.puretag]
+                        elem.path = self.path + [etag.canonical]
                         elem.isTemplate = True
                         self.structure += [(etag,elem)]
                     else:
@@ -276,7 +282,7 @@ class StructuredElement:
                 #print('exact t or i',t,e.path,path)
                 result += [(t,e)]
                 break
-            elif type(t) == Tag and (e.path+[t.puretag])[:l] == path:
+            elif type(t) == Tag and (e.path+[t.canonical])[:l] == path:
                 # the thing I am looking for is ????
                 #print('exact tag',(e.path+[t.puretag])[:l],'<->',path,e.path,t.puretag)
                 result += [(t,e)]
@@ -378,6 +384,7 @@ class StructuredElement:
         
         from .paragraphs import DocParagraphElement
         from .tables import DocTableElement
+        from .template import numberTag
 
         newElements = []
 
@@ -412,16 +419,7 @@ class StructuredElement:
                                 ]
         
         if newname:
-
-            obj = newElements[0] # first element is always a paragraph
-            tag = obj.tags[0] # always first tag!
-            obj.replaceTag(tag,f'<{newname}>')
-            tag.rewriteTag(newname)
-            
-            obj = newElements[-1] # last element is always a paragraph
-            tag = obj.tags[-1] # always last tag!
-            obj.replaceTag(tag,f'</{newname}>')
-            tag.rewriteTag(newname)
+            numberTag(newElements[0], newElements[0].tags[0], newname)
 
         # and finally unfold it again
         newUnfoldedElements = []

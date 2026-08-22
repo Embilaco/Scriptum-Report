@@ -43,23 +43,28 @@ def generate(tmp_path, use_sibling):
     shutil.copy(THIS_DIR / TEMPLATE, tmp_path)
     (tmp_path / 'data').mkdir(exist_ok=True)
 
-    lines = [
-        '*version=3',
-        '*documenttype=docx',
-        '*datadir=./data',
-        'section:second',
-        "  .text:description='ZZintro'",
-    ]
+    sibling = ''
     if use_sibling:
-        lines += ['section:second.subsection:seconda', "  .head='ZZsibling'"]
-    lines += [
-        'section:second.subsection:secondb', "  .head='ZZfirst'",
-        'section:second.subsection:secondb', "  .head='ZZsecond'",
-    ]
-    (tmp_path / 'case.rdf').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+        sibling = ('      - subsection:seconda:\n'
+                   '          - head: ZZsibling\n')
+
+    (tmp_path / 'case.yaml').write_text(
+        '_scriptum_:\n'
+        '  version: 4\n'
+        '  documenttype: docx\n'
+        '  datadir: ./data\n'
+        '_content_:\n'
+        '  - section:second:\n'
+        '      - text:description: ZZintro\n'
+        + sibling +
+        '      - subsection:secondb:\n'
+        '          - head: ZZfirst\n'
+        '      - subsection:secondb:\n'
+        '          - head: ZZsecond\n',
+        encoding='utf-8')
 
     os.chdir(tmp_path)
-    rdf = Scriptum.ReportDataFile('case.rdf')
+    rdf = Scriptum.ReportDataFile('case.yaml')
     document = Scriptum.ManagedDocx(TEMPLATE, rdf)
     document.typesetting(rdf)
     document.save('out.docx')

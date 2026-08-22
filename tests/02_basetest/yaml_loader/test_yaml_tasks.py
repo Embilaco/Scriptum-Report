@@ -99,7 +99,7 @@ def test_a_marker_emits_no_task_of_its_own():
     """)
 
     assert [t.target for t in tasks] == ['', 'image:generic']
-    assert tasks[1].where == 'marker:content'
+    assert tasks[1].where == 'marker:content::1'
 
 
 # --------------------------------------------------------- apply or copy
@@ -227,7 +227,7 @@ def test_a_fill_inside_a_marker_is_an_add():
     """)
 
     add = tasks[-1]
-    assert (add.what, add.where) == ('add', 'marker:content')
+    assert (add.what, add.where) == ('add', 'marker:content::1')
     assert add.modified is True
     assert 'description' in add.actions
 

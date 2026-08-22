@@ -16,7 +16,7 @@
 from docx import Document
 from docx.oxml.ns import qn
 from .section import Sections
-from ..rdf.tasks.report_task import ReportTask
+from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag
 
 import os
@@ -114,7 +114,12 @@ class ManagedDocx:
                 elif not t or t.burned: 
                     continue
                 else:
-                    self.fillGeneric(task.finaltarget,t,e,value)
+                    # The tag as the document spells it, not the canonical
+                    # address: findExact has already picked out this exact
+                    # tag, and the text to match on is what is written
+                    # there. The instance rides as an `id` argument now,
+                    # so a clone's tag still reads `text:description`.
+                    self.fillGeneric(t.puretag,t,e,value)
 
     def fillGeneric(self, target: str, tag: Tag, elem, value):
         """always do that loop for paragraph type elements and text value types"""
@@ -179,7 +184,7 @@ class ManagedDocx:
 
             #lasttask = None
             for t in rdf.tasks:
-                if t.path[0] == 'global': continue # apply the global tasks at the end
+                if t.path[0] == GLOBAL_ROOT: continue # apply the global tasks at the end
                 if t.modified: # the modification tells me if I have to add or copy templates
                     #print('\nto %s  *******************\n'%t.what, 
                     #      f'{t.path} - {t.myAddress} - {t.where}')
@@ -191,6 +196,11 @@ class ManagedDocx:
                         continue
 
                     if t.what == 'apply':
+                        if len(t.myAddress) == 1:
+                            # A top-level section. There is no parent to
+                            # claim a subAnchor from, and the section is
+                            # already in the document, so this is a no-op.
+                            continue
                         # 'apply' is used on structures and sections that already exist in the document
                         #
                         # will just fill the already existing content later
@@ -271,7 +281,7 @@ class ManagedDocx:
         else:
             print('   fill the content...')
             for t in rdf.tasks:
-                if t.path[0] == 'global': continue # apply the global tasks at the end
+                if t.path[0] == GLOBAL_ROOT: continue # apply the global tasks at the end
                 #print('\n',t.isCopy, t.path,t.myAddress,t.target,t.value)
                 if t.target:
                     # apply it on path, means: apply it on exact this item
@@ -284,7 +294,7 @@ class ManagedDocx:
             print('   fill the global content...')
             # apply the global tasks
             for t in rdf.tasks:
-                if t.path[0] == 'global' and t.target:
+                if t.path[0] == GLOBAL_ROOT and t.target:
                     self.apply(t.target,t)
 
         if not cleanup:                

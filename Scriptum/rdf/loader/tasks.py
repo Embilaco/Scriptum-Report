@@ -53,16 +53,9 @@ matching problem and not an interface redesign.
 """
 
 from ..namespaces import SECTION_NAMESPACES
-from ..tasks import ReportTask
+from ..tasks import GLOBAL_ROOT, ReportTask
 from ..values import Value
-from .document import GLOBAL_KEY
 from .entries import Container, Fill, Marker
-
-#: ``path[0]`` of a global task. The back ends recognise a global by this, as
-#: they recognised the text format's by ``'global'``; the spelling follows the
-#: document key so the two cannot drift apart.
-GLOBAL_ROOT = GLOBAL_KEY
-
 
 def emit(entries, settings, globals_=()):
     """Build the task list from a walked document.

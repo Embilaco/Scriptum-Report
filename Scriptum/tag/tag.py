@@ -141,20 +141,26 @@ class Tag:
             namespace, name, child = parts[0], parts[1], parts[2]
         return f'{namespace}:{name}:{child}:{self.instance}'
 
+    def withInstance(self, number):
+        """This tag's text, numbered -- **without** changing this tag.
+
+        A caller replacing the tag in a document has to match on the text that
+        is still there, so the new text is computed first and applied after.
+        """
+        head, _, rest = self.tagtext.partition(' ')
+        keep = [part for part in rest.split()
+                if not part.lower().startswith('id=')]
+        return ' '.join([head] + keep + [f'id={number}'])
+
     def setInstance(self, number):
         """Number this tag, in place, by writing an ``id`` argument.
 
         What a clone does instead of being renamed, so ``puretag`` is untouched
-        and the tag stays readable. Returns the new tag text, which a caller
-        writes back into the document.
+        and the tag stays readable. Returns the new tag text.
         """
         self.args = dict(self.args)
         self.args['id'] = str(number)
-
-        head, _, rest = self.tagtext.partition(' ')
-        keep = [part for part in rest.split()
-                if not part.lower().startswith('id=')]
-        self.tagtext = ' '.join([head] + keep + [f'id={number}'])
+        self.tagtext = self.withInstance(number)
         return self.tagtext
 
     def getLength(self, name, units):
@@ -296,6 +302,26 @@ def getTag(text):
 def getReTag(tag: Tag):
     pattern = OPENING+tag.tagtext+CLOSING
     return re.compile(pattern,flags=RECOMPILEFLAGS)
+
+def puretagOf(address: str) -> str:
+    """The tag as a template spells it, from a four-slot canonical address.
+
+    ``subsection:instruction::2`` is written ``<subsection:instruction>`` and
+    ``:head::1`` is written ``<head/>`` -- an empty namespace slot means the
+    name stands alone. Anything that is not four slots comes back unchanged, so
+    a caller may pass either form.
+
+    A template is looked up by the name a document writes, never by an
+    instance: there is one blueprint however many copies are made of it.
+    """
+    parts = address.split(':')
+    if len(parts) != 4:
+        return address
+    namespace, name, child, _instance = parts
+    if not namespace:
+        return name
+    return f'{namespace}:{name}:{child}' if child else f'{namespace}:{name}'
+
 
 def createTag(tagtext:str):
     return Tag("<"+tagtext+"/>")

@@ -20,10 +20,11 @@ these keep working.
 What is compared
 ----------------
 The sequence of non-empty paragraph texts, then every table cell, with runs of
-digits collapsed to ``#``. The collapsing is for dates: a fixture using
-``date:now`` is evaluated when the document is built, and the reference was
-built on another day. What the comparison exists for -- a paragraph missing, an
-extra one, two in the wrong order -- survives it.
+digits **and weekday names** collapsed to ``#``. Both are for dates: a fixture
+using ``date:now`` is evaluated when the document is built, and the reference
+was built on another day -- which the digits hide and the leading ``Fri`` of
+the default format does not. What the comparison exists for -- a paragraph
+missing, an extra one, two in the wrong order -- survives it.
 
 One trap this had to avoid
 --------------------------
@@ -54,22 +55,33 @@ from Scriptum.rdf.tasks import ReportTask
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = Path(__file__).resolve().parent / 'expected'
 DIGITS = re.compile(r'\d+')
+#: The default datetime format starts with a weekday name, which no amount
+#: of digit-collapsing hides: the reference was captured on another day.
+WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
     ('02_basetest/docx_basic/simple', 'word_simple', 'template.docx'),
     ('02_basetest/docx_basic/images', 'word_images', 'template_image.docx'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'template_table.docx'),
-    ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
     ('04_examples/wordreport', 'word_input', 'template.docx'),
     ('04_examples/essay', 'essay', 'essay.docx'),
 ]
 
-#: Why none of them match yet. Removing this and the marker is the last step.
-NOT_WIRED = (
-    'StructuredElement.path and the addressbook are keyed on template names, '
-    'so a task carrying the four-slot form finds nothing and the run fills '
-    'nothing, saying "cannot find section: section:x::1"'
+#: The one case that does not match, and why. It is a template problem, not a
+#: loader one: ``template_text.docx`` spells its depth-3 block
+#: ``<subsubsubsection:secondsubsubi>``, which is not in the docx ladder --
+#: every other template in the corpus stops at ``subsubsection``. The ``.yaml``
+#: uses the ladder's name, ``sub3section``, so the template needs the matching
+#: rename before the two can agree.
+PENDING = [
+    ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
+]
+
+TEMPLATE_MISMATCH = (
+    'template_text.docx spells a depth-3 block <subsubsubsection:...>, which '
+    'is not in the docx ladder; the .yaml uses the ladder name sub3section, so '
+    'the template needs the matching tag rename'
 )
 
 
@@ -117,11 +129,18 @@ def spoken(path):
     for table in document.tables:
         for row in table.rows:
             said.extend(cell.text.strip() for cell in row.cells)
-    return [DIGITS.sub('#', line) for line in said if line]
+    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
 
 
 def reference(stem):
-    return json.loads((EXPECTED / f'{stem}.json').read_text(encoding='utf-8'))
+    """The stored reference, through the same normaliser as a fresh run.
+
+    It was captured on another day, so it carries that day's weekday name --
+    and normalising only one side of a comparison is how you end up measuring
+    the calendar.
+    """
+    stored = json.loads((EXPECTED / f'{stem}.json').read_text(encoding='utf-8'))
+    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in stored]
 
 
 def difference(expected, got):
@@ -154,7 +173,7 @@ def compare(case, stem, template):
 
 def test_every_case_has_a_reference():
     """A missing reference would make a comparison vacuous."""
-    for case, stem, template in CASES:
+    for case, stem, template in CASES + PENDING:
         assert (EXPECTED / f'{stem}.json').is_file(), stem
         assert len(reference(stem)) > 3, stem
 
@@ -180,15 +199,23 @@ def test_the_difference_report_notices_what_it_should():
 # ---------------------------------------------------------- the comparison
 
 @pytest.mark.parametrize('case, stem, template', CASES)
-@pytest.mark.xfail(strict=True, reason=NOT_WIRED)
 def test_the_yaml_document_says_what_the_rdf_document_said(case, stem, template):
-    """The last step of the migration makes these pass.
+    """The document a .yaml produces says what its .rdf produced.
 
-    ``strict=True`` on purpose: when the back end starts resolving the new
-    addresses these begin passing, and a strict xfail turns that into a
-    failure -- the only reliable way for the change to announce itself
-    rather than being noticed months later.
+    This is what the whole migration was for, checked the only way that could
+    have caught the clone-ordering defect: by reading the finished document.
     """
+    expected, got, complaints = compare(case, stem, template)
+
+    assert got == expected, (
+        difference(expected, got)
+        + chr(10) + 'the run said: ' + repr(complaints[:3]))
+
+
+@pytest.mark.parametrize('case, stem, template', PENDING)
+@pytest.mark.xfail(strict=True, reason=TEMPLATE_MISMATCH)
+def test_the_case_whose_template_disagrees_with_the_ladder(case, stem, template):
+    """Strict, so that renaming the tag in the template announces itself."""
     expected, got, complaints = compare(case, stem, template)
 
     assert got == expected, (

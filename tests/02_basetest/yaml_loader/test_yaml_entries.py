@@ -339,13 +339,19 @@ def test_a_marker_holds_the_things_to_add_there():
     assert isinstance(marker, Marker)
     assert all(isinstance(child, Fill) for child in marker.children)
     assert [child.marker for child in marker.children] == \
-        ['marker:content', 'marker:content']
+        ['marker:content::1', 'marker:content::1']
 
 
-def test_a_marker_takes_no_id():
+def test_a_marker_is_always_instance_one():
     """It names a position in the template, not an instance in the output, so
     two entries naming it mean the same place -- which is what the corpus does
-    in word_tables.rdf, twice in one section with a fill between."""
+    in word_tables.rdf, twice in one section with a fill between.
+
+    Numbered rather than left unnumbered so it can be looked up like anything
+    else: the tree keys everything on a canonical address, and the tag in the
+    template carries no id, which makes it instance 1. What a marker does not
+    do is *count*.
+    """
     tree, diagnostics = read("""
         - section:a:
             - marker:content:
@@ -357,7 +363,7 @@ def test_a_marker_takes_no_id():
 
     assert not diagnostics, diagnostics.report()
     first, _, second = tree[0].children
-    assert first.address.id is None and second.address.id is None
+    assert first.address.id == 1 and second.address.id == 1
 
 
 def test_a_marker_does_not_scope_numbering():
