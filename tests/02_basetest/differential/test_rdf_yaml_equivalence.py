@@ -12,10 +12,15 @@ It began by generating both sides in one run. That stopped working the moment
 ``section:title`` where the tree now says ``section:title::1``, so the *old*
 side degrades and there is nothing left to compare against.
 
-So the reference is captured instead. ``expected/*.json`` is what each ``.rdf``
-generated at `44267a8`, the last commit before the tree changed. That decouples
-the check from a parser which is on its way out -- when the text format goes,
-these keep working.
+So the reference is captured instead. Each case keeps its own beside the
+fixture it belongs to -- ``<case>/expected/<stem>.json`` -- which is what each
+``.rdf`` generated at `44267a8`, the last commit before the tree changed. That
+decouples the check from a parser which is on its way out: when the text format
+goes, these keep working.
+
+Living next to the fixture rather than in one pile means a case is a directory
+you can read end to end: the document, the template, the data and what it is
+supposed to say.
 
 What is compared
 ----------------
@@ -53,7 +58,6 @@ from Scriptum.rdf.reportDataFile import ReportDataFile
 from Scriptum.rdf.tasks import ReportTask
 
 TESTS_ROOT = Path(__file__).resolve().parents[2]
-EXPECTED = Path(__file__).resolve().parent / 'expected'
 DIGITS = re.compile(r'\d+')
 #: The default datetime format starts with a weekday name, which no amount
 #: of digit-collapsing hides: the reference was captured on another day.
@@ -100,6 +104,8 @@ def prepare(case):
     work = Path(tempfile.mkdtemp())
     source = TESTS_ROOT / case
 
+    # Files only, so `expected/` stays where it is: the reference is what the
+    # run is checked against, not an input to it.
     for pattern in ('*.yaml', '*.docx'):
         for path in source.glob(pattern):
             shutil.copy(path, work)
@@ -132,14 +138,19 @@ def spoken(path):
     return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
 
 
-def reference(stem):
+def reference_path(case, stem):
+    """Where a case keeps what it is supposed to say."""
+    return TESTS_ROOT / case / 'expected' / f'{stem}.json'
+
+
+def reference(case, stem):
     """The stored reference, through the same normaliser as a fresh run.
 
     It was captured on another day, so it carries that day's weekday name --
     and normalising only one side of a comparison is how you end up measuring
     the calendar.
     """
-    stored = json.loads((EXPECTED / f'{stem}.json').read_text(encoding='utf-8'))
+    stored = json.loads(reference_path(case, stem).read_text(encoding='utf-8'))
     return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in stored]
 
 
@@ -163,7 +174,7 @@ def compare(case, stem, template):
     work = prepare(case)
     printed = generate(work, f'{stem}.yaml', template)
     got = spoken(work / 'out.docx')
-    expected = reference(stem)
+    expected = reference(case, stem)
     complaints = [line for line in printed.splitlines()
                   if 'ERROR' in line or 'WARNING' in line]
     return expected, got, complaints
@@ -174,8 +185,22 @@ def compare(case, stem, template):
 def test_every_case_has_a_reference():
     """A missing reference would make a comparison vacuous."""
     for case, stem, template in CASES + PENDING:
-        assert (EXPECTED / f'{stem}.json').is_file(), stem
-        assert len(reference(stem)) > 3, stem
+        assert reference_path(case, stem).is_file(), \
+            f'{stem}: no reference at {reference_path(case, stem)}'
+        assert len(reference(case, stem)) > 3, stem
+
+
+def test_no_reference_is_left_behind():
+    """Every ``expected/`` in the tree belongs to a case listed here.
+
+    A reference nobody compares against is worse than none: it looks like
+    coverage and is not.
+    """
+    on_disk = {path.resolve() for path in TESTS_ROOT.rglob('expected/*.json')}
+    claimed = {reference_path(case, stem).resolve()
+               for case, stem, _ in CASES + PENDING}
+
+    assert on_disk == claimed, f'orphaned: {sorted(on_disk - claimed)}'
 
 
 def test_generating_the_same_document_twice_says_the_same_thing():

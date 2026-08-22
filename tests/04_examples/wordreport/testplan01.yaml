@@ -5,7 +5,7 @@
 
     - subsubsection:tabular:
         - head: Tabular testplans
-        - text:description: 'Tabular ...'
+        - text:description: Tabular ...
         - marker:content:
             - table:test: {file: testplan2.csv, description: {from: row1}}
 
