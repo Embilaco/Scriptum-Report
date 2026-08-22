@@ -71,6 +71,8 @@ CASES = [
     ('02_basetest/docx_basic/tables', 'word_tables', 'template_table.docx'),
     ('04_examples/wordreport', 'word_input', 'template.docx'),
     ('04_examples/essay', 'essay', 'essay.docx'),
+    ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
+    ('04_examples/pptreport', 'powerpoint_input', 'template.pptx'),
 ]
 
 #: The one case that does not match, and why. It is a template problem, not a
@@ -87,20 +89,6 @@ TEMPLATE_MISMATCH = (
     'template_text.docx spells a depth-3 block <subsubsubsection:...>, which '
     'is not in the docx ladder; the .yaml uses the ladder name sub3section, so '
     'the template needs the matching tag rename'
-)
-
-#: PowerPoint has not been through the wiring the docx side went through, so
-#: its references are captured and waiting rather than passing. Capturing them
-#: **first** is the point: they record what the text format produced while it
-#: still can, and the .rdf path is the only thing that can produce them.
-PPTX_PENDING = [
-    ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
-    ('04_examples/pptreport', 'powerpoint_input', 'template.pptx'),
-]
-
-PPTX_NOT_WIRED = (
-    'the pptx back end still resolves template names, not four-slot addresses; '
-    'the run produces a presentation but fills only part of it'
 )
 
 
@@ -232,7 +220,7 @@ def compare(case, stem, template):
 
 def test_every_case_has_a_reference():
     """A missing reference would make a comparison vacuous."""
-    for case, stem, template in CASES + PENDING + PPTX_PENDING:
+    for case, stem, template in CASES + PENDING:
         assert reference_path(case, stem).is_file(), \
             f'{stem}: no reference at {reference_path(case, stem)}'
         assert len(reference(case, stem)) > 3, stem
@@ -246,7 +234,7 @@ def test_no_reference_is_left_behind():
     """
     on_disk = {path.resolve() for path in TESTS_ROOT.rglob('expected/*.json')}
     claimed = {reference_path(case, stem).resolve()
-               for case, stem, _ in CASES + PENDING + PPTX_PENDING}
+               for case, stem, _ in CASES + PENDING}
 
     assert on_disk == claimed, f'orphaned: {sorted(on_disk - claimed)}'
 
@@ -289,25 +277,6 @@ def test_the_yaml_document_says_what_the_rdf_document_said(case, stem, template)
 @pytest.mark.xfail(strict=True, reason=TEMPLATE_MISMATCH)
 def test_the_case_whose_template_disagrees_with_the_ladder(case, stem, template):
     """Strict, so that renaming the tag in the template announces itself."""
-    expected, got, complaints = compare(case, stem, template)
-
-    assert got == expected, (
-        difference(expected, got)
-        + chr(10) + 'the run said: ' + repr(complaints[:3]))
-
-
-@pytest.mark.parametrize('case, stem, template', PPTX_PENDING)
-@pytest.mark.xfail(strict=True, reason=PPTX_NOT_WIRED)
-def test_the_pptx_cases(case, stem, template):
-    """Captured before the pptx back end is touched, which is the whole point.
-
-    A reference is only worth having if it records the behaviour being
-    replaced, and only the text format can produce that. Wiring pptx first and
-    capturing afterwards would have recorded the new behaviour as its own
-    baseline -- a snapshot of whatever came out, agreeing with itself.
-
-    Strict, so that wiring pptx announces itself by failing here for passing.
-    """
     expected, got, complaints = compare(case, stem, template)
 
     assert got == expected, (

@@ -7,7 +7,7 @@ _scriptum_:
   documenttitle: This is a bloody test document
 
 _global_:
-  date_name: {date: '%d. %b %Y/Luke Skywalker'}
+  date_name: {date: today, format: '%d. %b %Y/Luke Skywalker'}
   reference: REF-X47
   revision: 1234567
   created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}
@@ -50,38 +50,66 @@ _content_:
       - rf1: x
       - rf2: ''
       - marker:content:
-          - p:custom1:
+          - p:heading:
               parfile: SomeParameters.nv
               parameter: Description
               left: 1cm
               top: 1cm
-          - p:footnote:
-              parfile: SomeParameters.nv
-              parameter: Title
-              left: 2cm
-              top: 3cm
-
-  - TitleContent:
-      - title: Test A report
-      - plant: Northpole
-      - marker:content:
-          - table:small: {file: table3.csv, description: {from: row1}}
-
-  - TitleContent:
-      - title: Test B report
-      - plant: Southpole
-      - marker:content:
-          - image:generic: {file: bootseal2.png, description: a strange part, height: 2cm}
-          - image:history:
-              file: bootseal2.png
-              left: 13cm
-              top: 2.5in
-              description: the same strange part
 
   - Material:
-      - title: Test C report
-      - plant: Honululu
+      - title: Details on the tool used
+      - plant: "a tiny complex\nsort of\nwhatever"
       - marker:content:
-          - text:insert: {file: dolor.txt, info: Moore, more: Roger}
+          - p:default: {text: there might be some explanation, top: .5cm}
+      - marker:table:
+          - table:blue: {file: table3.csv, description: {from: row1}}
+
+  - ResultsGeneral:
+
+  - ResultsGeneral:
+      - title: This is a result
+      - what: 'what is shown:'
+      - plant: "a tiny complex\nsort of\nwhatever"
+      - marker:content:
+          - image:history:
+              file: curve_test.png
+              left: 1cm
+              top: .5cm
+              description: This is a graph
+
+  - ResultsGeneral:
+      - title: This is a video
+      - what: test video display
+      - marker:content:
+          - video:generic:
+              file: world_avi.mp4
+              image:poster: {file: world_avi_poster.jpg}
+              description: an animated world
+          - p:code:
+              parfile: SomeParameters.nv
+              parameter: Title
+              left: 14cm
+          - p:default:
+              text: there might be a lengthy text or so
+              left: 14cm
+              top: 2cm
+              color: green
+      - plant: "a tiny complex\nsort of\nwhatever"
+
+  - ResultsAnimation:
+      - title: This is a fixed video
+      - what: test video display two
+      - video:general:
+          file: world_mp4.mp4
+          image:poster: {file: world_mp4_poster.jpg}
+
+  - ResultsTwoBlocks:
+      - title: two results, side by side
+      - what: multiple results
+      - plant: "a tiny complex\nsort of\nwhatever"
+      - marker:left:
+          - image:generic: {file: result1a.png, description: This is a door}
+      - marker:right:
+          - image:generic: {file: result1b.png, description: This is a door as well}
 
   - BackCover:

@@ -29,12 +29,12 @@ from .base import genericFill
 from .base import extractFontAndDecorators
 from .attrs import getColorFromSolidFill
 from .templates import makeTemplate
-from ..tag.tag import getTag
+from ..tag.tag import getTag, puretagOf
 from .shapes import getShapes
 from .slide import Slide
 from .. import version
 
-from ..rdf.tasks.report_task import ReportTask
+from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 
 # and what not
 #_NOT_ALLOWED = '\\,:;~+*#&%$' # by default OPENING and CLOSING will be added to this list, never tested for unicode characters
@@ -282,7 +282,10 @@ class ManagedPptx:
 
         #print(section,path,'T',target)
         
-        if section == 'global':
+        if section in ('global', GLOBAL_ROOT):
+            # 'global' is the text parser's spelling, GLOBAL_ROOT the loader's:
+            # both are still live until the text parser is retired, so a
+            # global task must be recognised under either name.
             # find globally all elements with that tag
             # collect them all to complete them at the end of everything
             self.collectglobal += [(target,task)]
@@ -302,7 +305,9 @@ class ManagedPptx:
             # adding content which does not yet exist requires templates
             # to be added where a @marker:content exists as general shape and target
             # we need to find the task.where first
-            mpath = [task.where]
+            # task.where is the marker's canonical four-slot address;
+            # tag_in_ph is keyed by puretag, as the layout spells it.
+            mpath = [puretagOf(task.where)]
             elems = self.findElements(path=mpath)
             # print('add', elems)
             if not elems:
