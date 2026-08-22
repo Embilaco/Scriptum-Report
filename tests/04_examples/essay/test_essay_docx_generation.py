@@ -6,7 +6,7 @@ import sys
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
 if str(CASE_ROOT) not in sys.path:
-    sys.path.append(str(CASE_ROOT)) 
+    sys.path.append(str(CASE_ROOT))
 
 from _setup_examples import *
 
@@ -25,10 +25,10 @@ def test_essay_document_is_created(tmp_path):
     config = CaseConfig(
         name="essay",
         case_dir=THIS_DIR,
-        rdf_name="essay.rdf",
+        rdf_name="essay.yaml",
         template_doc_name="essay.docx",
         output_name="final_essay.docx",
-        include_patterns=["essay*.rdf", "essay.docx"],
+        include_patterns=["essay*.yaml", "essay.docx"],
         data_source_dir=THIS_DIR / 'data',
         finish=False,
         createpdf=True,
