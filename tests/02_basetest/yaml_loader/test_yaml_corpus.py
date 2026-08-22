@@ -122,13 +122,19 @@ def test_every_yaml_fixture_is_accounted_for():
     assert not classified - found, 'stale YAML classifications'
 
 
-def test_the_corpus_matches_the_rdf_corpus_file_for_file():
-    """Every .rdf has a .yaml beside it, and nothing extra."""
+def test_every_remaining_rdf_still_has_a_yaml_beside_it():
+    """One direction only, now that the corpus is retired case by case.
+
+    It began as a two-way check, which was right while the two corpora were
+    meant to mirror each other. They are not any more: a case that has finished
+    moving deletes its ``.rdf`` and keeps the ``.yaml``, so "a .yaml with no
+    .rdf" is progress rather than a gap. What still has to hold is that nothing
+    is left untranslated.
+    """
     rdfs = {p.with_suffix('') for p in TESTS_ROOT.rglob('*.rdf')}
     yamls = {p.with_suffix('') for p in TESTS_ROOT.rglob('*.yaml')}
 
     assert not rdfs - yamls, 'fixtures still to translate'
-    assert not yamls - rdfs, 'YAML fixtures with no .rdf counterpart'
 
 
 # --------------------------------------------------- the interesting ones
