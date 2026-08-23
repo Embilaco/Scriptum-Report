@@ -31,6 +31,24 @@ using ``date: now`` is evaluated when the document is built, and the reference
 was built on another day -- which the digits hide and the leading ``Fri`` of
 the default format does not. What the comparison exists for -- a paragraph
 missing, an extra one, two in the wrong order -- survives it.
+
+What is not compared: field results
+-----------------------------------
+A Word template carries a *list of tables* and a *list of figures* -- TOC
+fields whose stored result is whatever Word last wrote into them. A plain run
+(``save()`` without ``finish``) leaves that result as the template had it,
+``Table 1: <description/>`` three times; a ``finish=True`` run -- Windows with
+Word, the only thing that can update a field -- rewrites it with one entry per
+caption actually in the document. So the same document says two different
+things in those lines depending on where it was built, and a reference
+captured one way can never match a run made the other way.
+
+Those entries are the one shape ``caption<TAB>page``, and :func:`comparable`
+drops them from **both** sides. Nothing is lost: every caption is also a
+caption paragraph of its own, which stays compared. One reference therefore
+serves both -- the wordreport reference was captured with ``finish=True``
+(``e60f4e0``) and the others without, and all compare against a plain run
+anywhere, and against a finished run where Word is.
 """
 
 from __future__ import annotations
@@ -56,6 +74,10 @@ DIGITS = re.compile(r'\d+')
 #: The default datetime format starts with a weekday name, which no amount
 #: of digit-collapsing hides: the reference was captured on another day.
 WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
+#: A field result of a list of tables / figures: ``caption<TAB>page``, after
+#: the digits have been collapsed. Only Word updates these, so a finished run
+#: and a plain run disagree on them by construction; see the module docstring.
+FIELD_ENTRY = re.compile(r'\t#$')
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
@@ -136,6 +158,14 @@ def spoken(path):
     return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
 
 
+def comparable(lines):
+    """*lines* without the field results only Word updates -- the entries of
+    a list of tables or figures -- so a reference captured with ``finish=True``
+    and a run made without it (or the other way round) compare on what the
+    document itself says."""
+    return [line for line in lines if not FIELD_ENTRY.search(line)]
+
+
 def _paragraphs(path):
     document = docx.Document(path)
     said = [p.text.strip() for p in document.paragraphs]
@@ -193,8 +223,8 @@ def difference(expected, got):
 def compare(case, stem, template):
     work = prepare(case)
     printed = generate(work, f'{stem}.yaml', template)
-    got = spoken(work / ('out.pptx' if template.endswith('.pptx') else 'out.docx'))
-    expected = reference(case, stem)
+    got = comparable(spoken(work / ('out.pptx' if template.endswith('.pptx') else 'out.docx')))
+    expected = comparable(reference(case, stem))
     complaints = [line for line in printed.splitlines()
                   if 'ERROR' in line or 'WARNING' in line]
     return expected, got, complaints
@@ -233,6 +263,24 @@ def test_generating_the_same_document_twice_says_the_same_thing():
     generate(work, f'{stem}.yaml', template, 'twice.docx')
 
     assert spoken(work / 'once.docx') == spoken(work / 'twice.docx')
+
+
+def test_field_results_are_dropped_from_both_sides_and_captions_are_not():
+    """The wordreport reference was captured with ``finish=True`` and holds
+    Word's refreshed lists; a plain run holds the template's stale ones. The
+    filter removes exactly the entries (caption, tab, page) and keeps the
+    caption paragraphs, so the two still compare -- and a caption that went
+    missing would still be noticed."""
+    stored = reference('04_examples/wordreport', 'word_input')
+    entries = [line for line in stored if FIELD_ENTRY.search(line)]
+    kept = comparable(stored)
+
+    assert entries, 'the reference holds no list entry any more -- recaptured without finish?'
+    assert all('\t' in line for line in entries)
+    assert not any(FIELD_ENTRY.search(line) for line in kept)
+    captions = [line for line in kept if line.startswith(('Table #: ', 'Figure #: '))]
+    assert captions, 'the caption paragraphs must survive the filter'
+    assert len(kept) == len(stored) - len(entries)
 
 
 def test_the_difference_report_notices_what_it_should():
