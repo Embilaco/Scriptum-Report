@@ -14,7 +14,7 @@ _content_:
 
   - section:two:
       - image:inline: {file: camera.png, description: cheese}
-      - image:existing: {file: bootseal2.png, description: 'what else?'}
+      - image:existing: {file: not-existing.png, description: 'what else?'}
       - marker:content:
           - image:generic: {file: screw.png, description: a screw thing }
           - image:generic: {file: curve_test.png, description: 'curve ...'}
