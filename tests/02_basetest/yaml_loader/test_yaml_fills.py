@@ -297,6 +297,81 @@ def test_a_timestamp_may_be_a_number(written):
     assert str(fill.value) == datetime.fromtimestamp(float(written)).strftime('%Y')
 
 
+@pytest.mark.parametrize('written', ['2022-12-15', '2022-12-15 14:24:59'])
+def test_an_iso_date_needs_no_quotes(written):
+    """Under the core schema a date-shaped scalar is a string, so the natural
+    spelling reads. (Under the 1.1 typing it arrived as a datetime object and
+    was refused with "needs text".)"""
+    fill = one(f"- date:creation: {{date: {written}, format: '%Y-%m-%d'}}")
+
+    assert str(fill.value) == '2022-12-15'
+
+
+@pytest.mark.parametrize('written', ['Now', 'TODAY', 'today '])
+def test_now_and_today_are_keywords_in_any_case(written):
+    fill = one(f"- date:creation: {{date: '{written}', format: '%Y'}}")
+
+    assert fill.value.object.valid
+    assert len(str(fill.value)) == 4
+
+
+def test_a_pattern_written_in_the_date_slot_is_named():
+    """Three translated fixtures wrote {date: 'FORMAT'} and rendered
+    01. Jan 1970 in the settings format -- DateValue degraded to the epoch
+    and nothing said so. The fingerprint is a '%' in the spec."""
+    report = failing("- date:creation: {date: '%d. %b %Y'}")
+
+    assert 'looks like a strftime pattern' in report
+    assert "{date: today, format: '%d. %b %Y'}" in report
+
+
+@pytest.mark.parametrize('written', ["'next tuesday'", "'01. Jan 1970 -- 01:00:00 x'"])
+def test_what_is_not_a_date_is_refused_not_the_epoch(written):
+    """The document is the one place where printing 01. Jan 1970 is worse
+    than stopping."""
+    report = failing(f"- date:creation: {{date: {written}}}")
+
+    assert 'is not a date' in report
+
+
+@pytest.mark.parametrize('written', ['12', "''"])
+def test_a_date_format_needs_text(written):
+    report = failing(f"- date:creation: {{date: now, format: {written}}}")
+
+    assert "'format' needs text" in report
+
+
+def _strftime_rejects_an_unknown_directive():
+    from datetime import datetime
+    try:
+        datetime(2001, 2, 3).strftime('%Q')
+    except ValueError:
+        return True
+    return False
+
+
+@pytest.mark.skipif(not _strftime_rejects_an_unknown_directive(),
+                    reason='glibc prints an unknown directive literally; '
+                           'only Windows strftime rejects it')
+def test_a_pattern_strftime_rejects_is_refused_not_swapped_for_the_default():
+    """DateValue used to fall back to dateformat silently when strftime
+    raised -- on Windows, that is; glibc never raises, so this half of the
+    rule is platform-dependent by nature."""
+    report = failing("- date:creation: {date: now, format: '%Q'}")
+
+    assert 'is not a strftime pattern' in report
+
+
+def test_a_date_namespace_does_not_make_a_scalar_a_date():
+    """`date:published: 01. August 2020` is the text the author wrote,
+    verbatim. Only the source key `date` evaluates anything: the namespace is
+    the tag's name in the template, and re-rendering a literal publication
+    date in datetimeformat is the last thing the author wants."""
+    fill = one('- date:published: 01. August 2020')
+
+    assert (fill.value.type, str(fill.value)) == ('str', '01. August 2020')
+
+
 def test_a_date_without_a_format_uses_the_setting():
     fill = one('- date:creation: {date: now}')
     assert fill.value.type == 'datetime'

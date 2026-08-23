@@ -62,6 +62,7 @@ retires with nothing to replace it.
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 
 from ..namespaces import SECTION_NAMESPACES
@@ -142,6 +143,30 @@ def _text(key, value, report, base):
     return value
 
 
+def _strftime_pattern(key, value, report, base):
+    """Text that ``strftime`` accepts.
+
+    An empty pattern renders every date as nothing, and an unknown directive
+    is refused by ``strftime`` on Windows (glibc prints it literally, so that
+    half of the check is platform-dependent by nature -- it catches what it
+    can where it can). Either would otherwise surface only in the finished
+    document, on every date in it.
+    """
+    text = _text(key, value, report, base)
+    if text is None:
+        return None
+    if not text.strip():
+        report(f'{key} is empty; it is a strftime pattern such as '
+               "'%d. %b %Y' (every date would render as nothing)")
+        return None
+    try:
+        datetime(2001, 2, 3, 4, 5, 6).strftime(text)
+    except (ValueError, TypeError) as error:
+        report(f'{key} {text!r} is not a strftime pattern: {error}')
+        return None
+    return text
+
+
 def _single_character(key, value, report, base):
     if not isinstance(value, str):
         report(f'{key} must be a single character, not {_kind_of(value)}')
@@ -196,8 +221,8 @@ SCHEMA = {
     'version': _version,
     'documenttype': _documenttype,
     'datadir': _directory,
-    'dateformat': _text,
-    'datetimeformat': _text,
+    'dateformat': _strftime_pattern,
+    'datetimeformat': _strftime_pattern,
     'nvseparator': _single_character,
     'csvseparator': _single_character,
     'floatformat': _text,

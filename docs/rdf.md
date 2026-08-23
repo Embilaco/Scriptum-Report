@@ -94,8 +94,17 @@ A mapping in the root document, and only there. Unknown keys are an error.
 | `documenttitle` | text | default `Autoreport` |
 
 See <https://docs.python.org/3/library/datetime.html> for the strftime
-patterns. There is deliberately no `timeformat`: times come from
-`datetimeformat` or from a `format` on the value.
+patterns; an empty pattern, or one `strftime` rejects, is refused. There is
+deliberately no `timeformat`: times come from `datetimeformat` or from a
+`format` on the value.
+
+The two defaults, `'%x'` and `'%c'`, are the C-library's locale forms. In a
+plain Python process that is the C locale — `08/23/26` and
+`Sun Aug 23 14:05:09 2026` — but they change the moment the host process
+calls `locale.setlocale` (a notebook, a GUI, a service): the same document
+then renders `23/08/2026 14:05:09`. If a report must read the same
+everywhere, set `dateformat` and `datetimeformat` explicitly; an ISO pattern
+such as `'%Y-%m-%d'` / `'%Y-%m-%d %H:%M:%S'` cannot be misread.
 
 ## Content — `_content_`
 
@@ -279,16 +288,35 @@ run.
 
 ```yaml
 - created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}
-- today: {date: today}                       # dateformat
+- today: {date: today}                       # rendered with dateformat
 - stamp: {date: 1231231230}                  # a Unix timestamp, datetimeformat
-- fixed: {date: '12/15/22 14:24:59', format: '%m/%d/%y %H:%M:%S'}
+- fixed: {date: 2022-12-15 14:24:59, format: '%Y-%m-%d %H:%M'}
 ```
 
-`date` takes *what to evaluate* — `now`, `today`, a timestamp (13 digits or
-more are taken as milliseconds) or a date string — and `format` the pattern.
-A pattern written in the `date` slot is not a date and will not do what you
-mean; `{date: today, format: '%d. %b %Y'}` is the form. A date is evaluated
-**when the document is read**.
+`date` takes *what to evaluate* and `format` the strftime pattern:
+
+- `now` — the current date and time; `today` — the current date. Any case.
+- a number — a Unix timestamp; 13 digits or more are taken as milliseconds.
+- a date string. Write it **ISO 8601** (`2022-12-15`, `2022-12-15 14:24:59`),
+  which needs no quotes and cannot be misread; any other form is read by
+  `python-dateutil`, which takes an ambiguous `05/06/22` **month first**, and
+  without `dateutil` installed only ISO and a few US-ordered forms are
+  recognised at all.
+
+Without `format`, `now` and a timestamp use `datetimeformat`, `today` uses
+`dateformat`. A date is evaluated **when the document is read**, in naive
+local time — no time zone is ever attached.
+
+What is refused, with a message pointing at the line: a spec that is not a
+date (no silent `01. Jan 1970`), a strftime pattern written in the `date`
+slot (`{date: '%d. %b %Y'}` — the pattern goes in `format`), an empty or
+non-text `format`, and a `format` that `strftime` rejects (Windows rejects an
+unknown directive; glibc prints it literally, so that check only bites
+there). Timestamps before 1970 are not portable either — Windows refuses them.
+
+A target *named* in the `date` namespace is not special: `date:published: 01.
+August 2020` is the text you wrote, verbatim. Only the source key `date`
+evaluates anything.
 
 ### Numbering
 

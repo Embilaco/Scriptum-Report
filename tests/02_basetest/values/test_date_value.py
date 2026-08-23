@@ -90,3 +90,73 @@ def test_a_date_string_with_a_time_in_it(tmp_path: Path):
     testtimefmt = next(t for t in rdf.tasks if t.target == "testtimefmt").value
     assert str(testtimefmt) == "12/15/22 14:24:59"
     assert rdf.errors == []
+
+
+# ------------------------------------------------- the class on its own
+
+from Scriptum.rdf.settings import SETTINGS
+from Scriptum.rdf.values.date_value import EPOCH, DateValue
+
+
+@pytest.mark.parametrize('spec, expected_format', [
+    ('now', '%c'), ('Now', '%c'), ('NOW ', '%c'),
+    ('today', '%x'), ('Today', '%x'),
+])
+def test_now_and_today_are_keywords_in_any_case(spec, expected_format):
+    value = DateValue(spec, SETTINGS())
+
+    assert value.valid
+    assert value.format == expected_format
+    assert abs((value.dt - datetime.now()).total_seconds()) < 5
+
+
+def test_a_timestamp_is_local_naive_time():
+    """Everything is naive local time: a timestamp is converted with
+    fromtimestamp, now is the local clock, nothing carries a tzinfo."""
+    value = DateValue(1231231230, SETTINGS(), format='%Y-%m-%d %H:%M:%S')
+
+    assert value.dt == datetime.fromtimestamp(1231231230)
+    assert value.dt.tzinfo is None
+    assert str(value) == datetime.fromtimestamp(1231231230).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def test_thirteen_digits_are_milliseconds():
+    assert DateValue('1566996265000', SETTINGS()).dt == datetime.fromtimestamp(1566996265)
+    assert DateValue(1566996265000, SETTINGS()).dt == datetime.fromtimestamp(1566996265)
+
+
+def test_what_does_not_parse_degrades_to_the_epoch_but_says_so():
+    """The class never raises -- the house rule -- but it is not silent either:
+    valid is False and problem names the spec, which is what the loader reads
+    to refuse the document. A direct caller gets the epoch and the flag."""
+    value = DateValue('next tuesday', SETTINGS())
+
+    assert value.valid is False
+    assert "'next tuesday' is not a date" in value.problem
+    assert value.dt == EPOCH
+    assert 'invalid' in repr(value)
+
+
+def test_a_good_date_is_valid_and_quiet():
+    value = DateValue('2022-12-15 14:24:59', SETTINGS(), format='%H:%M')
+
+    assert (value.valid, value.problem) == (True, None)
+    assert str(value) == '14:24'
+
+
+def _strftime_rejects_an_unknown_directive():
+    try:
+        datetime(2001, 2, 3).strftime('%Q')
+    except ValueError:
+        return True
+    return False
+
+
+@pytest.mark.skipif(not _strftime_rejects_an_unknown_directive(),
+                    reason='glibc prints an unknown directive literally')
+def test_a_pattern_strftime_rejects_is_flagged_and_rendered_with_dateformat():
+    value = DateValue('now', SETTINGS(), format='%Q')
+
+    assert value.valid is False
+    assert "'%Q' is not a strftime pattern" in value.problem
+    assert value.value == value.dt.strftime('%x'), 'the degrade, as before'

@@ -343,7 +343,7 @@ def _build(key, entries, selector, source, settings, diagnostics, path, report):
         return Value('readfrom', written.lower(), tostring=False)
 
     if key == 'date':
-        return _date(written, entries, scalar, settings)
+        return _date(written, entries, scalar, settings, report, value_node)
 
     return _numbering(written, entries, scalar)
 
@@ -357,7 +357,7 @@ def _file(written, selector, settings):
     return Value('file', object, tostring=False, subtype=object.subtype)
 
 
-def _date(written, entries, scalar, settings):
+def _date(written, entries, scalar, settings, report, value_node):
     """A :class:`DateValue` from its parts: the spec, and the pattern beside it.
 
     Nothing is composed. The text format packed the two into ``date:spec:'fmt'``
@@ -365,15 +365,38 @@ def _date(written, entries, scalar, settings):
     quotes around a date string, split the time inside it too
     (``'12/15/22 14:24:59'`` read as 14:00 with the pattern ``24:59``). The
     parts go to the class as parts.
+
+    **What does not read as a date is refused here, not degraded.** DateValue
+    keeps the house rule of never raising -- an unreadable spec becomes the
+    epoch, a pattern strftime rejects falls back to ``dateformat`` -- but it
+    flags both (``valid``, ``problem``), and a document is the one place where
+    silently printing ``01. Jan 1970`` is worse than stopping: three translated
+    fixtures did exactly that for a pattern written in the ``date`` slot before
+    anyone noticed. So the common fingerprints are named, with the form that
+    was meant, and the rest is reported as DateValue words it.
     """
     pattern = None
     if 'format' in entries:
         pattern = scalar('format', required=False)
         if pattern is None:
             return None
-        pattern = str(pattern)
-    return Value('datetime', DateValue(written, settings, format=pattern),
-                 tostring=True)
+        if not isinstance(pattern, str) or not pattern.strip():
+            report("'format' needs text: a strftime pattern such as "
+                   "'%d. %b %Y -- %H:%M:%S'", at=entries['format'][2])
+            return None
+
+    if isinstance(written, str) and '%' in written:
+        report(f"{written!r} looks like a strftime pattern written in the "
+               "'date' slot. 'date' takes what to evaluate -- now, today, a "
+               "timestamp or a date -- and the pattern goes beside it: "
+               f"{{date: today, format: {written!r}}}", at=value_node)
+        return None
+
+    date = DateValue(written, settings, format=pattern)
+    if not date.valid:
+        report(date.problem, at=value_node)
+        return None
+    return Value('datetime', date, tostring=True)
 
 
 def _numbering(written, entries, scalar):

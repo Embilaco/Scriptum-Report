@@ -312,6 +312,40 @@ def test_a_setting_that_should_be_text_rejects_a_number():
     assert 'Quote it' in report
 
 
+@pytest.mark.parametrize('key', ['dateformat', 'datetimeformat'])
+def test_a_date_format_setting_is_a_strftime_pattern(key):
+    header, diagnostics = read(MINIMAL + f"  {key}: '%d. %b %Y'\n")
+
+    assert not diagnostics, diagnostics.report()
+    assert getattr(header.settings, key) == '%d. %b %Y'
+
+
+@pytest.mark.parametrize('key', ['dateformat', 'datetimeformat'])
+def test_an_empty_date_format_setting_is_refused(key):
+    """It would render every date in the document as nothing, silently."""
+    _, diagnostics = read(MINIMAL + f"  {key}: ''\n")
+
+    assert 'is empty' in diagnostics.report()
+
+
+def _strftime_rejects_an_unknown_directive():
+    from datetime import datetime
+    try:
+        datetime(2001, 2, 3).strftime('%Q')
+    except ValueError:
+        return True
+    return False
+
+
+@pytest.mark.skipif(not _strftime_rejects_an_unknown_directive(),
+                    reason='glibc prints an unknown directive literally; '
+                           'only Windows strftime rejects it')
+def test_a_date_format_setting_strftime_rejects_is_refused():
+    _, diagnostics = read(MINIMAL + "  datetimeformat: '%Q'\n")
+
+    assert 'is not a strftime pattern' in diagnostics.report()
+
+
 @pytest.mark.parametrize('written', ['{a: 1}', '[1, 2]'])
 def test_a_setting_must_be_a_single_value(written):
     _, diagnostics = read(MINIMAL + f'  documenttitle: {written}\n')
