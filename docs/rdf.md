@@ -11,7 +11,10 @@ the template, `head` is `<head/>`.
 > Scriptum used to read a hand-written line format with the extension `.rdf`.
 > That format is gone; `ReportDataFile` reads `.yaml` only and refuses anything
 > else with a message. Every construct of the old format has an equivalent
-> below, written as YAML structure instead of prefix characters.
+> below, written as YAML structure instead of prefix characters — and
+> `scripts/rdf2yaml.py` converts an existing `.rdf` base into a starting
+> point, marking what needs a human with `# CHECK:` comments (see
+> [tools.md](./tools.md)).
 
 ## The whole format on one screen
 

@@ -50,7 +50,7 @@ dev = ["pytest>=7.0", "pywin32>=306", "python-dateutil>=2.8.2"]
 
 [tool.setuptools]
 script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py",
-                 "scripts/check_pptx.py", "scripts/check_rdf.py" ]
+                 "scripts/check_pptx.py", "scripts/check_rdf.py", "scripts/rdf2yaml.py" ]
 
 [tool.setuptools.packages.find]
 include = ["Scriptum*", "CHANGELOG", "docs"]

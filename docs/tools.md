@@ -19,6 +19,31 @@ of them are missing. The DOCX and PPTX scripts rely on `python-docx` and
 `python-pptx`; install them as described in `AGENTS.md` when validating DOCX or
 PPTX files.
 
+## Convert an existing `.rdf` base to YAML
+
+`scripts/rdf2yaml.py` turns the retired `.rdf` text format into `.yaml` report
+documents -- a starting point to be finished by hand, not a bullet-proof
+translation:
+
+```
+python scripts/rdf2yaml.py report.rdf [more.rdf ...] [--out DIR] [--force] [--no-follow] [--no-check]
+```
+
+Each `.rdf` named is a root document and is written as a `.yaml` beside it (or
+under `--out`). Files an `&include` names are followed and converted as
+fragments relative to where the include sits; `loopfiles:` globs keep their
+wildcard. What was ambiguous in the old format -- an absolute address that
+re-enters a path with several instances, a fragment that addresses a level
+above its include or another section, a setting set twice, a marker an include
+silently cleared, a namespace not on the ladder -- is decided the way the old
+parser or the hand-translated corpus decided it and marked with a `# CHECK:`
+comment in the output, so the places to look at are the places with a comment.
+The result is then read the way Scriptum reads it and the diagnostics printed;
+fix what it refuses (see [rdf.md](./rdf.md)), and the document is done. On the
+project's own corpus the converter reproduces the hand translations for ten of
+twelve documents exactly; the other two differ where the old format was
+ambiguous.
+
 ## Convert video files and generate poster_frame_images
 
 Use `scripts/convert_video.py` to convert video files to PowerPoint-friendly MP4 files.
