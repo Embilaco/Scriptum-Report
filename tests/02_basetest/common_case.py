@@ -22,6 +22,11 @@ runner hands ``ReportDataFile`` an absolute document path, a reference was
 captured with a relative one), and :func:`comparable` drops the field results
 only Word refreshes. Every case test uses these, so no two tests can disagree
 about what "the same document" means.
+
+What a document *shows* is read back too, since no text comparison sees a
+picture that silently went missing (`1f75367`): :func:`drawings` lists the
+inline pictures of a Word paragraph with their sizes, :func:`shapes` and
+:func:`size_cm` do the same for the shapes of a slide.
 """
 
 import json
@@ -32,6 +37,7 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 import docx
+from docx.oxml.ns import qn
 import pptx
 
 from _setup_basetest import *
@@ -299,3 +305,26 @@ def difference(expected, got) -> str:
         return (f'{name} says {abs(len(expected) - len(got))} more line(s): '
                 f'{[line[:60] for line in extra]}')
     return 'no difference'
+
+
+# ----------------------------------------------------- what a document shows
+
+#: Both python-docx and python-pptx measure in EMU; sizes are read back in cm.
+EMU_PER_CM = 360000
+
+
+def drawings(paragraph) -> list:
+    """(width, height) in cm of every inline picture in a Word *paragraph*."""
+    return [(round(int(extent.get('cx')) / EMU_PER_CM, 2),
+             round(int(extent.get('cy')) / EMU_PER_CM, 2))
+            for extent in paragraph._p.iter(qn('wp:extent'))]
+
+
+def shapes(slide, kind) -> list:
+    """The shapes of a *slide* of one ``MSO_SHAPE_TYPE`` *kind*, in order."""
+    return [shape for shape in slide.shapes if shape.shape_type == kind]
+
+
+def size_cm(shape) -> tuple:
+    """(width, height) in cm of a slide shape, as the slide shows it."""
+    return (round(shape.width / EMU_PER_CM, 2), round(shape.height / EMU_PER_CM, 2))

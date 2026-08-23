@@ -78,7 +78,6 @@ from common_case import reference as stored_reference  # noqa: E402
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
-    ('02_basetest/docx_basic/simple', 'word_simple', 'template.docx'),
     ('02_basetest/docx_basic/images', 'word_images', 'template.docx'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'template_table.docx'),
     ('04_examples/wordreport', 'word_input', 'template.docx'),
@@ -96,6 +95,7 @@ CASES = [
 #: makes the comparison). See "Cases graduate" in the module docstring.
 GRADUATED = [
     ('04_examples/pptreport', 'powerpoint_input', 'test_pptx_generation.py'),
+    ('02_basetest/docx_basic/simple', 'word_simple', 'test_docx_simple.py'),
 ]
 
 
