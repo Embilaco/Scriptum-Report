@@ -37,4 +37,6 @@ ijk'
     task = next(t for t in rdf.tasks if t.target == 'position')
     task.value.load()
 
-    assert task.value.content == 'Wed Aug 28 14:44:25 2019', f'AssertionError: value not correct: {task.value.content}'
+    # A timestamp in a parameter file is rendered with datetimeformat, whose
+    # default is ISO 8601 (it was '%c': 'Wed Aug 28 14:44:25 2019').
+    assert task.value.content == '2019-08-28 14:44:25', f'AssertionError: value not correct: {task.value.content}'

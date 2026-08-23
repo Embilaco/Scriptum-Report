@@ -86,8 +86,8 @@ A mapping in the root document, and only there. Unknown keys are an error.
 | `version` | integer | `4` for this format; lower is refused |
 | `documenttype` | `docx` or `pptx` | required; it selects the section ladder below |
 | `datadir` | path | where `file:` values are looked up; must exist; **relative to the document** |
-| `dateformat` | strftime pattern | default `'%x'`, used by `{date: today}` |
-| `datetimeformat` | strftime pattern | default `'%c'`, used by `{date: now}` and by timestamps |
+| `dateformat` | strftime pattern | default `'%Y-%m-%d'`, used by `{date: today}` |
+| `datetimeformat` | strftime pattern | default `'%Y-%m-%d %H:%M:%S'`, used by `{date: now}`, by timestamps and by timestamps in parameter files |
 | `nvseparator` | one character | between name and value in parameter files, default `:` |
 | `csvseparator` | one character | between CSV columns, default `;` |
 | `floatformat` | Python format spec | how a float is written, default `7.4f` |
@@ -98,13 +98,24 @@ patterns; an empty pattern, or one `strftime` rejects, is refused. There is
 deliberately no `timeformat`: times come from `datetimeformat` or from a
 `format` on the value.
 
-The two defaults, `'%x'` and `'%c'`, are the C-library's locale forms. In a
-plain Python process that is the C locale — `08/23/26` and
-`Sun Aug 23 14:05:09 2026` — but they change the moment the host process
-calls `locale.setlocale` (a notebook, a GUI, a service): the same document
-then renders `23/08/2026 14:05:09`. If a report must read the same
-everywhere, set `dateformat` and `datetimeformat` explicitly; an ISO pattern
-such as `'%Y-%m-%d'` / `'%Y-%m-%d %H:%M:%S'` cannot be misread.
+**Why the defaults are ISO 8601.** A document that says nothing about formats
+renders `2026-08-23` and `2026-08-23 14:05:09` — the same in every process,
+on every machine, unambiguous between day and month, and sortable. Until
+2026-08-23 the defaults were the C library's locale forms `'%x'` and `'%c'`:
+in a plain Python process those are the C locale (`08/23/26`,
+`Sun Aug 23 14:05:09 2026`, US order and English weekday), but they change
+the moment the host process calls `locale.setlocale` — a notebook, a GUI, a
+service — so the same document rendered `23/08/2026 14:05:09` there. A
+report's dates should not depend on who launched the process.
+
+What you can do instead, per document or per value:
+
+- set `dateformat` / `datetimeformat` in `_scriptum_` to whatever house style
+  the report wants — `'%d. %b %Y'`, or `'%x'` / `'%c'` if the locale's own
+  forms are wanted knowingly;
+- give one value its own `format`: `{date: now, format: '%H:%M'}`;
+- for a literal date that must appear exactly as written, write it as text —
+  `date:published: 01. August 2020` is a string, not a date.
 
 ## Content — `_content_`
 

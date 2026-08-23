@@ -99,8 +99,9 @@ from Scriptum.rdf.values.date_value import EPOCH, DateValue
 
 
 @pytest.mark.parametrize('spec, expected_format', [
-    ('now', '%c'), ('Now', '%c'), ('NOW ', '%c'),
-    ('today', '%x'), ('Today', '%x'),
+    ('now', '%Y-%m-%d %H:%M:%S'), ('Now', '%Y-%m-%d %H:%M:%S'),
+    ('NOW ', '%Y-%m-%d %H:%M:%S'),
+    ('today', '%Y-%m-%d'), ('Today', '%Y-%m-%d'),
 ])
 def test_now_and_today_are_keywords_in_any_case(spec, expected_format):
     value = DateValue(spec, SETTINGS())
@@ -159,4 +160,14 @@ def test_a_pattern_strftime_rejects_is_flagged_and_rendered_with_dateformat():
 
     assert value.valid is False
     assert "'%Q' is not a strftime pattern" in value.problem
-    assert value.value == value.dt.strftime('%x'), 'the degrade, as before'
+    assert value.value == value.dt.strftime('%Y-%m-%d'), 'the degrade: dateformat'
+
+
+def test_the_defaults_are_iso_8601():
+    """Decided 2026-08-23 (question 47d53a4d56f1 on the YAML board): a document
+    that says nothing about formats renders the same in every process. The C
+    library's '%x'/'%c' followed the process locale."""
+    settings = SETTINGS()
+
+    assert (settings.dateformat, settings.datetimeformat) ==         ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S')
+    assert str(DateValue(1231231230, settings)) ==         datetime.fromtimestamp(1231231230).strftime('%Y-%m-%d %H:%M:%S')
