@@ -10,9 +10,8 @@ that, so this module reads the deck back:
 
 * what it *says*, against the reference in ``expected/powerpoint_input.json``
   -- captured at `44267a8` from the ``.rdf`` this fixture was translated from,
-  by the differential harness, which this case has graduated from (see
-  ``02_basetest/differential``; the reading and normalising are shared in
-  ``common_case``);
+  by the differential harness, which this case has graduated from (the
+  reading, normalising and comparing are shared in ``common_case``);
 * what it *shows*, which no text comparison can see: the pictures with their
   sizes, the table with its shape, the two movies with their posters, and the
   two pictures that could only be announced as missing.
@@ -20,7 +19,6 @@ that, so this module reads the deck back:
 
 from pathlib import Path
 import importlib.util
-import os
 import sys
 
 import pptx
@@ -43,8 +41,9 @@ spec.loader.exec_module(module)
 
 CaseConfig = module.CaseConfig
 run_pptx_case = module.run_pptx_case
-said, normalise, reference, difference = (
-    module.said, module.normalise, module.reference, module.difference)
+said, normalise, reference, difference, portable, fold = (
+    module.said, module.normalise, module.reference, module.difference,
+    module.portable, module.fold)
 
 REFERENCE = THIS_DIR / 'expected' / 'powerpoint_input.json'
 
@@ -63,26 +62,6 @@ def build(tmp_path):
         createpdf=False,
     )
     return run_pptx_case(config, tmp_path)
-
-
-def portable(lines, workspace):
-    """*lines* with the workspace taken out of the paths quoted in them.
-
-    The runner hands ``ReportDataFile`` an absolute document path, so the data
-    directory -- and the path a missing-file message quotes -- is absolute,
-    while the reference was captured from a run with a relative one and reads
-    ``data/...``. The message quotes with ``repr``, which on Windows doubles
-    every backslash, so the prefix to strip is the repr'd workspace; the
-    separators are folded to ``/`` afterwards (on both sides, see the
-    comparison) so the test reads the same on every platform.
-    """
-    prefix = repr(str(workspace) + os.sep)[1:-1]
-    return [fold(line.replace(prefix, '')) for line in lines]
-
-
-def fold(line):
-    """A repr'd Windows path reads like a POSIX one."""
-    return line.replace('\\\\', '/')
 
 
 def of_kind(slide, kind):
@@ -108,7 +87,7 @@ def test_the_deck_says_what_the_reference_says(tmp_path):
     reference -- digits and weekday names collapsed on both sides, since the
     reference was captured on another day and ``date: now`` is evaluated per
     run. The one line that names a path (a picture whose file is missing) is
-    made portable first, see :func:`portable`."""
+    made portable first, see ``common_case.portable``."""
     deck = build(tmp_path)
 
     got = normalise(portable(said(deck), deck.parent))

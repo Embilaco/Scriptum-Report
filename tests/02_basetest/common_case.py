@@ -16,8 +16,12 @@ case can compare what it *says* with the reference kept beside it in
 ``.pptx`` in order, :func:`normalise` hides what changes from run to run
 (digits, weekday names -- both for dates), :func:`reference` reads a stored
 list through the same normaliser, and :func:`difference` says where two lists
-part. The differential harness in ``differential/`` uses the same four, so a
-case and the harness can never disagree about what "the same document" means.
+part. Two more make a run comparable with a reference captured another way:
+:func:`portable` takes the absolute workspace out of a quoted path (the
+runner hands ``ReportDataFile`` an absolute document path, a reference was
+captured with a relative one), and :func:`comparable` drops the field results
+only Word refreshes. Every case test uses these, so no two tests can disagree
+about what "the same document" means.
 """
 
 import json
@@ -212,6 +216,52 @@ def _slides(path):
                 for row in shape.table.rows:
                     lines.extend(cell.text.strip() for cell in row.cells)
     return lines
+
+
+def portable(lines, workspace) -> list:
+    """*lines* with *workspace* taken out of the paths quoted in them.
+
+    The runner hands ``ReportDataFile`` an absolute document path, so the data
+    directory -- and the path a message quotes for a missing picture or video
+    -- is absolute, while a reference was captured from a run with a relative
+    one and reads ``data/...``. The message quotes with ``repr``, which on
+    Windows doubles every backslash, so the prefix to strip is the repr'd
+    workspace; the separators are then folded to ``/`` so the comparison reads
+    the same on every platform. Apply :func:`fold` to the reference side too.
+    """
+    prefix = repr(str(workspace) + os.sep)[1:-1]
+    return [fold(line.replace(prefix, '')) for line in lines]
+
+
+def fold(line) -> str:
+    """A repr'd Windows path reads like a POSIX one."""
+    return line.replace('\\\\', '/')
+
+
+#: A field result of a list of tables / figures: ``caption<TAB>page``, after
+#: the digits have been collapsed. Only Word updates these, so a finished run
+#: and a plain run disagree on them by construction; see :func:`comparable`.
+FIELD_ENTRY = re.compile(r'\t#$')
+
+
+def comparable(lines) -> list:
+    """*lines* without the field results only Word updates.
+
+    A Word template carries a *list of tables* and a *list of figures* -- TOC
+    fields whose stored result is whatever Word last wrote into them. A plain
+    run (``save()`` without ``finish``) leaves that result as the template had
+    it; a ``finish=True`` run -- Windows with Word, the only thing that can
+    update a field -- rewrites it with one entry per caption actually in the
+    document. So the same document says two different things in those lines
+    depending on where it was built, and a reference captured one way can
+    never match a run made the other way. The entries are the one shape
+    ``caption<TAB>page`` and are dropped from **both** sides; nothing is lost,
+    every caption is also a caption paragraph of its own, which stays compared.
+    The wordreport reference was captured with ``finish=True`` (``e60f4e0``),
+    the others without, and all compare against a plain run anywhere and a
+    finished run where Word is.
+    """
+    return [line for line in lines if not FIELD_ENTRY.search(line)]
 
 
 def normalise(lines) -> list:

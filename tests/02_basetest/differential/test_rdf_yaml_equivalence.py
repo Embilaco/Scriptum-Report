@@ -48,20 +48,10 @@ accounts for it.
 What is not compared: field results
 -----------------------------------
 A Word template carries a *list of tables* and a *list of figures* -- TOC
-fields whose stored result is whatever Word last wrote into them. A plain run
-(``save()`` without ``finish``) leaves that result as the template had it,
-``Table 1: <description/>`` three times; a ``finish=True`` run -- Windows with
-Word, the only thing that can update a field -- rewrites it with one entry per
-caption actually in the document. So the same document says two different
-things in those lines depending on where it was built, and a reference
-captured one way can never match a run made the other way.
-
-Those entries are the one shape ``caption<TAB>page``, and :func:`comparable`
-drops them from **both** sides. Nothing is lost: every caption is also a
-caption paragraph of its own, which stays compared. One reference therefore
-serves both -- the wordreport reference was captured with ``finish=True``
-(``e60f4e0``) and the others without, and all compare against a plain run
-anywhere, and against a finished run where Word is.
+fields whose stored result is whatever Word last wrote into them, so a
+``finish=True`` run and a plain run disagree on those lines by construction.
+``common_case.comparable`` drops them from **both** sides; its docstring has
+the full story.
 """
 
 from __future__ import annotations
@@ -69,7 +59,6 @@ from __future__ import annotations
 import contextlib
 import io
 import os
-import re
 import shutil
 import sys
 import tempfile
@@ -84,13 +73,8 @@ TESTS_ROOT = Path(__file__).resolve().parents[2]
 if str(TESTS_ROOT / '02_basetest') not in sys.path:
     sys.path.append(str(TESTS_ROOT / '02_basetest'))
 
-from common_case import said, normalise, difference  # noqa: E402
+from common_case import said, normalise, difference, comparable, FIELD_ENTRY  # noqa: E402
 from common_case import reference as stored_reference  # noqa: E402
-
-#: A field result of a list of tables / figures: ``caption<TAB>page``, after
-#: the digits have been collapsed. Only Word updates these, so a finished run
-#: and a plain run disagree on them by construction; see the module docstring.
-FIELD_ENTRY = re.compile(r'\t#$')
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
@@ -161,14 +145,6 @@ def generate(work, document_name, template, output=None):
 def spoken(path):
     """What the finished document says, in order, dates neutralised."""
     return normalise(said(path))
-
-
-def comparable(lines):
-    """*lines* without the field results only Word updates -- the entries of
-    a list of tables or figures -- so a reference captured with ``finish=True``
-    and a run made without it (or the other way round) compare on what the
-    document itself says."""
-    return [line for line in lines if not FIELD_ENTRY.search(line)]
 
 
 def reference_path(case, stem):
