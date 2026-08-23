@@ -86,7 +86,6 @@ CASES = [
     # .yaml uses the ladder's sub3section. The tag was renamed in the template
     # and the reference re-captured -- it predated blueprint pruning and still
     # held the nested blueprint text a seconda clone used to leak.
-    ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
 ]
 
 #: (case directory relative to tests/, fixture stem, the test file that now
@@ -96,6 +95,7 @@ GRADUATED = [
     ('02_basetest/docx_basic/simple', 'word_simple', 'test_docx_simple.py'),
     ('02_basetest/docx_basic/images', 'word_images', 'test_docx_images.py'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'test_docx_tables.py'),
+    ('02_basetest/docx_basic/text', 'word_text', 'test_docx_text.py'),
 ]
 
 
