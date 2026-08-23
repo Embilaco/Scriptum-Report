@@ -25,8 +25,6 @@ from .template import copy_table_before, copy_paragraph_before, add_page_break_b
 
 from ..tag.tag import Tag, getTag, puretagOf
 from ..rdf.namespaces import docx_sections
-from docx.text.paragraph import Paragraph
-from docx.table import Table
 from docx.oxml.table import CT_Tbl
 from copy import deepcopy
 
@@ -436,6 +434,11 @@ class StructuredElement:
         mycopy = StructuredElement(newElements[0].tags[0], newpath, parent, newUnfoldedElements, e)
         parent.subAnchors = _subs
         mycopy.explore()
+        # A parent's explore() marks each child's opening paragraph for
+        # deletion when it meets the open tag; a clone is appended without
+        # that pass, so it is marked here -- else an opening paragraph that
+        # held nothing but the tag outlives its tag as an empty line.
+        parent.markForDeletion(newElements[0])
         #print('mycopy', mycopy.path, 'into', parent.path, 'at', anchor.path)
         # add this one into the parents structure
         parent.structure.append(('struct',mycopy))
@@ -453,23 +456,27 @@ class StructuredElement:
         print('clean() TO BE IMPLEMENTED IN SUBCLASSES')
         pass
 
-    def delete(self):
-        """delete the full structure
-        
-        access to deletion for final user
+    def delete(self, verbose=True):
+        """Remove the whole structure from the document.
+
+        ``structure`` holds wrapped elements -- ``DocParagraphElement`` and
+        ``DocTableElement`` -- never the python-docx objects themselves, so
+        the leaves are deleted through the wrapper. (This used to test for
+        the raw ``Paragraph``/``Table`` types, which never matched, and so
+        recursed through every level and removed nothing.) One element can
+        sit under several tags, so a leaf may be asked twice; the wrappers'
+        ``delete`` is a no-op on a detached element, which is what makes
+        that safe.
         """
-        print(f'Deleting structure {(".".join(self.path))}')
-        from .paragraphs import delete_paragraph
-        from .tables import delete_table
+        if verbose:
+            print(f'Deleting structure {(".".join(self.path))}')
         for t, e in self.structure:
-            #print(el)
-            if t in ['struct', 'image', 'table']:
+            if t in ['struct', 'image', 'table', 'text']:
+                e.delete(verbose=verbose)
+            else:
                 e.delete()
-            elif type(e) == Paragraph:
-                delete_paragraph(e)
-            elif type(e) == Table:
-                delete_table(e)
-        print('... deleted')
+        if verbose:
+            print('... deleted')
 
     def inspect(self, level=None, indent=0):
         """visualize the content of that element"""

@@ -213,6 +213,24 @@ def test_setting_an_instance_leaves_the_puretag_alone():
     assert 'breakbefore' in tag.tagtext, 'other arguments survive'
 
 
+def test_numbering_makes_an_instance_which_is_never_a_blueprint():
+    """``template`` marks a blueprint, and a numbered tag is a clone of one.
+
+    The argument is dropped with the numbering, so a clone cannot be taken
+    for a blueprint by anything that decides by that argument -- and cannot
+    be pruned with the blueprints at the end, content and all.
+    """
+    tag = createTag('subsection:instruction template breakbefore')
+
+    tag.setInstance(2)
+
+    assert 'template' not in tag.args
+    assert 'template' not in tag.tagtext.split()
+    assert 'breakbefore' in tag.args, 'only template goes'
+    assert tag.withInstance(3).split() == \
+        ['subsection:instruction', 'breakbefore', 'id=3']
+
+
 def test_a_numbered_tag_rescans_to_the_same_address():
     """The rewritten text goes back into the document and is scanned again, so
     the round trip has to hold."""

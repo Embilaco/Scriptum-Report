@@ -146,10 +146,18 @@ class Tag:
 
         A caller replacing the tag in a document has to match on the text that
         is still there, so the new text is computed first and applied after.
+
+        Numbering makes an instance, and an instance is never a blueprint: the
+        ``template`` argument is dropped along with any old ``id``. A clone
+        that still said ``template`` would read as a blueprint to anything
+        that decides by that argument -- and be pruned with the blueprints at
+        the end, content and all. The nested blueprints a clone carries keep
+        the argument: their tags are not the one being numbered.
         """
         head, _, rest = self.tagtext.partition(' ')
         keep = [part for part in rest.split()
-                if not part.lower().startswith('id=')]
+                if not part.lower().startswith('id=')
+                and part.lower() != 'template']
         return ' '.join([head] + keep + [f'id={number}'])
 
     def setInstance(self, number):
@@ -160,6 +168,7 @@ class Tag:
         """
         self.args = dict(self.args)
         self.args['id'] = str(number)
+        self.args.pop('template', None)
         self.tagtext = self.withInstance(number)
         return self.tagtext
 

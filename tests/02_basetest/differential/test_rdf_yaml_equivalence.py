@@ -80,7 +80,9 @@ CASES = [
 #: ``<subsubsubsection:secondsubsubi>``, which is not in the docx ladder --
 #: every other template in the corpus stops at ``subsubsection``. The ``.yaml``
 #: uses the ladder's name, ``sub3section``, so the template needs the matching
-#: rename before the two can agree.
+#: rename before the two can agree. Its reference also predates blueprint
+#: pruning (it still holds the nested blueprint ``seconda::2`` used to leak),
+#: so re-capture it after the rename rather than expecting it to pass as is.
 PENDING = [
     ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
 ]

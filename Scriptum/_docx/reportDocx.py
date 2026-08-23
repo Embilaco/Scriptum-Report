@@ -16,6 +16,7 @@
 from docx import Document
 from docx.oxml.ns import qn
 from .section import Sections
+from ..rdf.namespaces import docx_sections
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag
 
@@ -177,6 +178,11 @@ class ManagedDocx:
         """
         print('check consistency')
 
+        # Blueprints that were cloned in place of being filled. They leave the
+        # tree when their first instance is cloned, so the pruning pass at the
+        # end cannot find them by walking it; they are remembered here instead.
+        spentBlueprints = []
+
         if not addcopy:
             print('   SKIP: add and copy new paragraphs and more ...')
         else:
@@ -221,10 +227,37 @@ class ManagedDocx:
                                   f'{(".".join(t.myAddress))}')
                             continue
 
+                        element = struct[0][1]
+                        firstElement = element.structure[0][1]
+
+                        if element.isTemplate:
+                            # A block whose tag says `template` is a blueprint,
+                            # and every instance of it is a clone -- the first
+                            # included. The clone goes exactly where the
+                            # blueprint stands (before its opening paragraph),
+                            # which keeps document order whatever order the
+                            # data names things in; the blueprint itself is
+                            # pruned at the end. Word now agrees with
+                            # PowerPoint, which always copies.
+                            #
+                            # The blueprint leaves the parent's structure
+                            # first: findExact takes the first match, and the
+                            # fills to come must reach the clone, not a block
+                            # that is about to be deleted. A blueprint nested
+                            # inside a clone was never through getTemplates(),
+                            # so it gets its deepcopy here.
+                            if not hasattr(element, 'deepcopy'):
+                                element.createTemplate()
+                            parent.structure = [(pt, pe) for pt, pe in parent.structure
+                                                if pe is not element]
+                            spentBlueprints.append(element)
+                            element.copy(firstElement, parent=parent,
+                                         newpath=t.myAddress[:-1],
+                                         newname=t.myAddress[-1], section=root)
+
                         # Claims this child *and everything ahead of it*, so a
                         # later clone cannot be inserted upstream of the block
                         # it follows -- see StructuredElement.claimSubAnchor.
-                        firstElement = struct[0][1].structure[0][1]
                         parent.claimSubAnchor(firstElement)
 
                         continue
@@ -323,11 +356,12 @@ class ManagedDocx:
             #     e.replaceTagInAll(t.puretag,'')
             #     t.burn()
 
-        if not removetemplate:                
-            print('   SKIP: remove template section...')
+        if not removetemplate:
+            print('   SKIP: remove template section and blueprints...')
         else:
-            print('   remove template section...')
+            print('   remove template section and blueprints...')
             self.sections.delete('template')
+            self.pruneBlueprints(spentBlueprints)
 
         if not cleardust:                
             print('   SKIP: clearing all the dust...')
@@ -351,6 +385,36 @@ class ManagedDocx:
             self.document.core_properties.title = documenttitle
 
         print('done')
+
+    def pruneBlueprints(self, spent):
+        """Remove every blueprint from the document, used or not.
+
+        A blueprint is a section-ladder block whose tag says ``template``. It
+        is never content: its instances are clones, and once they are placed
+        the blueprint has nothing left to do -- and an unused one would stay
+        in the finished document otherwise, tags cleaned and text intact,
+        which is what used to happen.
+
+        Two kinds have to be found two ways. A blueprint that was cloned left
+        its parent's structure when that happened, so it is taken from
+        ``spent``. One that was never used is still in the tree -- whether it
+        came with the template or rides inside a clone, where a nested
+        blueprint is copied along with everything else -- so the tree is
+        walked for it. Clones themselves do not say ``template`` (numbering
+        drops it), so the walk cannot mistake an instance for its blueprint.
+        Deleting is a no-op on a detached element, so the overlap between
+        the two is harmless, and so is meeting a nested blueprint after its
+        parent already went.
+        """
+        ladder = docx_sections['order']
+        found = list(spent)
+        for sec in self.sections:
+            if sec.name == 'template':
+                continue  # went wholesale, just above
+            found += [e for e in sec.iterOnStructures()
+                      if e.isTemplate and e.type in ladder]
+        for e in found:
+            e.delete(verbose=False)
 
     def findTableOfContents(self):
         """find the table of contents, other tables untouched for now"""

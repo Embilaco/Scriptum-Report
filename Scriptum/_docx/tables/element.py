@@ -49,6 +49,10 @@ class DocTableElement(DocElement, TableElement):
                     tags += found
         self.tags = tags
 
+    def delete(self):
+        """Remove the table from the document; a no-op once detached."""
+        delete_table(self.thing)
+
     #
     # replace tags
     #

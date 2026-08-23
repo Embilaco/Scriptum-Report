@@ -1,22 +1,25 @@
-"""A clone must land after the instance it follows, not above it.
+"""Where a clone lands, and what is left of a blueprint afterwards.
 
-The bug this guards was reproduced on two of the shipped templates with the
-current ``.rdf`` format, so it is not something the YAML work introduced.
+A block whose tag says ``template`` is a **blueprint**: every instance of it
+is a clone, the first included, and the blueprint itself is pruned at the
+end. A block without the argument is content: its first instance is the block
+itself and later instances clone it. Word thereby agrees with PowerPoint,
+which always copies.
 
-``subAnchors`` holds the opening paragraph of each ladder-type child of a
-structure, in document order. ``apply`` claimed one; ``copy`` inserted before
-whichever was left at the front. When the document never used a blueprint that
-sits *earlier* in the template, that blueprint stayed at the front -- so the
-clone was inserted before it, upstream of the block it was supposed to follow.
-The unused blueprint is pruned at the end, by which time the clone is already
-in the wrong place.
+Placement follows from that. The first instance of a blueprint goes exactly
+where the blueprint stands -- before its opening paragraph, which is then
+removed with the rest of it -- so the finished document keeps the template's
+order whatever order the data names things in. Further instances go before
+the first *unclaimed* sibling, and claiming a child claims everything ahead of
+it (``claimSubAnchor``): an earlier blueprint the data never used must not
+stay at the front, or the next clone goes in upstream of the block it follows,
+which is the defect reproduced here on two of the shipped templates.
 
-``template_text.docx`` is the right template for this: ``section:second`` holds
-``<subsection:seconda template>`` and then ``<subsection:secondb template>``, so
-using only ``secondb`` leaves an earlier blueprint unclaimed.
-
-The fix is that claiming a child claims everything ahead of it too -- nothing at
-or before it can be a valid insertion point for content that comes after it.
+``template_text.docx`` is the right template for most of this: ``section:
+second`` holds ``<subsection:seconda template>`` -- with a nested
+``<subsubsection:secondsub1 template>`` whose body says *Secondsub1* -- and
+then ``<subsection:secondb template>``. The one case it cannot express, a
+blueprint beside an ordinary sibling, gets a template built here.
 """
 
 from pathlib import Path
@@ -35,54 +38,78 @@ from _setup_docx_basic import *          # noqa: F401,F403  (brings reset_state)
 TEMPLATE = 'template_text.docx'
 MARKS = ('ZZintro', 'ZZsibling', 'ZZfirst', 'ZZsecond')
 
+HEADER = ('_scriptum_:\n'
+          '  version: 4\n'
+          '  documenttype: docx\n'
+          '  datadir: ./data\n'
+          '_content_:\n')
 
-def generate(tmp_path, use_sibling):
-    """Build a document that repeats ``subsection:secondb``, and read its order."""
+
+def generate(tmp_path, second, template=TEMPLATE, section='section:second'):
+    """Build a document from one section's body and return its paragraphs."""
     import Scriptum
 
-    shutil.copy(THIS_DIR / TEMPLATE, tmp_path)
+    if isinstance(template, str):
+        shutil.copy(THIS_DIR / template, tmp_path)
+    else:
+        template.save(tmp_path / 'built.docx')
+        template = 'built.docx'
     (tmp_path / 'data').mkdir(exist_ok=True)
 
-    sibling = ''
-    if use_sibling:
-        sibling = ('      - subsection:seconda:\n'
-                   '          - head: ZZsibling\n')
-
     (tmp_path / 'case.yaml').write_text(
-        '_scriptum_:\n'
-        '  version: 4\n'
-        '  documenttype: docx\n'
-        '  datadir: ./data\n'
-        '_content_:\n'
-        '  - section:second:\n'
-        '      - text:description: ZZintro\n'
-        + sibling +
-        '      - subsection:secondb:\n'
-        '          - head: ZZfirst\n'
-        '      - subsection:secondb:\n'
-        '          - head: ZZsecond\n',
-        encoding='utf-8')
+        HEADER + f'  - {section}:\n' + second, encoding='utf-8')
 
     os.chdir(tmp_path)
     rdf = Scriptum.ReportDataFile('case.yaml')
-    document = Scriptum.ManagedDocx(TEMPLATE, rdf)
+    document = Scriptum.ManagedDocx(template, rdf)
     document.typesetting(rdf)
     document.save('out.docx')
 
-    return [p.text.strip() for p in docx.Document('out.docx').paragraphs
-            if p.text.strip() in MARKS]
+    return [p.text.strip() for p in docx.Document('out.docx').paragraphs]
 
+
+def marks(paragraphs):
+    return [p for p in paragraphs if p in MARKS]
+
+
+TWO_SECONDB = ('      - text:description: ZZintro\n'
+               '      - subsection:secondb:\n'
+               '          - head: ZZfirst\n'
+               '      - subsection:secondb:\n'
+               '          - head: ZZsecond\n')
+
+SIBLING = ('      - subsection:seconda:\n'
+           '          - head: ZZsibling\n')
+
+
+# ------------------------------------------------------------ placement
 
 def test_a_clone_follows_its_instance_when_an_earlier_blueprint_is_unused(tmp_path):
     """The regression. Before the fix this came back as intro, second, first."""
-    assert generate(tmp_path, use_sibling=False) == \
+    assert marks(generate(tmp_path, TWO_SECONDB)) == \
         ['ZZintro', 'ZZfirst', 'ZZsecond']
 
 
 def test_a_clone_still_follows_its_instance_when_the_blueprint_is_used(tmp_path):
     """The case that always worked, kept so the fix cannot break it."""
-    assert generate(tmp_path, use_sibling=True) == \
+    body = '      - text:description: ZZintro\n' + SIBLING + TWO_SECONDB[
+        len('      - text:description: ZZintro\n'):]
+    assert marks(generate(tmp_path, body)) == \
         ['ZZintro', 'ZZsibling', 'ZZfirst', 'ZZsecond']
+
+
+def test_first_instances_keep_the_template_order_whatever_the_data_order(tmp_path):
+    """``secondb`` named before ``seconda`` still comes out after it.
+
+    The first instance of a blueprint lands where the blueprint stands, so
+    the data's order cannot reorder the template. A cursor that popped "the
+    next free slot" regardless of which block was named would put secondb's
+    clone into seconda's place here -- the design that was tried first.
+    """
+    body = ('      - subsection:secondb:\n'
+            '          - head: ZZfirst\n'
+            + SIBLING)
+    assert marks(generate(tmp_path, body)) == ['ZZsibling', 'ZZfirst']
 
 
 def test_claiming_a_child_claims_everything_ahead_of_it():
@@ -105,3 +132,74 @@ def test_claiming_a_child_claims_everything_ahead_of_it():
 
     holder.claimSubAnchor('d')
     assert holder.subAnchors == []
+
+
+# -------------------------------------------------------------- pruning
+
+def test_an_unused_blueprint_leaves_nothing_behind(tmp_path):
+    """Only ``secondb`` is used, so ``seconda`` -- and the nested blueprint
+    inside it -- must not show up: its tags cleaned and its text intact was
+    what the finished document used to carry."""
+    said = generate(tmp_path, TWO_SECONDB)
+
+    assert 'Secondsub1' not in said
+    assert 'SubSub I' not in said
+    assert 'Between the subsections' in said, 'ordinary content stays'
+
+
+def test_a_blueprint_carried_inside_a_clone_is_pruned_when_unused(tmp_path):
+    """A clone of ``seconda`` carries a copy of the ``secondsub1`` blueprint.
+    The first instance uses it, the second does not -- so its text appears
+    once, not twice. Twice is what a clone used to leak."""
+    body = ('      - subsection:seconda:\n'
+            '          - head: ZZfirst\n'
+            '          - subsubsection:secondsub1:\n'
+            '              - item: used here\n'
+            '      - subsection:seconda:\n'
+            '          - head: ZZsecond\n')
+    said = generate(tmp_path, body)
+
+    assert said.count('Secondsub1') == 1
+    assert marks(said) == ['ZZfirst', 'ZZsecond']
+
+
+# --------------------------------------- a blueprint beside ordinary content
+
+def built_template():
+    """``section:mix`` holds a blueprint, an ordinary subsection, a blueprint.
+
+    No shipped template has the mixture, and it is the shape that separates
+    "the first instance goes where its blueprint stands" from any rule that
+    counts slots: name the three in reverse and the output must still read
+    alpha, plain, omega.
+    """
+    document = docx.Document()
+    for line in ('<section:mix>MIX',
+                 '<subsection:alpha template><head/>',
+                 '</subsection:alpha>',
+                 '<subsection:plain><head/>',
+                 '</subsection:plain>',
+                 '<subsection:omega template><head/>',
+                 '</subsection:omega>'):
+        document.add_paragraph(line)
+    document.add_section()
+    # A section ends with its break paragraph, and that paragraph must carry
+    # the closing tag -- nothing may sit between the two.
+    document.paragraphs[-1].text = '</section:mix>'
+    document.add_paragraph('<section:template>')
+    document.add_paragraph('</section:template>')
+    return document
+
+
+def test_a_blueprint_beside_ordinary_content_keeps_its_place(tmp_path):
+    body = ('      - subsection:omega:\n'
+            '          - head: ZZomega\n'
+            '      - subsection:plain:\n'
+            '          - head: ZZplain\n'
+            '      - subsection:alpha:\n'
+            '          - head: ZZalpha\n')
+    said = generate(tmp_path, body, template=built_template(),
+                    section='section:mix')
+
+    assert [p for p in said if p.startswith('ZZ')] == \
+        ['ZZalpha', 'ZZplain', 'ZZomega']
