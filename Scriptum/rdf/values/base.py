@@ -55,11 +55,18 @@ class Value:
             self.object.applyActions(actions)
 
     def load(self):
-        """load the content of this value from whatever source it comes from"""
+        """Load the content of this value from whatever source it comes from.
+
+        Fills ``self.content`` and returns it too, so ``value.load()`` reads
+        either way. (Two call sites in the back ends used the return value
+        while there was none: a parfile fill in a Word paragraph rendered the
+        word 'None', and a text-file fill on a slide would have raised.)
+        """
         if hasattr(self.object,'content'):
             self.content = self.object.content
         else:
             self.content = str(self)
+        return self.content
 
     def __repr__(self) -> str:
         return f'{self.type} {self.object!r}'

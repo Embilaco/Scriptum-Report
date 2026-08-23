@@ -106,7 +106,8 @@ def genericFill(
             match[0].fillAnimation(match[1], task)
 
     elif value.type == 'file' and value.subtype == 'text':
-        text = value.load().content
+        value.load()
+        text = value.content
         for element in iterable:
             found = element.replaceTagInAll(target,text)
             if found and onlyOne:

@@ -151,8 +151,11 @@ class ManagedDocx:
                 if not value.object.exists:
                     found.text = f'file {value.object.filename!r} not found'
                 else:
-                    nv = value.load()
-                    found.text = str(nv)
+                    # load() fills value.content; it used to be read as the
+                    # return value, which was None, so the word 'None' went
+                    # into the paragraph where the parameter belonged.
+                    value.load()
+                    found.text = str(value.content)
 
     def typesetting(self, rdf, 
                     addcopy=True, 
