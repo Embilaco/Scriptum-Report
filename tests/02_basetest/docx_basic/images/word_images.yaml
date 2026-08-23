@@ -16,10 +16,10 @@ _content_:
       - image:inline: {file: camera.png, description: cheese}
       - image:existing: {file: bootseal2.png, description: 'what else?'}
       - marker:content:
-          - image:generic: {file: load1.png, description: load one}
-          - image:generic: {file: history.png, description: 'historic...'}
-          - image:lonely: {file: load1.png}
-          - image:lonely: {file: load1.png}
-          - icon:rocket: a
-          - image:small: {file: history.png, description: 'small historic...'}
-          - image:small: {file: load1.png, description: load one again}
+          - image:generic: {file: screw.png, description: a screw thing }
+          - image:generic: {file: curve_test.png, description: 'curve ...'}
+          - image:lonely: {file: screw.png}
+          - image:lonely: {file: not-existing.png}
+          - icon:rocket: a rocket
+          - image:small: {file: curve_test.png, description: 'small curve ...'}
+          - image:small: {file: screw.png, description: a screw thing again}
