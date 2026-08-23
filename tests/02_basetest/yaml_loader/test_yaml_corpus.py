@@ -198,7 +198,8 @@ def test_the_big_docx_document_knows_which_files_are_missing(tmp_path):
     """Existence is decided when the document is read (see *Content is lazy,
     existence is eager* on the values board), so the missing inputs are known
     before any document work begins. The text parser's suite pinned this list
-    for the same fixture; it is unchanged, in document order."""
+    for the same fixture, in document order; it lost pudding.jpg when that
+    file joined data_source (5bf0c37)."""
     document = load(prepare('02_basetest/rdf/rdf_big_docx.yaml', tmp_path))
 
     missing = []
@@ -210,7 +211,7 @@ def test_the_big_docx_document_knows_which_files_are_missing(tmp_path):
                 missing.append(name)
 
     assert missing == [
-        'pudding.jpg', 'instruction2.png', 'instructiongeneral.csv',
+        'instruction2.png', 'instructiongeneral.csv',
         'instruction1.png', 'instruction1b.png', 'instruction2.csv',
         'plate1.png', 'plate1.txt', 'bc1.png', 'some.png', 'some.txt',
         'tools.csv', 'tool.par', 'todo.txt', 'ingredients1.csv',
