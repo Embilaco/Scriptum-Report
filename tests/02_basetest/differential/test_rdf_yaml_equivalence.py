@@ -88,25 +88,13 @@ CASES = [
     ('04_examples/essay', 'essay', 'essay.docx'),
     ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
     ('04_examples/pptreport', 'powerpoint_input', 'template.pptx'),
-]
-
-#: The one case that does not match, and why. It is a template problem, not a
-#: loader one: ``template_text.docx`` spells its depth-3 block
-#: ``<subsubsubsection:secondsubsubi>``, which is not in the docx ladder --
-#: every other template in the corpus stops at ``subsubsection``. The ``.yaml``
-#: uses the ladder's name, ``sub3section``, so the template needs the matching
-#: rename before the two can agree. Its reference also predates blueprint
-#: pruning (it still holds the nested blueprint ``seconda::2`` used to leak),
-#: so re-capture it after the rename rather than expecting it to pass as is.
-PENDING = [
+    # The last to join: template_text.docx spelled its depth-3 block
+    # <subsubsubsection:secondsubsubi>, a name not on the docx ladder, while the
+    # .yaml uses the ladder's sub3section. The tag was renamed in the template
+    # and the reference re-captured -- it predated blueprint pruning and still
+    # held the nested blueprint text a seconda clone used to leak.
     ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
 ]
-
-TEMPLATE_MISMATCH = (
-    'template_text.docx spells a depth-3 block <subsubsubsection:...>, which '
-    'is not in the docx ladder; the .yaml uses the ladder name sub3section, so '
-    'the template needs the matching tag rename'
-)
 
 
 def prepare(case):
@@ -234,7 +222,7 @@ def compare(case, stem, template):
 
 def test_every_case_has_a_reference():
     """A missing reference would make a comparison vacuous."""
-    for case, stem, template in CASES + PENDING:
+    for case, stem, template in CASES:
         assert reference_path(case, stem).is_file(), \
             f'{stem}: no reference at {reference_path(case, stem)}'
         assert len(reference(case, stem)) > 3, stem
@@ -248,7 +236,7 @@ def test_no_reference_is_left_behind():
     """
     on_disk = {path.resolve() for path in TESTS_ROOT.rglob('expected/*.json')}
     claimed = {reference_path(case, stem).resolve()
-               for case, stem, _ in CASES + PENDING}
+               for case, stem, _ in CASES}
 
     assert on_disk == claimed, f'orphaned: {sorted(on_disk - claimed)}'
 
@@ -304,13 +292,3 @@ def test_the_yaml_document_says_what_the_rdf_document_said(case, stem, template)
         difference(expected, got)
         + chr(10) + 'the run said: ' + repr(complaints[:3]))
 
-
-@pytest.mark.parametrize('case, stem, template', PENDING)
-@pytest.mark.xfail(strict=True, reason=TEMPLATE_MISMATCH)
-def test_the_case_whose_template_disagrees_with_the_ladder(case, stem, template):
-    """Strict, so that renaming the tag in the template announces itself."""
-    expected, got, complaints = compare(case, stem, template)
-
-    assert got == expected, (
-        difference(expected, got)
-        + chr(10) + 'the run said: ' + repr(complaints[:3]))
