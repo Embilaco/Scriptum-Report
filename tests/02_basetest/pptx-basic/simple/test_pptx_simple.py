@@ -1,18 +1,40 @@
-"""Pytest version of the former CreateDOCforEssay notebook."""
+"""The simple pptx case, built and read back.
+
+``powerpoint_simple.yaml`` is the pptx back end in small: layout copies
+(``TitleSlide`` ... ``BackCover``), placeholder texts, ``_global_`` values
+on every slide (reference, date and name), parameter-file values placed at
+a marker with ``left``/``top``, a CSV table described from its first row, a
+text file with extra ``info``/``more`` fills, and two pictures whose file is
+missing -- announced where the picture would be. A test that only checks the
+file is there proves none of that, so this module reads the deck back:
+
+* what it *says*, against ``expected/powerpoint_simple.json`` (captured at
+  `44267a8` from the ``.rdf`` this fixture was translated from);
+* what it *shows*: the layouts in order, the two pictures with their sizes,
+  the table, the text boxes the parameter file and the text file produced,
+  and the two missing pictures announced rather than shown.
+"""
 
 from pathlib import Path
 import sys
 
+import pptx
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
 if str(CASE_ROOT) not in sys.path:
-    sys.path.append(str(CASE_ROOT)) 
+    sys.path.append(str(CASE_ROOT))
 
 from _setup_pptx_basic import *
 from common_case import CaseConfig, run_pptx_case
+from common_case import said, normalise, reference, difference, portable, fold, shapes, size_cm
 
-def test_document_is_created(tmp_path):
-    print(f'\nWorking in {tmp_path}')
+REFERENCE = THIS_DIR / 'expected' / 'powerpoint_simple.json'
+
+
+def build(tmp_path):
+    """The deck, typeset the way every pptx case is."""
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
@@ -24,10 +46,68 @@ def test_document_is_created(tmp_path):
         finish=False,
         createpdf=False,
     )
+    return run_pptx_case(config, tmp_path)
 
-    #print(tmp_path, os.curdir, os.getcwd())
 
-    result_path = run_pptx_case(config, tmp_path)
+def test_document_is_created(tmp_path):
+    print(f'\nWorking in {tmp_path}')
+
+    result_path = build(tmp_path)
 
     assert result_path.exists(), "Expected final_report.pptx to be generated"
     assert result_path.stat().st_size > 0, "Generated document should not be empty"
+
+
+def test_the_deck_says_what_the_reference_says(tmp_path):
+    """Slide by slide, every text the deck carries, against the stored
+    reference. The two missing pictures are announced with their path, which
+    the runner makes absolute -- portable() takes the workspace out again."""
+    deck = build(tmp_path)
+
+    got = normalise(portable(said(deck), deck.parent))
+    expected = [fold(line) for line in reference(REFERENCE)]
+
+    assert got == expected, difference(expected, got)
+
+
+def test_pictures_table_and_text_boxes_are_placed(tmp_path):
+    """What the text comparison cannot see."""
+    deck = pptx.Presentation(build(tmp_path))
+    slides = list(deck.slides)
+
+    assert [slide.slide_layout.name for slide in slides] == [
+        'TitleSlide', 'TaskProjectDefinition', 'TitleContent', 'TitleContent',
+        'Material', 'BackCover']
+    title, definition, table_slide, pictures_slide, material, back = slides
+
+    # image:main_model and image:model_icon (screw.png, square), one each
+    pictures = lambda slide: [size_cm(p) for p in shapes(slide, MSO_SHAPE_TYPE.PICTURE)]
+    assert pictures(title) == [(7.99, 7.99)]
+    assert pictures(definition) == [(3.4, 3.4)]
+
+    # the parameter file's values placed at the definition slide's marker
+    boxes = [shape.text_frame.text for shape in shapes(definition, MSO_SHAPE_TYPE.TEXT_BOX)]
+    assert boxes == ['This is a description of the testplan\nmore description\nand even more ',
+                     'WhatEver-F1 ']
+
+    # table:small from table3.csv; the layout has no caption box, so the
+    # description from row1 has nowhere to go and the table stands alone
+    (table,) = shapes(table_slide, MSO_SHAPE_TYPE.TABLE)
+    assert (len(table.table.rows), len(table.table.columns)) == (4, 5)
+    assert table.table.cell(0, 0).text == 'Type'
+    assert shapes(table_slide, MSO_SHAPE_TYPE.TEXT_BOX) == []
+
+    # both pictures of the next slide name a file that is not there: each is
+    # announced in a text box under its caption, and no picture is placed
+    assert pictures(pictures_slide) == []
+    announced = [shape.text_frame.text for shape in shapes(pictures_slide, MSO_SHAPE_TYPE.TEXT_BOX)
+                 if 'non existing image file' in shape.text_frame.text]
+    assert len(announced) == 2 and all('bootseal2.png' in text for text in announced)
+
+    # text:insert: the text file and its two extra fills, three boxes
+    boxes = [shape.text_frame.text for shape in shapes(material, MSO_SHAPE_TYPE.TEXT_BOX)]
+    assert boxes[0].startswith('A general text may look like this Lorem ipsum')
+    assert boxes[1:] == ['Some further info Moore', 'And even more Roger']
+
+    assert len(back.shapes) == 0, 'BackCover takes nothing from the document'
+    assert deck.core_properties.author.startswith('Scriptum ')
