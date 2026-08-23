@@ -30,7 +30,20 @@ digits **and weekday names** collapsed to ``#``. Both are for dates: a fixture
 using ``date: now`` is evaluated when the document is built, and the reference
 was built on another day -- which the digits hide and the leading ``Fri`` of
 the default format does not. What the comparison exists for -- a paragraph
-missing, an extra one, two in the wrong order -- survives it.
+missing, an extra one, two in the wrong order -- survives it. The reading and
+the normalising live in ``common_case`` (:func:`said`, :func:`normalise`,
+:func:`reference`, :func:`difference`), shared with the case tests, so a case
+and this harness cannot disagree about what "the same document" means.
+
+Cases graduate
+--------------
+A case whose own test file reads its document back and compares it with the
+reference leaves :data:`CASES` for :data:`GRADUATED`: the comparison is then
+made where the case lives, next to the checks only that case can make (the
+pictures, videos and tables a text comparison cannot see), and is not made
+twice. ``04_examples/pptreport`` was the first. The reference stays in the
+case's ``expected/`` and :func:`test_no_reference_is_left_behind` still
+accounts for it.
 
 What is not compared: field results
 -----------------------------------
@@ -55,25 +68,25 @@ from __future__ import annotations
 
 import contextlib
 import io
-import json
 import os
 import re
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
-import docx
-import pptx
 import pytest
 
 import Scriptum
 from Scriptum.rdf.reportDataFile import ReportDataFile
 
 TESTS_ROOT = Path(__file__).resolve().parents[2]
-DIGITS = re.compile(r'\d+')
-#: The default datetime format starts with a weekday name, which no amount
-#: of digit-collapsing hides: the reference was captured on another day.
-WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
+if str(TESTS_ROOT / '02_basetest') not in sys.path:
+    sys.path.append(str(TESTS_ROOT / '02_basetest'))
+
+from common_case import said, normalise, difference  # noqa: E402
+from common_case import reference as stored_reference  # noqa: E402
+
 #: A field result of a list of tables / figures: ``caption<TAB>page``, after
 #: the digits have been collapsed. Only Word updates these, so a finished run
 #: and a plain run disagree on them by construction; see the module docstring.
@@ -87,13 +100,18 @@ CASES = [
     ('04_examples/wordreport', 'word_input', 'template.docx'),
     ('04_examples/essay', 'essay', 'essay.docx'),
     ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
-    ('04_examples/pptreport', 'powerpoint_input', 'template.pptx'),
     # The last to join: template_text.docx spelled its depth-3 block
     # <subsubsubsection:secondsubsubi>, a name not on the docx ladder, while the
     # .yaml uses the ladder's sub3section. The tag was renamed in the template
     # and the reference re-captured -- it predated blueprint pruning and still
     # held the nested blueprint text a seconda clone used to leak.
     ('02_basetest/docx_basic/text', 'word_text', 'template_text.docx'),
+]
+
+#: (case directory relative to tests/, fixture stem, the test file that now
+#: makes the comparison). See "Cases graduate" in the module docstring.
+GRADUATED = [
+    ('04_examples/pptreport', 'powerpoint_input', 'test_pptx_generation.py'),
 ]
 
 
@@ -142,8 +160,7 @@ def generate(work, document_name, template, output=None):
 
 def spoken(path):
     """What the finished document says, in order, dates neutralised."""
-    said = _slides(path) if str(path).endswith('.pptx') else _paragraphs(path)
-    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in said if line]
+    return normalise(said(path))
 
 
 def comparable(lines):
@@ -154,58 +171,14 @@ def comparable(lines):
     return [line for line in lines if not FIELD_ENTRY.search(line)]
 
 
-def _paragraphs(path):
-    document = docx.Document(path)
-    said = [p.text.strip() for p in document.paragraphs]
-    for table in document.tables:
-        for row in table.rows:
-            said.extend(cell.text.strip() for cell in row.cells)
-    return said
-
-
-def _slides(path):
-    said = []
-    for slide in pptx.Presentation(path).slides:
-        for shape in slide.shapes:
-            if shape.has_text_frame:
-                for paragraph in shape.text_frame.paragraphs:
-                    said.append(''.join(run.text for run in paragraph.runs).strip())
-            if shape.has_table:
-                for row in shape.table.rows:
-                    said.extend(cell.text.strip() for cell in row.cells)
-    return said
-
-
 def reference_path(case, stem):
     """Where a case keeps what it is supposed to say."""
     return TESTS_ROOT / case / 'expected' / f'{stem}.json'
 
 
 def reference(case, stem):
-    """The stored reference, through the same normaliser as a fresh run.
-
-    It was captured on another day, so it carries that day's weekday name --
-    and normalising only one side of a comparison is how you end up measuring
-    the calendar.
-    """
-    stored = json.loads(reference_path(case, stem).read_text(encoding='utf-8'))
-    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in stored]
-
-
-def difference(expected, got):
-    """A readable account of the first place the two diverge."""
-    for index, (a, b) in enumerate(zip(expected, got)):
-        if a != b:
-            return (f'first difference at line {index}:\n'
-                    f'  expected: {a[:120]!r}\n'
-                    f'  got     : {b[:120]!r}')
-    if len(expected) != len(got):
-        longer, name = ((expected, 'the reference') if len(expected) > len(got)
-                        else (got, 'this run'))
-        extra = longer[min(len(expected), len(got)):][:4]
-        return (f'{name} says {abs(len(expected) - len(got))} more line(s): '
-                f'{[line[:60] for line in extra]}')
-    return 'no difference'
+    """The stored reference, through the same normaliser as a fresh run."""
+    return stored_reference(reference_path(case, stem))
 
 
 def compare(case, stem, template):
@@ -229,16 +202,29 @@ def test_every_case_has_a_reference():
 
 
 def test_no_reference_is_left_behind():
-    """Every ``expected/`` in the tree belongs to a case listed here.
+    """Every ``expected/`` in the tree belongs to a case listed here, or to
+    one that graduated to its own test file.
 
     A reference nobody compares against is worse than none: it looks like
     coverage and is not.
     """
     on_disk = {path.resolve() for path in TESTS_ROOT.rglob('expected/*.json')}
     claimed = {reference_path(case, stem).resolve()
-               for case, stem, _ in CASES}
+               for case, stem, _ in CASES + GRADUATED}
 
     assert on_disk == claimed, f'orphaned: {sorted(on_disk - claimed)}'
+
+
+def test_a_graduated_case_compares_in_its_own_test_file():
+    """The test file a graduated case names exists beside it and reads its
+    reference -- otherwise the reference is an orphan with an alibi."""
+    for case, stem, test_file in GRADUATED:
+        test = TESTS_ROOT / case / test_file
+        assert test.is_file(), f'{case}: {test_file} is not there'
+        assert f'{stem}.json' in test.read_text(encoding='utf-8'), \
+            f'{case}/{test_file} does not read expected/{stem}.json'
+        assert (case, stem) not in {(c, s) for c, s, _ in CASES}, \
+            f'{case} is listed twice: compare it here or there, not both'
 
 
 def test_generating_the_same_document_twice_says_the_same_thing():

@@ -5,12 +5,30 @@ This module extracts the reusable pieces from the legacy notebook-based
 execution flow. To create a new case, define a :class:`CaseConfig` pointing at
 the report document (``.yaml``) and the template and call
 :func:`run_docx_case` or :func:`run_pptx_case`.
+
+Reading the result back
+-----------------------
+A case test that only asserts a file exists proves nothing about the document
+(the clone-ordering defect fixed in `b1a4afd` lived for years behind such
+tests). The second half of this module reads a finished document back so a
+case can compare what it *says* with the reference kept beside it in
+``expected/<stem>.json``: :func:`said` lists the texts of a ``.docx`` or a
+``.pptx`` in order, :func:`normalise` hides what changes from run to run
+(digits, weekday names -- both for dates), :func:`reference` reads a stored
+list through the same normaliser, and :func:`difference` says where two lists
+part. The differential harness in ``differential/`` uses the same four, so a
+case and the harness can never disagree about what "the same document" means.
 """
 
+import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
+
+import docx
+import pptx
 
 from _setup_basetest import *
 import Scriptum  # type: ignore
@@ -151,3 +169,83 @@ def run_pptx_case(config: CaseConfig, tmp_path: Path) -> Path:
         os.chdir(current_dir)
 
     return output_path
+
+
+# ------------------------------------------------------------ reading back
+
+DIGITS = re.compile(r'\d+')
+#: The default datetime format used to start with a weekday name, which no
+#: amount of digit-collapsing hides: a reference is captured on another day.
+WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
+
+
+def said(path) -> list:
+    """What a finished document says, in order: the non-empty texts.
+
+    A ``.docx``: every paragraph, then every table cell. A ``.pptx``: slide by
+    slide, every paragraph of every shape with a text frame, then the cells of
+    every table shape. Whitespace is stripped and empty texts are dropped, so
+    a placeholder a run left blank does not count as something said.
+    """
+    path = Path(path)
+    lines = _slides(path) if path.suffix.lower() == '.pptx' else _paragraphs(path)
+    return [line for line in lines if line]
+
+
+def _paragraphs(path):
+    document = docx.Document(path)
+    lines = [p.text.strip() for p in document.paragraphs]
+    for table in document.tables:
+        for row in table.rows:
+            lines.extend(cell.text.strip() for cell in row.cells)
+    return lines
+
+
+def _slides(path):
+    lines = []
+    for slide in pptx.Presentation(path).slides:
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for paragraph in shape.text_frame.paragraphs:
+                    lines.append(''.join(run.text for run in paragraph.runs).strip())
+            if shape.has_table:
+                for row in shape.table.rows:
+                    lines.extend(cell.text.strip() for cell in row.cells)
+    return lines
+
+
+def normalise(lines) -> list:
+    """*lines* with runs of digits and weekday names collapsed to ``#``.
+
+    Both are for dates: a document using ``date: now`` is evaluated when it is
+    built, and the reference was built on another day. What a comparison
+    exists for -- a text missing, an extra one, two in the wrong order --
+    survives it.
+    """
+    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in lines]
+
+
+def reference(path) -> list:
+    """The stored reference at *path* (a JSON list of texts), normalised.
+
+    It was captured on another day, so it carries that day's digits and
+    weekday name -- normalising only one side of a comparison is how you end
+    up measuring the calendar.
+    """
+    return normalise(json.loads(Path(path).read_text(encoding='utf-8')))
+
+
+def difference(expected, got) -> str:
+    """A readable account of the first place the two diverge."""
+    for index, (a, b) in enumerate(zip(expected, got)):
+        if a != b:
+            return (f'first difference at line {index}:\n'
+                    f'  expected: {a[:120]!r}\n'
+                    f'  got     : {b[:120]!r}')
+    if len(expected) != len(got):
+        longer, name = ((expected, 'the reference') if len(expected) > len(got)
+                        else (got, 'this run'))
+        extra = longer[min(len(expected), len(got)):][:4]
+        return (f'{name} says {abs(len(expected) - len(got))} more line(s): '
+                f'{[line[:60] for line in extra]}')
+    return 'no difference'
