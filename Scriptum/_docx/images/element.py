@@ -53,6 +53,13 @@ class DocImageBlockElement(StructuredElement):
 
             #print(imagename,width,height)
             found = image_par.replaceTag(self.tag, "")
+            if found is None:
+                # The tag is no longer in the paragraph: a header or footer
+                # shared by linked sections is unfolded into each of them, so
+                # a global fill meets the same paragraph once per section and
+                # the first visit has already placed the picture.
+                self.tag.burn()
+                return
             try:
                 found.add_picture(imagename, width=width, height=height)
             except UnrecognizedImageError:

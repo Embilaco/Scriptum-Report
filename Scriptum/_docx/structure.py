@@ -334,7 +334,12 @@ class StructuredElement:
                     if st.puretag == path:
                         found += [(st,se)]
             elif t == 'image':
-                if e.path[-1] == path:
+                # By the tag as the document spells it, like every other
+                # branch here. The element's path is the canonical address
+                # (`image:allover::1`) since the tree went four-slot, and a
+                # global target is a puretag; comparing the two matched nothing,
+                # so a global image fill silently placed no picture.
+                if e.tag.puretag == path:
                     found += [(t,e)]
             elif t.puretag == path:
                 found += [(t,e)]
