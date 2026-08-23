@@ -78,7 +78,6 @@ from common_case import reference as stored_reference  # noqa: E402
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
-    ('04_examples/wordreport', 'word_input', 'template.docx'),
     ('04_examples/essay', 'essay', 'essay.docx'),
     ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
     # The last to join: template_text.docx spelled its depth-3 block
@@ -96,6 +95,7 @@ GRADUATED = [
     ('02_basetest/docx_basic/images', 'word_images', 'test_docx_images.py'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'test_docx_tables.py'),
     ('02_basetest/docx_basic/text', 'word_text', 'test_docx_text.py'),
+    ('04_examples/wordreport', 'word_input', 'test_docx_generation.py'),
 ]
 
 
