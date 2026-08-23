@@ -2,7 +2,7 @@
  "TEST section one",
  "MAIN",
  "ALLOVER",
- "no file with image: 'data\\\\bootseal#.png'",
+ "no file with image: 'data\\\\not-existing.png'",
  "Picture: is already existing +",
  "Blablabla",
  "ALLOVER",
