@@ -57,6 +57,18 @@ def failing(body, settings=SETTINGS):
 
 # ----------------------------------------------------------------- scalars
 
+def test_a_merge_key_is_refused_as_an_address_not_crashed_on():
+    """``<<`` resolved to the 1.1 merge tag, which SafeLoader cannot construct
+    as a scalar -- ``ConstructorError`` escaped the loader. It is a string
+    now, and a string that is not an address."""
+    assert 'not a valid segment' in failing('- <<: x')
+
+
+def test_a_date_shaped_scalar_is_the_text_it_looks_like():
+    fill = one('- head: 2022-12-15')
+    assert (fill.value.type, str(fill.value)) == ('str', '2022-12-15')
+
+
 def test_unquoted_text_is_text():
     """The trap the format was shaped to remove."""
     fill = one('- head: Serving')

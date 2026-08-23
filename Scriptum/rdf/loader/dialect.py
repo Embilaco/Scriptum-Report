@@ -43,10 +43,25 @@ whole process -- every other library in the interpreter included. PyYAML's
 What is deliberately left alone
 -------------------------------
 ``null`` already matches 1.2 (``~``, ``null``, ``Null``, ``NULL``, empty).
-The 1.1-only ``<<`` merge key and ``=`` value key keep their constructors, and
-they cost nothing here: the document walker reads the node graph itself, so a
-``<<`` key arrives as an ordinary key and is rejected for not being an address
-rather than being merged away behind its back.
+
+What is removed outright
+------------------------
+The 1.1 schema resolves four more tags that the 1.2 core schema does not have,
+and each of them bit or would bite:
+
+* ``timestamp`` -- ``2022-12-15`` became a ``datetime.date`` and
+  ``2022-12-15 14:24:59`` a ``datetime.datetime``, so an unquoted date written
+  where the format asks for one (``{date: 2022-12-15}``) arrived as an object
+  the loader could only refuse with "needs text". Under the core schema it is
+  the string it looks like, and ``date:`` reads it.
+* ``merge`` (``<<``) and ``value`` (``=``) -- SafeLoader resolves the tags but
+  has no scalar constructor for them, so a stray ``<<`` written as a key or a
+  value raised ``ConstructorError`` out of the loader instead of producing a
+  diagnostic. As strings they are refused as what they are: not an address.
+* ``yaml`` (``!``, ``&``, ``*`` as whole scalars) -- the same shape of failure.
+
+So the resolver map keeps exactly ``null``, ``bool``, ``int`` and ``float`` --
+which is the core schema.
 """
 
 import re
@@ -58,6 +73,15 @@ _REPLACED = frozenset({
     'tag:yaml.org,2002:bool',
     'tag:yaml.org,2002:int',
     'tag:yaml.org,2002:float',
+})
+
+#: 1.1 tags the core schema does not have at all. A scalar that would have
+#: resolved to one of these is a plain string here.
+_DROPPED = frozenset({
+    'tag:yaml.org,2002:timestamp',
+    'tag:yaml.org,2002:merge',
+    'tag:yaml.org,2002:value',
+    'tag:yaml.org,2002:yaml',
 })
 
 #: YAML 1.2 core schema. Note what is absent: ``yes``/``no``/``on``/``off``,
@@ -85,7 +109,8 @@ class Core12Loader(yaml.SafeLoader):
 # Assigning the filtered map is what gives the subclass its own copy. Do this
 # BEFORE any add_implicit_resolver call -- see the module docstring.
 Core12Loader.yaml_implicit_resolvers = {
-    first: [(tag, pattern) for tag, pattern in resolvers if tag not in _REPLACED]
+    first: [(tag, pattern) for tag, pattern in resolvers
+            if tag not in _REPLACED and tag not in _DROPPED]
     for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
 }
 

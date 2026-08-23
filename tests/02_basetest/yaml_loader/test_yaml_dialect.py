@@ -112,6 +112,33 @@ def test_ordinary_text_is_text(written):
     assert load(written) == written
 
 
+# ------------------------------------- 1.1 tags the core schema does not have
+
+@pytest.mark.parametrize('written', ['2022-12-15', '2022-12-15 14:24:59',
+                                     '2022-12-15T14:24:59Z', '2001-12-14t21:59:43.10-05:00'])
+def test_a_timestamp_shaped_scalar_is_text(written):
+    """1.1 resolved these to ``datetime.date`` / ``datetime.datetime``, so an
+    unquoted ``{date: 2022-12-15}`` arrived at the loader as an object it could
+    only refuse with "needs text". The core schema has no timestamp type; the
+    string is what ``date:`` reads."""
+    assert load(written) == written
+
+
+@pytest.mark.parametrize('written', ['<<', '='])
+def test_merge_and_value_indicators_are_text(written):
+    """SafeLoader resolved ``<<`` and ``=`` to tags it has no scalar
+    constructor for, so a stray one written as a key or a value raised
+    ``ConstructorError`` out of the loader instead of a diagnostic."""
+    assert load(written) == written
+
+
+def test_the_resolver_map_holds_exactly_the_core_schema():
+    tags = {tag.rsplit(':', 1)[-1]
+            for resolvers in Core12Loader.yaml_implicit_resolvers.values()
+            for tag, _ in resolvers}
+    assert tags == {'null', 'bool', 'int', 'float'}
+
+
 # --------------------------- the trap: mutating the shared resolver map
 
 def test_the_subclass_owns_its_resolver_map():
