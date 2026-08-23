@@ -7,7 +7,7 @@ _scriptum_:
   documenttitle: This is a bloody test document
 
 _global_:
-  date_name: {date: '%d. %b %Y/Luke Skywalker'}
+  date_name: {date: today, format: '%d. %b %Y/Luke Skywalker'}
   reference: REF-X47
   revision: 1234567
   created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}
