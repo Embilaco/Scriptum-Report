@@ -78,7 +78,6 @@ from common_case import reference as stored_reference  # noqa: E402
 
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
-    ('04_examples/essay', 'essay', 'essay.docx'),
     ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'template.pptx'),
     # The last to join: template_text.docx spelled its depth-3 block
     # <subsubsubsection:secondsubsubi>, a name not on the docx ladder, while the
@@ -96,6 +95,7 @@ GRADUATED = [
     ('02_basetest/docx_basic/tables', 'word_tables', 'test_docx_tables.py'),
     ('02_basetest/docx_basic/text', 'word_text', 'test_docx_text.py'),
     ('04_examples/wordreport', 'word_input', 'test_docx_generation.py'),
+    ('04_examples/essay', 'essay', 'test_essay_docx_generation.py'),
 ]
 
 
@@ -208,11 +208,12 @@ def test_generating_the_same_document_twice_says_the_same_thing():
     fails the harness is measuring its own noise rather than the translation."""
     case, stem, template = CASES[0]
     work = prepare(case)
+    suffix = Path(template).suffix
 
-    generate(work, f'{stem}.yaml', template, 'once.docx')
-    generate(work, f'{stem}.yaml', template, 'twice.docx')
+    generate(work, f'{stem}.yaml', template, f'once{suffix}')
+    generate(work, f'{stem}.yaml', template, f'twice{suffix}')
 
-    assert spoken(work / 'once.docx') == spoken(work / 'twice.docx')
+    assert spoken(work / f'once{suffix}') == spoken(work / f'twice{suffix}')
 
 
 def test_field_results_are_dropped_from_both_sides_and_captions_are_not():
