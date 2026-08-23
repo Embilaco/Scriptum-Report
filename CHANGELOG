@@ -1,3 +1,4 @@
+unreleased - the report data file is a YAML document (.yaml); the hand-written .rdf text format and its parser are removed
 unreleased - removed *timeformat, a setting from an early version that was never implemented
 1.2.1 - 2025/11/30 - early package fix
 1.2.0 - 2025/11/28 - first PyPi release
