@@ -1,4 +1,4 @@
-"""Tests for :mod:`rdf.values.namevalues_value`."""
+"""Tests for :mod:`rdf.values.namevalues_value`, through a report document."""
 
 from datetime import datetime
 
@@ -15,8 +15,14 @@ def workspace(tmp_path: Path) -> Path:
     return workdir
 
 
-def _write_rdf(path: Path, lines: list[str]) -> Path:
-    path.write_text("\n".join(lines))
+def _write_document(path: Path, settings: list[str], fills: list[str]) -> Path:
+    """A document with ``section:parameters`` holding the given fills."""
+    path.write_text("\n".join(
+        ["_scriptum_:", "  version: 4", "  documenttype: docx", "  datadir: ."]
+        + [f"  {line}" for line in settings]
+        + ["_content_:", "  - section:parameters:"]
+        + [f"      - {line}" for line in fills]
+    ), encoding='utf-8')
     return path
 
 
@@ -40,23 +46,19 @@ def test_namevalue_parses_timestamp_fields(monkeypatch: pytest.MonkeyPatch, work
 
     _create_nv_file(workspace, "params.nv")
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "namevalue.rdf",
+    document = _write_document(
+        workspace / "namevalue.yaml",
+        ["nvseparator: ':'", "datetimeformat: '%Y-%m-%d %H:%M:%S'"],
         [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=.",
-            "*nvseparator=:",
-            "*datetimeformat=%Y-%m-%d %H:%M:%S",
-            "section:parameters",
-            ".nv:nine=parfile:params.nv:CreatedNine",
-            ".nv:ten=parfile:params.nv:CreatedTen",
-            ".nv:milli=parfile:params.nv:CreatedMilli",
+            "nv:nine: {parfile: params.nv, parameter: CreatedNine}",
+            "nv:ten: {parfile: params.nv, parameter: CreatedTen}",
+            "nv:milli: {parfile: params.nv, parameter: CreatedMilli}",
         ],
     )
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     tasks = {task.target: task for task in rdf.tasks if task.target.startswith("nv:")}
+    assert all(task.value.type == 'parfile' for task in tasks.values())
     readers = {target: NameValueReader(task.value.object) for target, task in tasks.items()}
 
     expected_nine = datetime.fromtimestamp(123456789).strftime("%Y-%m-%d %H:%M:%S")
@@ -74,18 +76,13 @@ def test_namevalue_missing_file_falls_back_to_message(
     """Missing ``*.nv`` files do not crash and expose a helpful placeholder."""
 
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "missing_nv.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=.",
-            "section:parameters",
-            ".nv:missing=parfile:missing.nv:Foo",
-        ],
+    document = _write_document(
+        workspace / "missing_nv.yaml",
+        [],
+        ["nv:missing: {parfile: missing.nv, parameter: Foo}"],
     )
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = next(t for t in rdf.tasks if t.target == "nv:missing")
     reader = NameValueReader(task.value.object)
 

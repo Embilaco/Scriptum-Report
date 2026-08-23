@@ -1,22 +1,23 @@
 """What each fixture's ``.yaml`` generates, against what its ``.rdf`` did.
 
-This is the safety net for the last piece of the migration. Every docx case
-test asserts only that a file was written and is not empty, which is how the
-clone-ordering defect fixed in `b1a4afd` lived in shipped code for years with a
-green suite. This reads the finished documents back instead.
+This is the safety net of the migration. Every docx case test asserts only
+that a file was written and is not empty, which is how the clone-ordering
+defect fixed in `b1a4afd` lived in shipped code for years with a green suite.
+This reads the finished documents back instead.
 
 Why a stored reference rather than a live comparison
 ----------------------------------------------------
 It began by generating both sides in one run. That stopped working the moment
-``StructuredElement.path`` became canonical: the text parser emits
-``section:title`` where the tree now says ``section:title::1``, so the *old*
-side degrades and there is nothing left to compare against.
+``StructuredElement.path`` became canonical: the text parser emitted
+``section:title`` where the tree says ``section:title::1``, so the *old* side
+degraded and there was nothing left to compare against.
 
-So the reference is captured instead. Each case keeps its own beside the
+So the reference was captured instead. Each case keeps its own beside the
 fixture it belongs to -- ``<case>/expected/<stem>.json`` -- which is what each
 ``.rdf`` generated at `44267a8`, the last commit before the tree changed. That
-decouples the check from a parser which is on its way out: when the text format
-goes, these keep working.
+is what let the text parser go: the ``.rdf`` files and the parser are gone, and
+these references are the record of what they produced. A case whose
+``.yaml`` stops saying this has changed meaning, whatever the reason.
 
 Living next to the fixture rather than in one pile means a case is a directory
 you can read end to end: the document, the template, the data and what it is
@@ -26,17 +27,10 @@ What is compared
 ----------------
 The sequence of non-empty paragraph texts, then every table cell, with runs of
 digits **and weekday names** collapsed to ``#``. Both are for dates: a fixture
-using ``date:now`` is evaluated when the document is built, and the reference
+using ``date: now`` is evaluated when the document is built, and the reference
 was built on another day -- which the digits hide and the leading ``Fri`` of
 the default format does not. What the comparison exists for -- a paragraph
 missing, an extra one, two in the wrong order -- survives it.
-
-One trap this had to avoid
---------------------------
-The reader keeps **process-global state** and one root document per interpreter
-is the standing rule, so :func:`reset` clears it before each generation rather
-than relying on the suite's autouse fixture. A previous session was misled by
-exactly that.
 """
 
 from __future__ import annotations
@@ -56,7 +50,6 @@ import pytest
 
 import Scriptum
 from Scriptum.rdf.reportDataFile import ReportDataFile
-from Scriptum.rdf.tasks import ReportTask
 
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 DIGITS = re.compile(r'\d+')
@@ -94,16 +87,6 @@ TEMPLATE_MISMATCH = (
 )
 
 
-def reset():
-    """Clear the process-global state the reader keeps between generations."""
-    ReportTask._serial = 0
-    ReportTask._tree = {}
-    ReportTask._allPaths = {}
-    ReportTask._newPaths = {}
-    ReportDataFile._depth = 0
-    ReportDataFile._global_settings = {}
-
-
 def prepare(case):
     """A directory holding the fixtures, the template and a ``data``."""
     work = Path(tempfile.mkdtemp())
@@ -133,7 +116,6 @@ def generate(work, document_name, template, output=None):
     output = output or ('out.pptx' if powerpoint else 'out.docx')
 
     os.chdir(work)
-    reset()
     with contextlib.redirect_stdout(io.StringIO()) as printed:
         rdf = ReportDataFile(document_name)
         if powerpoint:

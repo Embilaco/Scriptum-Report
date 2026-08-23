@@ -1,4 +1,4 @@
-"""Tests for :mod:`rdf.values.image_value`."""
+"""Tests for :mod:`rdf.values.image_value`, through a report document."""
 
 from pathlib import Path
 
@@ -26,8 +26,17 @@ def workspace(tmp_path: Path) -> Path:
     return workdir
 
 
-def _write_rdf(path: Path, lines: list[str]) -> Path:
-    path.write_text("\n".join(lines))
+def _write_document(path: Path, image: str) -> Path:
+    """A document whose one fill is ``image:preview``, loaded from ``data``."""
+    path.write_text("\n".join([
+        "_scriptum_:",
+        "  version: 4",
+        "  documenttype: docx",
+        "  datadir: ./data",
+        "_content_:",
+        "  - section:figures:",
+        f"      - image:preview: {{file: {image}}}",
+    ]), encoding='utf-8')
     return path
 
 
@@ -52,19 +61,11 @@ def test_image_value_temperatures_dimensions(monkeypatch: pytest.MonkeyPatch, wo
     monkeypatch.chdir(workspace)
     monkeypatch.setattr(sys.modules["PIL.Image"], "open", fake_open)
 
-    rdf_path = _write_rdf(
-        workspace / "image.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=./data",
-            "section:figures",
-            ".image:preview=file:camera.png",
-        ],
-    )
+    document = _write_document(workspace / "image.yaml", "camera.png")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = _image_task(rdf)
+    assert task.value.type == 'file' and task.value.subtype == 'image'
     task.value.load()
 
     assert task.value.content.size == (640, 480)
@@ -78,18 +79,9 @@ def test_image_value_missing_file_returns_placeholder(
     """Missing image files produce a descriptive placeholder string."""
 
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "image_missing.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=./data",
-            "section:figures",
-            ".image:preview=file:not_available.png",
-        ],
-    )
+    document = _write_document(workspace / "image_missing.yaml", "not_available.png")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = _image_task(rdf)
     task.value.load()
 
@@ -109,18 +101,9 @@ def test_image_value_propagates_open_errors(monkeypatch: pytest.MonkeyPatch, wor
     monkeypatch.chdir(workspace)
     monkeypatch.setattr(sys.modules["PIL.Image"], "open", raising_open)
 
-    rdf_path = _write_rdf(
-        workspace / "image_error.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=./data",
-            "section:figures",
-            ".image:preview=file:camera.png",
-        ],
-    )
+    document = _write_document(workspace / "image_error.yaml", "camera.png")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = _image_task(rdf)
 
     with pytest.raises(OSError):

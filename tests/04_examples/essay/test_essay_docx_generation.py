@@ -25,7 +25,7 @@ def test_essay_document_is_created(tmp_path):
     config = CaseConfig(
         name="essay",
         case_dir=THIS_DIR,
-        rdf_name="essay.yaml",
+        document_name="essay.yaml",
         template_doc_name="essay.docx",
         output_name="final_essay.docx",
         include_patterns=["essay*.yaml", "essay.docx"],

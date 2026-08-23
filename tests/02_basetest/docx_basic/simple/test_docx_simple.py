@@ -16,10 +16,10 @@ def test_document_is_created(tmp_path):
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
-        rdf_name="word_simple.rdf",
+        document_name="word_simple.yaml",
         template_doc_name="template.docx",
         output_name="final_report.docx",
-        include_patterns=["*.rdf", "template.docx"],
+        include_patterns=["*.yaml", "template.docx"],
         data_source_dir=DATA_SOURCE,
         finish=False,
         createpdf=False,

@@ -44,7 +44,7 @@ Markers are transparent
 A marker names a position in the template, not a level and not an instance. So
 it takes no id -- two ``marker:content`` entries in one section refer to the
 same tag -- and it does not scope numbering: adds inside it count against the
-enclosing container, which is what ``checkPath`` does today, markers never
+enclosing container, as the text parser's ``checkPath`` did, markers never
 having been part of a path.
 
 Includes splice

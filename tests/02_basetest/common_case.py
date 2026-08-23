@@ -1,9 +1,10 @@
-"""Reusable helpers for docx creation tests.
+"""Reusable helpers for docx and pptx creation tests.
 
 This module extracts the reusable pieces from the legacy notebook-based
-"CreateDOCforEssay" test so that new docx-based scenarios can reuse the same
-setup and execution flow. To create a new case, define a :class:`CaseConfig`
-pointing at the relevant RDF and template files and call :func:`run_docx_case`.
+"CreateDOCforEssay" test so that new scenarios can reuse the same setup and
+execution flow. To create a new case, define a :class:`CaseConfig` pointing at
+the report document (``.yaml``) and the template and call
+:func:`run_docx_case` or :func:`run_pptx_case`.
 """
 
 import os
@@ -22,8 +23,8 @@ class CaseConfig:
 
     Attributes:
         name: Identifier used for debugging output.
-        case_dir: Directory that contains the RDF and template files.
-        rdf_name: Name of the RDF file to load from ``case_dir``.
+        case_dir: Directory that contains the report document and the template.
+        document_name: Name of the ``.yaml`` report document in ``case_dir``.
         template_doc_name: Name of the input Word/PowerPoint document.
         output_name: Name of the generated document.
         include_patterns: Glob patterns (relative to ``case_dir``) that should
@@ -35,7 +36,7 @@ class CaseConfig:
 
     name: str
     case_dir: Path
-    rdf_name: str
+    document_name: str
     template_doc_name: str
     output_name: str
     include_patterns: Sequence[str] = field(default_factory=list)
@@ -95,8 +96,7 @@ def run_docx_case(config: CaseConfig, tmp_path: Path) -> Path:
     current_dir = Path(os.getcwd())
     os.chdir(workspace)
     try:
-        base_rdf = workspace / config.rdf_name
-        rdf = Scriptum.ReportDataFile(base_rdf)
+        rdf = Scriptum.ReportDataFile(workspace / config.document_name)
 
         document = Scriptum.ManagedDocx(config.template_doc_name)
         document.typesetting(
@@ -131,8 +131,7 @@ def run_pptx_case(config: CaseConfig, tmp_path: Path) -> Path:
     current_dir = Path(os.getcwd())
     os.chdir(workspace)
     try:
-        base_rdf = workspace / config.rdf_name
-        rdf = Scriptum.ReportDataFile(base_rdf)
+        rdf = Scriptum.ReportDataFile(workspace / config.document_name)
 
         document = Scriptum.ManagedPptx(config.template_doc_name)
         document.artist(

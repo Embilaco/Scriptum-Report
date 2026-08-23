@@ -16,10 +16,10 @@ def test_document_is_created(tmp_path):
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
-        rdf_name="powerpoint_simple.rdf",
+        document_name="powerpoint_simple.yaml",
         template_doc_name="template.pptx",
         output_name="final_report.pptx",
-        include_patterns=["*.rdf", "template.pptx"],
+        include_patterns=["*.yaml", "template.pptx"],
         data_source_dir=DATA_SOURCE,
         finish=False,
         createpdf=False,

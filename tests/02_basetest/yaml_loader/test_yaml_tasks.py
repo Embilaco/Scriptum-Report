@@ -270,10 +270,11 @@ def test_a_global_task_has_no_id_and_matches_on_target():
     assert '::' not in task.myAddress[-1]
 
 
-def test_checkpath_does_not_run_and_nothing_is_renamed():
-    """from_parts bypasses it. The instance numbers came from the document's
-    own nesting, which is what checkPath was reconstructing from a flat file --
-    running it as well would number them twice."""
+def test_a_repeat_is_numbered_and_nothing_is_renamed():
+    """The instance numbers come from the document's own nesting, assigned
+    while the loader walks. The text parser reconstructed them from a flat file
+    with ``checkPath`` and renamed every repeat ``foo_c002``; that rename is
+    gone with the parser, so ``_cNNN`` must never appear."""
     tasks = tasks_of("""
         _content_:
           - section:a:

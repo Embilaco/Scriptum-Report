@@ -122,19 +122,16 @@ def test_every_yaml_fixture_is_accounted_for():
     assert not classified - found, 'stale YAML classifications'
 
 
-def test_every_remaining_rdf_still_has_a_yaml_beside_it():
-    """One direction only, now that the corpus is retired case by case.
+def test_no_rdf_fixture_is_left():
+    """The text format is gone, reader and all.
 
-    It began as a two-way check, which was right while the two corpora were
-    meant to mirror each other. They are not any more: a case that has finished
-    moving deletes its ``.rdf`` and keeps the ``.yaml``, so "a .yaml with no
-    .rdf" is progress rather than a gap. What still has to hold is that nothing
-    is left untranslated.
+    This began as "every ``.rdf`` still has a ``.yaml`` beside it", the check
+    that nothing was left untranslated while the two corpora sat side by side.
+    The last ``.rdf`` went with the parser, so what has to hold now is the
+    other thing: a ``.rdf`` appearing anywhere under ``tests/`` is a file
+    nothing reads, and it should be noticed rather than carried.
     """
-    rdfs = {p.with_suffix('') for p in TESTS_ROOT.rglob('*.rdf')}
-    yamls = {p.with_suffix('') for p in TESTS_ROOT.rglob('*.yaml')}
-
-    assert not rdfs - yamls, 'fixtures still to translate'
+    assert not list(TESTS_ROOT.rglob('*.rdf')), 'no reader exists for these'
 
 
 # --------------------------------------------------- the interesting ones
@@ -167,6 +164,58 @@ def test_the_big_docx_document_splices_all_four_include_groups(tmp_path):
     assert any('subsection:tool::1' in a for a in addresses)
     assert any('subsection:preparation::1' in a for a in addresses)
     assert any('subsubsection:ingredients::2' in a for a in addresses)
+
+
+def test_the_multi_section_document_reads_as_the_text_parser_read_it(tmp_path):
+    """The shape the text parser's own suite pinned for this fixture, carried
+    over: the same containers in the same order, every fill under the right
+    one, and the global fill last -- in the canonical addresses now."""
+    document = load(prepare('02_basetest/rdf/rdf_multiSection.yaml', tmp_path))
+
+    shape = [('.'.join(t.myAddress), t.target, t.what) for t in document.tasks]
+    assert shape == [
+        ('section:instruction_bc::1', '', 'apply'),
+        ('section:instruction_bc::1.subsection:instruction::1', '', 'apply'),
+        ('section:instruction_bc::1.subsection:instruction::1.:head::1',
+         'head', ''),
+        ('section:instruction_bc::1.subsection:instruction::1'
+         '.subsubsection:detail::1', '', 'apply'),
+        ('section:instruction_bc::1.subsection:instruction::1'
+         '.subsubsection:detail::1.:float::1', 'float', ''),
+        ('section:instruction_bc::1.subsection:instruction::1'
+         '.subsubsection:detail::1.:integer::1', 'integer', ''),
+        ('section:instruction_bc::1.subsection:instruction::1'
+         '.subsubsection:detail::1.text:description::1', 'text:description', ''),
+        ('_global_.setup', 'setup', ''),
+    ]
+    assert [t.path for t in document.tasks][:2] == [
+        ['section:instruction_bc'],
+        ['section:instruction_bc', 'subsection:instruction'],
+    ], 'path is the template address, without instance numbers'
+
+
+def test_the_big_docx_document_knows_which_files_are_missing(tmp_path):
+    """Existence is decided when the document is read (see *Content is lazy,
+    existence is eager* on the values board), so the missing inputs are known
+    before any document work begins. The text parser's suite pinned this list
+    for the same fixture; it is unchanged, in document order."""
+    document = load(prepare('02_basetest/rdf/rdf_big_docx.yaml', tmp_path))
+
+    missing = []
+    for task in document.tasks:
+        value = task.value
+        if value.type in ('file', 'parfile') and not value.object.exists:
+            name = Path(value.object.filename).name
+            if name not in missing:
+                missing.append(name)
+
+    assert missing == [
+        'pudding.jpg', 'instruction2.png', 'instructiongeneral.csv',
+        'instruction1.png', 'instruction1b.png', 'instruction2.csv',
+        'plate1.png', 'plate1.txt', 'bc1.png', 'some.png', 'some.txt',
+        'tools.csv', 'tool.par', 'todo.txt', 'ingredients1.csv',
+        'ingredients2.csv', 'foo.txt', 'bar.csv',
+    ]
 
 
 def test_the_word_report_reaches_its_testplans_section(tmp_path):

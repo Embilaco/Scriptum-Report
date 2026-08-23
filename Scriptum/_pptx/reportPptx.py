@@ -282,10 +282,7 @@ class ManagedPptx:
 
         #print(section,path,'T',target)
         
-        if section in ('global', GLOBAL_ROOT):
-            # 'global' is the text parser's spelling, GLOBAL_ROOT the loader's:
-            # both are still live until the text parser is retired, so a
-            # global task must be recognised under either name.
+        if section == GLOBAL_ROOT:
             # find globally all elements with that tag
             # collect them all to complete them at the end of everything
             self.collectglobal += [(target,task)]

@@ -190,10 +190,7 @@ class ManagedDocx:
 
             #lasttask = None
             for t in rdf.tasks:
-                # 'global' is the text parser's spelling, GLOBAL_ROOT the loader's:
-                # both are still live until the text parser is retired, so a
-                # global task must be recognised under either name.
-                if t.path[0] in ('global', GLOBAL_ROOT): continue # apply the global tasks at the end
+                if t.path[0] == GLOBAL_ROOT: continue # apply the global tasks at the end
                 if t.modified: # the modification tells me if I have to add or copy templates
                     #print('\nto %s  *******************\n'%t.what, 
                     #      f'{t.path} - {t.myAddress} - {t.where}')
@@ -317,8 +314,7 @@ class ManagedDocx:
         else:
             print('   fill the content...')
             for t in rdf.tasks:
-                # both spellings, see above
-                if t.path[0] in ('global', GLOBAL_ROOT): continue # apply the global tasks at the end
+                if t.path[0] == GLOBAL_ROOT: continue # apply the global tasks at the end
                 #print('\n',t.isCopy, t.path,t.myAddress,t.target,t.value)
                 if t.target:
                     # apply it on path, means: apply it on exact this item
@@ -331,8 +327,7 @@ class ManagedDocx:
             print('   fill the global content...')
             # apply the global tasks
             for t in rdf.tasks:
-                # both spellings, see above
-                if t.path[0] in ('global', GLOBAL_ROOT) and t.target:
+                if t.path[0] == GLOBAL_ROOT and t.target:
                     self.apply(t.target,t)
 
         if not cleanup:                

@@ -1,11 +1,12 @@
 """``ReportDataFile`` reads a ``.yaml`` document through the loader.
 
 The name stays, because the thing has not changed: it is still the report data
-file, in a different syntax. What changes is the extension, and that is what
-selects the reader.
+file, in a different syntax. What changed is the extension -- and it is the
+only thing the class reads now. The ``.rdf`` text parser that used to sit
+behind the same name is gone, so anything that is not a ``.yaml`` document is
+refused with a message rather than guessed at.
 
-The surface a back end uses is ``tasks``, ``settings`` and ``errors``, and all
-three are filled the same way either reader fills them.
+The surface a back end uses is ``tasks``, ``settings`` and ``errors``.
 """
 
 from __future__ import annotations
@@ -69,18 +70,25 @@ def test_either_extension_selects_the_loader(tmp_path, suffix):
     assert ReportDataFile(document).settings.documenttype == 'docx'
 
 
-def test_an_rdf_still_goes_down_the_text_path(tmp_path):
-    document = write(tmp_path, 'report.rdf', """
+@pytest.mark.parametrize('name', ['report.rdf', 'report.txt', 'report'])
+def test_anything_but_a_yaml_document_is_refused(tmp_path, name):
+    """The text format is not read any more, and it says so rather than
+    falling through to a parser that does not exist or to a YAML parse of a
+    file that is not one."""
+    document = write(tmp_path, name, """
         *version=3
         *documenttype=docx
         section:a
         .head='Title'
     """)
 
-    rdf = ReportDataFile(document)
+    with pytest.raises(DocumentError) as caught:
+        ReportDataFile(document)
 
-    assert not rdf.errors
-    assert not any('::' in a for t in rdf.tasks for a in t.myAddress)
+    report = str(caught.value)
+    assert 'not a report document' in report
+    assert '.yaml' in report
+    assert name in report
 
 
 def test_errors_are_filled_and_the_exception_still_carries_them(tmp_path):
@@ -111,13 +119,14 @@ def test_a_missing_file_is_reported_rather_than_silently_empty(tmp_path):
     assert 'cannot read' in str(caught.value)
 
 
-def test_neither_reader_keeps_a_log(tmp_path):
+def test_the_reader_keeps_no_log(tmp_path):
     """``logs`` mirrored an assembled *text* file line by line, for debugging.
 
     A YAML document has no such assembly -- an include is spliced into a tree
     rather than pasted into a stream -- and the loader's diagnostics say more
     than the mirror ever did: file, line, column and the path through the
-    document. Nothing outside the parser ever read it.
+    document. Nothing outside the text parser ever read it, and it went before
+    the parser did.
     """
     document = write(tmp_path, 'report.yaml', DOCUMENT)
 
@@ -139,25 +148,18 @@ def test_the_translated_corpus_loads_through_the_facade(tmp_path):
     assert rdf.tasks[-1].path == ['_global_']
 
 
-def test_an_unknown_setting_is_an_error_in_the_text_format_too(tmp_path):
-    """The consequence of dropping the log, and the right one.
+def test_two_documents_in_one_interpreter_do_not_see_each_other(tmp_path):
+    """The text parser numbered repeats through a process-global tree and
+    counted serials on the class, which is why one root document per
+    interpreter used to be a rule. Nothing is kept between documents now: the
+    second document reads exactly as it would have on its own."""
+    first = write(tmp_path, 'first.yaml', DOCUMENT)
+    second = write(tmp_path, 'second.yaml', DOCUMENT)
 
-    An unrecognised ``*key`` used to be written to the log as an ignored entry
-    while the parse carried on -- the tolerance that hid ``*timeformat`` for
-    years. With no log that ignore would be completely silent, so it is now an
-    error naming what is known, which is what the YAML schema already did.
-    """
-    document = write(tmp_path, 'report.rdf', """
-        *version=3
-        *documenttype=docx
-        *timeformat='%H:%M'
-        section:a
-        .head='Title'
-    """)
+    alone = ReportDataFile(first)
+    ReportDataFile(first)
+    again = ReportDataFile(second)
 
-    with pytest.raises(Exception) as caught:
-        ReportDataFile(document)
-
-    report = str(caught.value)
-    assert 'Unknown setting *timeformat' in report
-    assert 'documenttitle' in report, 'the message lists what is known'
+    assert [t.serial for t in again.tasks] == [t.serial for t in alone.tasks]
+    assert [t.myAddress for t in again.tasks] == [t.myAddress for t in alone.tasks]
+    assert again.tasks[0].serial == 1

@@ -42,14 +42,13 @@ A fill inside a marker is an ``add``: it materialises a new element from the
 template element its address names and places it at the marker. A fill outside
 one targets something the template already contains. That split is unchanged.
 
-What this does not do
----------------------
-Make the back ends read any of it. The addresses are the new four-slot form,
-so an addressbook keyed on the old names will not match -- that, and the
-mechanics of materialising instance 2 in a Word document, are directive
-``e577f6adf2e4``. The shape the back ends work with is deliberately preserved:
-a task still carries a segment list that joins with ``.``, so this is a
-matching problem and not an interface redesign.
+Serials
+-------
+A task's ``serial`` is its position in the finished list, 1-based, stamped here
+once the list is complete. The text parser counted on a class attribute that
+lived for the whole interpreter, which is why one root document per process
+used to be a rule; numbering the list instead leaves nothing behind between
+documents.
 """
 
 from ..namespaces import SECTION_NAMESPACES
@@ -68,6 +67,8 @@ def emit(entries, settings, globals_=()):
     tasks = []
     _emit_entries(entries, always_copy, tasks)
     tasks.extend(_global_task(fill) for fill in globals_)
+    for number, task in enumerate(tasks, 1):
+        task.serial = number
     return tasks
 
 
@@ -93,7 +94,7 @@ def _container_task(entry, always_copy):
     """
     what = 'copy' if (always_copy or entry.address.id != 1) else 'apply'
 
-    return ReportTask.from_parts(
+    return ReportTask(
         myAddress=list(entry.canonical_path) + [entry.address.canonical],
         # `path` is the **template** address and `myAddress` the **instance**
         # one -- which is the split the text format already had, and the reason
@@ -115,7 +116,7 @@ def _template_path(entry):
 
 def _fill_task(entry):
     """A value for one target, or an add when the fill sits in a marker."""
-    return ReportTask.from_parts(
+    return ReportTask(
         myAddress=list(entry.canonical_path) + [entry.address.canonical],
         # Ancestors as template names, matching the text format's `root`.
         path=[address.puretag for address in entry.path],
@@ -136,7 +137,7 @@ def _global_task(fill):
     -- which the old ``_cNNN`` renaming silently prevented, since a renamed
     clone no longer equalled the name the global was addressed at.
     """
-    return ReportTask.from_parts(
+    return ReportTask(
         myAddress=[GLOBAL_ROOT, fill.address.puretag],
         path=[GLOBAL_ROOT],
         target=fill.address.puretag,
