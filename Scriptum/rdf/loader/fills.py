@@ -49,6 +49,12 @@ source key    replaces                      companions
 More than one source key in an entry is an error. Everything that is not the
 source key or one of its companions is a modifier.
 
+``file``, ``parfile``, ``text`` and ``from`` take text. ``date`` and
+``numbering`` also take a number -- a timestamp, or the counter kind ``1`` --
+because that is how an author naturally writes them and the value classes
+take the parts as they are; the parts are never composed back into the text
+format's ``date:spec:'fmt'`` / ``numbering:kind:fmt:start`` and re-split.
+
 Lengths are recognised by modifier name
 ---------------------------------------
 The text format decided a value was a length by looking at its last two
@@ -157,12 +163,11 @@ def _from_scalar(node, selector, source, settings, diagnostics, path):
         return None
 
     if isinstance(raw, str):
-        return Value.from_parts('str', StringValue(raw), tostring=True)
+        return Value('str', StringValue(raw), tostring=True)
     if isinstance(raw, int):
-        return Value.from_parts('int', IntegerValue(raw), tostring=True)
+        return Value('int', IntegerValue(raw), tostring=True)
     if isinstance(raw, float):
-        return Value.from_parts('float', FloatValue(raw, settings),
-                                tostring=True)
+        return Value('float', FloatValue(raw, settings), tostring=True)
 
     report(f'{raw!r} is not a value this format knows')
     return None
@@ -206,7 +211,7 @@ def _colour(node, report):
                f'{hint}')
         return None
 
-    return Value.from_parts('color', colour, tostring=False)
+    return Value('color', colour, tostring=False)
 
 
 # ---------------------------------------------------------------- mappings
@@ -307,10 +312,15 @@ def _build(key, entries, selector, source, settings, diagnostics, path, report):
         return None
 
     written = source.value(value_node)
-    if not isinstance(written, str) or not written.strip():
+    if isinstance(written, str):
+        written = written.strip()
+    # A timestamp or the counter kind 1 is a number to an author and to the
+    # value class alike; everything else takes text.
+    takes_numbers = key in ('date', 'numbering') and not isinstance(written, bool)
+    if not (isinstance(written, str) and written) \
+            and not (takes_numbers and isinstance(written, (int, float))):
         report(f'{key!r} needs text', at=value_node)
         return None
-    written = written.strip()
 
     if key == 'file':
         return _file(written, selector, settings)
@@ -321,21 +331,21 @@ def _build(key, entries, selector, source, settings, diagnostics, path, report):
             return None
         filename, exists = getCorrectFile(written, False, settings.datadir)
         object = NameValue(filename, exists, settings, str(parameter))
-        return Value.from_parts('parfile', object, tostring=False,
-                                subtype=object.subtype)
+        return Value('parfile', object, tostring=False,
+                     subtype=object.subtype)
 
     if key == 'text':
-        return Value.from_parts('str', StringValue(written), tostring=True)
+        return Value('str', StringValue(written), tostring=True)
 
     if key == 'from':
         # Meaningful as a table modifier: the caption is read out of the table
         # itself. The name is lowercased, as it was when written '@row1'.
-        return Value.from_parts('readfrom', written.lower(), tostring=False)
+        return Value('readfrom', written.lower(), tostring=False)
 
     if key == 'date':
         return _date(written, entries, scalar, settings)
 
-    return _numbering(written, entries, scalar, report)
+    return _numbering(written, entries, scalar)
 
 
 def _file(written, selector, settings):
@@ -344,53 +354,46 @@ def _file(written, selector, settings):
         object = TableValue(filename, exists, settings)
     else:
         object = _FILE_CLASSES.get(selector, FileValue)(filename, exists)
-    return Value.from_parts('file', object, tostring=False,
-                            subtype=object.subtype)
+    return Value('file', object, tostring=False, subtype=object.subtype)
 
 
 def _date(written, entries, scalar, settings):
-    """Compose what :class:`DateValue` reads, from parts YAML kept apart.
+    """A :class:`DateValue` from its parts: the spec, and the pattern beside it.
 
-    The format is always quoted, so a strftime pattern containing ``:`` --
-    ``'%H:%M:%S'`` is the common one -- survives DateValue's tokeniser, which
-    respects quotes. The author never writes the composed form, so the
-    delimiter is not something they can trip over; only the loader builds it.
+    Nothing is composed. The text format packed the two into ``date:spec:'fmt'``
+    and DateValue split it again on ``:`` -- which, once YAML had consumed the
+    quotes around a date string, split the time inside it too
+    (``'12/15/22 14:24:59'`` read as 14:00 with the pattern ``24:59``). The
+    parts go to the class as parts.
     """
+    pattern = None
     if 'format' in entries:
         pattern = scalar('format', required=False)
-        if pattern is not None:
-            return Value.from_parts(
-                'datetime', DateValue(f"{written}:'{pattern}'", settings),
-                tostring=True)
-    return Value.from_parts('datetime', DateValue(written, settings),
-                            tostring=True)
+        if pattern is None:
+            return None
+        pattern = str(pattern)
+    return Value('datetime', DateValue(written, settings, format=pattern),
+                 tostring=True)
 
 
-def _numbering(written, entries, scalar, report):
-    """Compose what :class:`NumberValue` reads: ``kind:format[:start]``.
+def _numbering(written, entries, scalar):
+    """A :class:`NumberValue` from its parts: kind, format and start.
 
-    NumberValue splits on ``:`` and has no quoting, so a format containing one
-    would be misread. That is reported rather than composed -- the point of
-    keeping the parts apart in the document is to stop a delimiter deciding
-    something the author did not.
+    Nothing is composed, so a ``:`` in the format is just a character --
+    the text format's ``numbering:kind:format[:start]`` could not say that.
     """
     pattern = scalar('format')
     if pattern is None:
         return None
-    pattern = str(pattern)
-    if ':' in pattern:
-        report(f'a numbering format cannot contain ":": {pattern!r}')
-        return None
 
-    parts = [written, pattern]
+    start = None
     if 'start' in entries:
         start = scalar('start', required=False)
         if start is None:
             return None
-        parts.append(str(start))
 
-    return Value.from_parts('numbering', NumberValue(':'.join(parts)),
-                            tostring=True)
+    return Value('numbering', NumberValue(written, str(pattern), start),
+                 tostring=True)
 
 
 # --------------------------------------------------------------- modifiers
@@ -435,7 +438,7 @@ def _length(name, node, source, settings, diagnostics, path):
 
     object = LengthValue(written.strip())
     object.floatformat = settings.floatformat
-    return Value.from_parts('length', object, tostring=True)
+    return Value('length', object, tostring=True)
 
 
 __all__ = ['read', 'selector_for', 'SOURCE_KEYS', 'COMPANIONS',

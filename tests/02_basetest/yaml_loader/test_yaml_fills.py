@@ -256,12 +256,33 @@ def test_a_date_takes_its_spec_and_its_format_apart(spec):
 
 
 def test_a_date_format_may_contain_colons():
-    """Composed for DateValue with the format always quoted, so its tokeniser
-    keeps ``%H:%M:%S`` in one piece. The author never writes the composed
-    form, which is what makes the delimiter safe."""
+    """The spec and the pattern reach DateValue as two arguments; nothing is
+    composed and re-split, so a colon in either is just a character."""
     fill = one("- date:creation: {date: now, format: '%H:%M:%S'}")
 
     assert str(fill.value).count(':') == 2
+
+
+def test_a_date_string_keeps_the_time_inside_it():
+    """YAML consumes the quotes around a date string. While the loader composed
+    ``date:spec:'fmt'`` for DateValue to split on ``:``, the time inside the
+    string was split like a delimiter and '12/15/22 14:24:59' read as 14:00
+    with the pattern '24:59'. The parts go to the class as parts now."""
+    fill = one("- date:creation: {date: '12/15/22 14:24:59', format: '%H:%M:%S'}")
+
+    assert str(fill.value) == '14:24:59'
+    assert fill.value.object.format == '%H:%M:%S'
+
+
+@pytest.mark.parametrize('written', ['1231231230', '1231231230.5'])
+def test_a_timestamp_may_be_a_number(written):
+    """``date:`` takes an integer timestamp, as the format says -- unquoted,
+    which YAML types as a number; the loader used to refuse that with
+    "'date' needs text"."""
+    from datetime import datetime
+    fill = one(f"- date:creation: {{date: {written}, format: '%Y'}}")
+
+    assert str(fill.value) == datetime.fromtimestamp(float(written)).strftime('%Y')
 
 
 def test_a_date_without_a_format_uses_the_setting():
@@ -273,19 +294,29 @@ def test_numbering_takes_kind_format_and_start():
     fill = one("- number:fig: {numbering: '1', format: 'Figure %s', start: 1}")
 
     assert fill.value.type == 'numbering'
+    assert next(fill.value.object) == 'Figure 1'
+
+
+def test_the_counter_kind_1_may_be_a_number():
+    """Unquoted, YAML types it as an int; the loader used to refuse that with
+    "'numbering' needs text"."""
+    fill = one("- number:fig: {numbering: 1, format: '%s)', start: 3}")
+
+    assert [next(fill.value.object) for _ in range(2)] == ['3)', '4)']
 
 
 def test_numbering_needs_a_format():
     assert "needs 'format'" in failing("- number:fig: {numbering: '1'}")
 
 
-def test_a_numbering_format_with_a_colon_is_refused_rather_than_composed():
-    """NumberValue splits on ``:`` and has no quoting, so composing one would
-    be misread. The point of keeping the parts apart in the document is that a
-    delimiter never decides something the author did not."""
-    report = failing("- number:fig: {numbering: '1', format: 'a:%s'}")
+def test_a_numbering_format_may_contain_a_colon():
+    """NumberValue takes kind, format and start as three arguments, so a
+    colon in the format is just a character. The text format's
+    ``numbering:kind:format[:start]`` could not say that, and for a while the
+    loader refused the colon rather than compose something misread."""
+    fill = one("- number:fig: {numbering: '1', format: 'a:%s'}")
 
-    assert 'cannot contain ":"' in report
+    assert next(fill.value.object) == 'a:1'
 
 
 def test_inline_rows_are_reserved_and_say_so():

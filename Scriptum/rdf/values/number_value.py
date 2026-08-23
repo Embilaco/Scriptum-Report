@@ -35,35 +35,40 @@ class FloatValue:
         return fformat(self.value)
 
 class NumberValue:
-    """Class to define different section number formats."""
+    """A counter: a pre-expanded sequence of numbered strings, walked by
+    ``next()`` -- reading ``content`` advances it (see *NumberValue.content
+    advances an iterator* on the values board).
 
-    def __init__(self, value: str):
-        """Extract a numbering type list out of the content."""
+    Three parts, given separately -- ``{numbering: kind, format: 'Figure %s',
+    start: 1}`` -- where the text format packed them into one
+    ``numbering:kind:format[:start]`` value that this class split on ``:``.
+
+    ``kind``    ``1`` (arabic), ``a``/``A`` (letters), ``i``/``I`` (roman, to
+                39), or ``F`` (free: ``start`` is a ``;``-separated list of
+                the values themselves). Given as a string or, for ``1``, an int.
+    ``format``  a ``%``-pattern with one ``%s``; a ``:`` in it is just text.
+    ``start``   the first counter value (an int, default 1), or the list for
+                ``F``.
+
+    An unknown kind or an unusable start does not raise: ``str`` says what went
+    wrong and the sequence is empty, the house rule for every value class.
+    """
+
+    def __init__(self, kind, format, start=None):
+        """Expand the counter from its parts."""
+
+        k = str(kind).strip()
+        f = str(format)
+        value = f'numbering {k!r} {f!r}' + (f' from {start!r}' if start is not None else '')
 
         err = False
-        try:
-            all_parts = value.split(':')
-        except Exception:
-            self.str = f'- failed to read {value!r}'
-            values = []
-            err = True
+        if k == 'F':
+            s = '' if start is None else str(start)
         else:
-            if len(all_parts) == 2:
-                k, f = all_parts
-                s = '1'
-            elif len(all_parts) == 3:
-                k, f, s = all_parts
-            else:
-                self.str = f'- failed to interprete {value!r}'
-                values = []
-                err = True
-
-        if not err:
             try:
-                if k != 'F':
-                    s = int(s)
+                s = 1 if start is None else int(start)
             except Exception:
-                self.str = f'- failed to understand {value!r}'
+                self.str = f'- failed to understand {value}'
                 values = []
                 err = True
 
@@ -93,7 +98,7 @@ class NumberValue:
                         if i >= 39:
                             break
                     else:
-                        self.str = f'- unknown number format in {value!r}'
+                        self.str = f'- unknown number format in {value}'
                         values = []
                         err = True
                         break

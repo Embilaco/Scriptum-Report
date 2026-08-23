@@ -26,16 +26,16 @@ def _document(tmp_path: Path, fills: list[str]) -> Path:
 def test_date_time_strings(tmp_path: Path):
     """The forms a ``date`` source takes, through the loader.
 
-    The spec and the strftime pattern are separate keys; a timestamp is quoted,
-    because ``date:`` takes text.
+    The spec and the strftime pattern are separate keys; a timestamp may be
+    written as a number or as text.
     """
     base = _document(tmp_path, [
         "setdate: {date: today}",
         "settime: {date: now}",
         "created: {date: now, format: '%d. %b %Y -- %H:%M:%S'}",
-        "initial: {date: '1231231230', format: '%d. %b %Y -- %H:%M:%S'}",
+        "initial: {date: 1231231230, format: '%d. %b %Y -- %H:%M:%S'}",
         "toolong: {date: '12312312345689', format: '%d. %b %Y -- %H:%M:%S'}",
-        "tooshort: {date: '123123', format: '%d. %b %Y -- %H:%M:%S'}",
+        "tooshort: {date: 123123, format: '%d. %b %Y -- %H:%M:%S'}",
     ])
 
     rdf = ReportDataFile(str(base))
@@ -67,15 +67,14 @@ def test_date_time_strings(tmp_path: Path):
     assert rdf.errors == []
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "the loader hands DateValue the date string without the quotes YAML "
-    "consumed, and DateValue's tokeniser splits the time on its colons: "
-    "'12/15/22 14:24:59' is read as 14:00 with the format '24:59'. Goes "
-    "when DateValue takes its parts instead of re-tokenising a line"))
 def test_a_date_string_with_a_time_in_it(tmp_path: Path):
     """``date:`` takes a date string as written; a time inside it is part of
     the date, not a delimiter. With ``format`` the same string is rendered
     through the pattern.
+
+    This was wrong while DateValue re-tokenised a composed ``spec:'fmt'``
+    string: YAML had consumed the quotes, so the time was split on its colons
+    and '12/15/22 14:24:59' read as 14:00 with the format '24:59'.
     """
     base = _document(tmp_path, [
         "testtime: {date: '12/15/22 14:24:59'}",

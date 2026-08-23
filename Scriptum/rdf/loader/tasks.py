@@ -104,7 +104,7 @@ def _container_task(entry, always_copy):
         # `myAddress`.
         path=_template_path(entry),
         target='',
-        value=Value.from_parts('newsection', '', tostring=False),
+        value=Value('newsection', '', tostring=False),
         what=what,
     )
 

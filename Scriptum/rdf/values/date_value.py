@@ -1,4 +1,4 @@
-"""Helpers for parsing date values."""
+"""A date or time, stamped when the document is read."""
 
 import re
 from datetime import datetime
@@ -44,109 +44,84 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for environments with
 
     date_parser = _SimpleDateParser()
 
-from ..common import removeQuotes
+
+_NUMERIC = re.compile(r'^[-+]?\d+(?:\.\d+)?$')
 
 
 class DateValue:
-    """DateValues are either
-    date:now                      -> date:now
-    date:now:format               -> date:now:'%d. %b %Y -- %H:%M:%S'
-    date:today                    -> date:today
-    date:today:format             -> date:today:'%d. %b %Y'
-    date:integer-timestamp        -> date:1231231230
-    date:integer-timestamp:format -> date:1231231230:'%d. %b %Y -- %H:%M:%S'
-    date:quoted-timestring        -> date:'12/15/22 14:24:59'
-    date:quoted-timestring:format -> date:'12/15/22 14:24:59':'%m.%d.%y %H:%M:%S'
+    """A date, formatted **in the constructor** -- the one value type that is
+    fully eager (see *Dates are stamped at parse time* on the values board).
+
+    ``spec`` is what to evaluate, exactly as the document gives it:
+
+    ==================  ======================================================
+    ``'now'``           the current date and time; default format
+                        ``settings.datetimeformat``
+    ``'today'``         the current date; default format ``settings.dateformat``
+    a number            a Unix timestamp -- an ``int``/``float``, or a string
+                        of digits; 13 digits or more are taken as milliseconds
+    any other string    a date, read by ``dateutil`` (or the bundled fallback
+                        parser when it is absent)
+    ==================  ======================================================
+
+    ``format`` is the strftime pattern, given separately -- ``{date: now,
+    format: '%H:%M:%S'}`` -- so a colon in either part is just a character.
+    The text format packed spec and pattern into one ``date:spec:'fmt'`` value
+    that this class then split on ``:`` with quote tracking; the loader handed
+    it the date string without the quotes YAML had consumed, and a time inside
+    the string was split like a delimiter (``'12/15/22 14:24:59'`` read as
+    14:00 with the pattern ``24:59``). Taking the parts apart is what fixed it.
+
+    Two degradations are kept as they were and are on the date audit's list:
+    a date that does not parse becomes the **epoch** silently, and a pattern
+    ``strftime`` rejects falls back to ``settings.dateformat``. ``self.dt``
+    holds the datetime either way.
     """
-    def __init__(self, v: str, settings={}):
-        
-        if v.startswith('now'):
-            v = v.replace('now', '', 1)
-            if v.startswith(':') and len(v) > 1:
-                self.format = removeQuotes(v[1:])
-            else:
-                self.format = settings.datetimeformat
+
+    def __init__(self, spec, settings, format=None):
+        if isinstance(spec, str):
+            spec = spec.strip()
+
+        if spec == 'now':
             dt = datetime.now()
-            value = dt.strftime(self.format)
-        elif v.startswith('today'):
-            v = v.replace('today', '', 1)
-            if v.startswith(':') and len(v) > 1:
-                self.format = removeQuotes(v[1:])
-            else:
-                self.format = settings.dateformat
+            default = settings.datetimeformat
+        elif spec == 'today':
             dt = datetime.today()
-            value = dt.strftime(self.format)
+            default = settings.dateformat
         else:
-            tokens = []
-            current = []
-            quote_char = None
+            dt = self._parse(spec)
+            default = settings.datetimeformat
 
-            for ch in v:
-                if ch in {"'", '"'}:
-                    if quote_char is None:
-                        quote_char = ch
-                    elif quote_char == ch:
-                        quote_char = None
-                    current.append(ch)
-                elif ch == ':' and quote_char is None:
-                    tokens.append(''.join(current))
-                    current = []
-                else:
-                    current.append(ch)
-
-            tokens.append(''.join(current))
-
-            dt = None
-            explicit_format = None
-
-            numeric_re = re.compile(r'^[-+]?\d+(?:\.\d+)?$')
-
-            for i in range(1, len(tokens) + 1):
-                candidate_value = ':'.join(tokens[:i]).strip()
-                candidate_format = ':'.join(tokens[i:]).strip() if i < len(tokens) else ''
-
-                value_text = removeQuotes(candidate_value)
-                format_text = removeQuotes(candidate_format) if candidate_format else ''
-
-                if not value_text:
-                    continue
-
-                parsed_dt = None
-
-                if numeric_re.match(value_text):
-                    try:
-                        ts_value = float(value_text)
-                        if '.' not in value_text and len(value_text.lstrip('+-')) >= 13:
-                            ts_value /= 1000.0
-                        parsed_dt = datetime.fromtimestamp(ts_value)
-                    except Exception:
-                        parsed_dt = None
-
-                if parsed_dt is None:
-                    try:
-                        parsed_dt = date_parser.parse(value_text)
-                    except Exception:
-                        continue
-
-                dt = parsed_dt
-                explicit_format = format_text or None
-                break
-
-            if dt is None:
-                dt = datetime.fromtimestamp(0)
-
-            if explicit_format:
-                self.format = explicit_format
-            else:
-                self.format = settings.datetimeformat
-
-            try:
-                value = dt.strftime(self.format)
-            except Exception:
-                value = dt.strftime(settings.dateformat)
-
-        self.value = value
+        self.format = format if format else default
         self.dt = dt
+
+        try:
+            self.value = dt.strftime(self.format)
+        except Exception:
+            self.value = dt.strftime(settings.dateformat)
+
+    @staticmethod
+    def _parse(spec):
+        """A timestamp or a date string to a datetime; the epoch if neither."""
+        text = str(spec).strip()
+
+        if isinstance(spec, (int, float)) and not isinstance(spec, bool) \
+                or _NUMERIC.match(text):
+            try:
+                stamp = float(text)
+                if '.' not in text and len(text.lstrip('+-')) >= 13:
+                    stamp /= 1000.0
+                return datetime.fromtimestamp(stamp)
+            except Exception:
+                pass
+
+        if text:
+            try:
+                return date_parser.parse(text)
+            except Exception:
+                pass
+
+        return datetime.fromtimestamp(0)
 
     @property
     def content(self):

@@ -173,7 +173,7 @@ def test_package_stays_within_its_layer(package):
         # the exact import that used to break graceful degradation
         ('from .._docx import docx_sections', ['Scriptum', 'rdf'], 'rdf', {'_docx'}),
         # same dot count, deeper file: stays inside the package
-        ('from ..common import removeQuotes', ['Scriptum', 'rdf', 'values'], 'rdf', set()),
+        ('from ..common import getCorrectFile', ['Scriptum', 'rdf', 'values'], 'rdf', set()),
         # absolute forms -- the blind spot of a purely dot-counting check
         ('from Scriptum._pptx import pptx_sections', ['Scriptum', 'rdf'], 'rdf', {'_pptx'}),
         ('import Scriptum._docx', ['Scriptum', 'rdf'], 'rdf', {'_docx'}),
