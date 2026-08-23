@@ -61,9 +61,9 @@ class YamlSource:
         try:
             root = loader.get_single_node()
         except yaml.MarkedYAMLError as exc:
-            diagnostics.error(_marked_message(exc),
-                              node=_MarkNode(exc.problem_mark or exc.context_mark),
-                              filename=filename)
+            mark = exc.problem_mark or exc.context_mark
+            diagnostics.error(_marked_message(exc, _line_of(text, mark)),
+                              node=_MarkNode(mark), filename=filename)
             return None
         except yaml.YAMLError as exc:
             diagnostics.error(f'cannot parse YAML: {exc}', filename=filename)
@@ -75,6 +75,16 @@ class YamlSource:
 
         if root is None:
             diagnostics.error('the document is empty', filename=filename)
+            return None
+
+        # What composes fine and would go wrong later, or has gone wrong
+        # already without a word: a tag the loader cannot construct (it would
+        # raise out of construction, far from here), and an anchor nothing
+        # refers to (the word is simply gone from the value).
+        problems = _unreadable_markup(root, loader)
+        if problems:
+            for node, message in problems:
+                diagnostics.error(message, node=node, filename=filename)
             return None
 
         return cls(root, loader, filename)
@@ -118,10 +128,156 @@ class _Origin:
 _ORIGIN = _Origin()
 
 
-def _marked_message(exc):
+def _marked_message(exc, line=''):
     problem = (exc.problem or 'malformed YAML').strip()
     context = (exc.context or '').strip()
-    return f'{context}, {problem}' if context else problem
+    message = f'{context}, {problem}' if context else problem
+    hint = _quoting_hint(message, line)
+    return f'{message}. {hint}' if hint else message
+
+
+def _line_of(text, mark):
+    """The source line a mark points at, for a hint to quote back."""
+    if mark is None:
+        return ''
+    if isinstance(text, bytes):
+        text = text.decode('utf-8', errors='replace').lstrip(chr(0xFEFF))
+    lines = text.splitlines()
+    return lines[mark.line] if 0 <= mark.line < len(lines) else ''
+
+
+#: PyYAML's scanner and parser name the token they choked on; an author
+#: wrote a value. Each entry maps the problem PyYAML reports to what the
+#: author most likely did. The value part of the line is quoted back when it
+#: can be found, so the fix is in the message.
+_QUOTING_HINTS = (
+    ('mapping values are not allowed here',
+     "An unquoted value that contains ': ' or ends with ':' reads as a nested "
+     "key"),
+    ('sequence entries are not allowed here',
+     "An unquoted value that starts with '- ' reads as a list item"),
+    ('mapping keys are not allowed here',
+     "An unquoted value that starts with '? ' reads as a complex key"),
+    ('found undefined alias',
+     "An unquoted value that starts with '*' reads as a YAML alias"),
+    ("found character '\\t'",
+     'YAML indents with spaces; a tab cannot start a token'),
+    ('cannot start any token',
+     "An unquoted value cannot start with '%', '@' or '`'"),
+    ('while scanning a block scalar',
+     "'|' and '>' start a block scalar, whose text goes on the following "
+     "lines, indented; a value that starts with '|' or '>' must be quoted"),
+    ('while scanning a quoted scalar',
+     'A quoted value was opened and never closed'),
+)
+
+
+def _quoting_hint(message, line):
+    """What the author most likely did, from PyYAML's message and the line."""
+    for fingerprint, explanation in _QUOTING_HINTS:
+        if fingerprint in message:
+            break
+    else:
+        explanation = _quote_inside_quotes(line)
+        if not explanation:
+            return ''
+    value = _value_part(line)
+    if value and not value.startswith(("'", '"')):
+        quoted = "'" + value.replace("'", "''") + "'"
+        return f'{explanation}. Quote the value: {quoted}'
+    return explanation
+
+
+def _quote_inside_quotes(line):
+    """A single-quoted value with a lone quote inside: ``'it's``.
+
+    YAML closes the value at the apostrophe and chokes on what follows, with
+    a message about block mappings that says nothing about quotes.
+    """
+    value = _value_part(line)
+    if not value.startswith("'"):
+        return ''
+    body = value[1:]
+    index = 0
+    while index < len(body):
+        if body[index] == "'":
+            if body[index + 1:index + 2] == "'":       # an escaped quote
+                index += 2
+                continue
+            rest = body[index + 1:].strip()
+            if rest and not rest.startswith('#'):
+                return ("A single quote inside a single-quoted value is "
+                        "written twice: 'it''s'")
+            return ''
+        index += 1
+    return ''
+
+
+def _value_part(line):
+    """What follows the first ``: `` on a line -- the value of a block entry.
+
+    Addresses carry colons without a following space (``date:creation``), so
+    the separator is the colon-space, never a bare colon.
+    """
+    stripped = line.strip()
+    if stripped.startswith('- '):
+        stripped = stripped[2:].lstrip()
+    _, separator, value = stripped.partition(': ')
+    return value.strip() if separator else ''
+
+
+def _unreadable_markup(root, loader):
+    """Tags the loader cannot construct, and anchors nothing refers to.
+
+    Both compose without complaint. A ``!tag`` then raises ``ConstructorError``
+    out of the first ``value()`` call, far from any diagnostic; an anchor is
+    never heard of again -- ``- title: &me a value`` has silently lost
+    ``&me`` from its text. Returns ``(node, message)`` pairs.
+    """
+    problems = []
+    seen = set()
+    constructible = loader.yaml_constructors
+
+    def walk(node):
+        if id(node) in seen:
+            return
+        seen.add(id(node))
+        if node.tag not in constructible:
+            shown = _shown(node)
+            written = node.tag if node.tag.startswith('!') else ''
+            quoted = ' '.join(part for part in (written, shown) if part)
+            problems.append((node, (
+                f'{node.tag!r} is a YAML tag, which this format does not '
+                f"read. A value that starts with '!' must be quoted"
+                + (f": '{quoted}'" if quoted else ''))))
+        if is_sequence(node):
+            for child in node.value:
+                walk(child)
+        elif is_mapping(node):
+            for key, value in node.value:
+                walk(key)
+                walk(value)
+
+    walk(root)
+
+    for anchor, node in loader.anchored.items():
+        if anchor in loader.aliased:
+            continue
+        shown = _shown(node)
+        problems.append((node, (
+            f"'&{anchor}' reads as a YAML anchor, and nothing refers to it, so "
+            'the word is dropped from the value. If it is part of the text, '
+            'quote the value'
+            + (f": '&{anchor} {shown}'" if shown else ''))))
+
+    problems.sort(key=lambda pair: (pair[0].start_mark.line,
+                                    pair[0].start_mark.column))
+    return problems
+
+
+def _shown(node):
+    """A scalar's text for a hint, or '' for anything else."""
+    return node.value.strip() if is_scalar(node) and isinstance(node.value, str) else ''
 
 
 # ------------------------------------------------------------- node kinds

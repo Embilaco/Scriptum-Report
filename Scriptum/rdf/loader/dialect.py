@@ -103,7 +103,31 @@ class Core12Loader(yaml.SafeLoader):
 
     Safe in the same sense its base is: an unknown ``!`` tag is refused rather
     than constructed, so a document cannot name a Python type to instantiate.
+
+    It also remembers the **anchors** it composed and the **aliases** it
+    resolved (``anchored``: name -> node; ``aliased``: names). PyYAML forgets
+    both once the document is composed, and the loader needs them: an author
+    who writes ``- title: &me a value`` has not defined an anchor, they have
+    lost the word ``&me`` from their text -- silently, which is the class of
+    failure this format exists to end. An anchor nothing refers to is reported
+    by ``nodes.YamlSource`` for exactly that reason; one that *is* aliased is
+    ordinary YAML and passes.
     """
+
+    def __init__(self, stream):
+        super().__init__(stream)
+        self.anchored = {}
+        self.aliased = set()
+
+    def compose_node(self, parent, index):
+        if self.check_event(yaml.events.AliasEvent):
+            self.aliased.add(self.peek_event().anchor)
+            return super().compose_node(parent, index)
+        anchor = self.peek_event().anchor
+        node = super().compose_node(parent, index)
+        if anchor is not None:
+            self.anchored[anchor] = node
+        return node
 
 
 # Assigning the filtered map is what gives the subclass its own copy. Do this

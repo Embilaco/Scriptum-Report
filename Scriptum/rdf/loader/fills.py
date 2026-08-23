@@ -233,6 +233,16 @@ def _from_mapping(node, selector, source, settings, diagnostics, path,
 
     found = [key for key in entries if key in SOURCE_KEYS]
     if not found:
+        if len(pairs) == 1 and is_null(pairs[0][2]):
+            # One key, no value: overwhelmingly an unquoted value that ends in
+            # ':' (YAML reads it as a nested key) or was written {word}. The
+            # key is the text the author meant, so it is quoted back whole.
+            written = pairs[0][0]
+            report('this reads as a mapping with one key and no value. An '
+                   "unquoted value ending in ':' does that, and so does "
+                   f"{{word}}. If {written!r} is the text you meant, quote it: "
+                   f"'{written}:'")
+            return None, {}
         report('a value needs one source key: '
                f'{", ".join(SOURCE_KEYS)}. Found {", ".join(sorted(entries))}.')
         return None, {}

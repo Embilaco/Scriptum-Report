@@ -147,6 +147,113 @@ def test_an_empty_document_is_reported():
     assert 'empty' in diagnostics.report()
 
 
+# ------------------------------ what an unquoted value can do, named
+
+@pytest.mark.parametrize('line, says, quoted', [
+    ("- title: From Typewriting to Variable Fonts:",
+     "contains ': ' or ends with ':'", "'From Typewriting to Variable Fonts:'"),
+    ("- title: Note: this matters",
+     "contains ': ' or ends with ':'", "'Note: this matters'"),
+    ("- title: - something", "starts with '- '", "'- something'"),
+    ("- title: ? what", "starts with '? '", "'? what'"),
+    ("- title: *me", "starts with '*'", "'*me'"),
+    ("- title: %d of them", "cannot start with '%', '@' or '`'", "'%d of them'"),
+    ("- title: @home", "cannot start with '%', '@' or '`'", "'@home'"),
+    ("- title: `cmd`", "cannot start with '%', '@' or '`'", "'`cmd`'"),
+    ("- title: | pipe", "start a block scalar", "'| pipe'"),
+    ("- title: > fold", "start a block scalar", "'> fold'"),
+])
+def test_a_scanner_error_says_what_the_author_most_likely_did(line, says, quoted):
+    """PyYAML names the token it choked on; the author wrote a value. The
+    diagnostic keeps PyYAML's message and adds what an unquoted value with
+    that character does -- and the value itself, quoted, so the fix is in
+    the message."""
+    source, diagnostics = source_of(
+        f'_content_:\n  - section:a:\n      {line}\n'.encode('utf-8'))
+
+    assert source is None
+    report = diagnostics.report()
+    assert says in report, report
+    assert f'Quote the value: {quoted}' in report, report
+
+
+def test_a_tab_is_named_as_a_tab():
+    source, diagnostics = source_of(b'_content_:\n  - a:\n      - t: a\tb\n')
+
+    assert source is None
+    assert 'YAML indents with spaces' in diagnostics.report()
+
+
+def test_a_lone_quote_inside_single_quotes_is_explained():
+    """``'it's`` closes at the apostrophe; PyYAML then complains about the
+    block mapping, which says nothing about quotes."""
+    source, diagnostics = source_of(b"_content_:\n  - a:\n      - t: 'it's\n")
+
+    assert source is None
+    assert "written twice: 'it''s'" in diagnostics.report()
+
+
+def test_an_unclosed_double_quote_is_named():
+    source, diagnostics = source_of(b'_content_:\n  - a:\n      - t: "it\n')
+
+    assert source is None
+    assert 'opened and never closed' in diagnostics.report()
+
+
+def test_a_correct_quote_gets_no_hint():
+    source, diagnostics = source_of(
+        b"_content_:\n  - a:\n      - t: 'it''s'   # it's fine\n")
+
+    assert source is not None and not diagnostics
+
+
+def test_a_tag_is_reported_instead_of_raising_out_of_construction():
+    """``!me`` composes fine and ``ConstructorError`` came out of the first
+    ``value()`` call, far from any diagnostic."""
+    source, diagnostics = source_of(b'_content_:\n  - a:\n      - t: !me a value\n')
+
+    assert source is None
+    report = diagnostics.report()
+    assert "'!me' is a YAML tag" in report
+    assert "must be quoted: '!me a value'" in report
+    assert 'doc.yaml:3:12' in report
+
+
+def test_a_python_tag_is_refused_the_same_way():
+    source, diagnostics = source_of(
+        b'_content_:\n  - a:\n      - t: !!python/object/apply:os.system ["echo"]\n')
+
+    assert source is None
+    assert 'is a YAML tag, which this format does not read' in diagnostics.report()
+
+
+def test_an_anchor_nothing_refers_to_is_reported_not_swallowed():
+    """``&me a value`` read as the string ``a value`` -- the author lost a
+    word and nothing said so."""
+    source, diagnostics = source_of(b'_content_:\n  - a:\n      - t: &me a value\n')
+
+    assert source is None
+    report = diagnostics.report()
+    assert "'&me' reads as a YAML anchor, and nothing refers to it" in report
+    assert "quote the value: '&me a value'" in report
+
+
+def test_an_anchor_that_is_aliased_is_ordinary_yaml():
+    source, diagnostics = source_of(
+        b'_content_:\n  - a:\n      - t: &me a value\n      - u: *me\n')
+
+    assert source is not None and not diagnostics
+
+
+def test_the_value_part_of_a_line_is_what_follows_the_first_colon_space():
+    """Addresses carry colons without a space (``date:creation``), so the
+    separator is the colon-space and the hint quotes the right thing."""
+    assert nodes._value_part('      - date:creation: Note: x') == 'Note: x'
+    assert nodes._value_part('  - head: a') == 'a'
+    assert nodes._value_part('      - head:') == ''
+    assert nodes._value_part('_content_:') == ''
+
+
 def test_a_missing_file_is_reported_rather_than_raised():
     diagnostics = Diagnostics()
     assert YamlSource.from_path('no-such-file.yaml', diagnostics) is None

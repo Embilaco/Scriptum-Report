@@ -234,6 +234,21 @@ def test_a_fill_is_not_a_level_of_the_ladder():
     assert isinstance(head, Fill) and isinstance(subsection, Container)
 
 
+def test_a_value_that_starts_with_a_dash_on_its_own_line_is_named():
+    """``title:`` followed by ``- something`` on the next line is a container
+    whose body is one bare item -- which is never right. The ladder diagnostic
+    says what a sequence value means and that the dash is the likely cause."""
+    _, diagnostics = read("""
+        - section:a:
+            - title:
+                - something
+    """)
+
+    report = diagnostics.report()
+    assert 'A sequence value is a body' in report
+    assert "a value that starts with '- ' reads as a list item, so quote it" in report
+
+
 # ------------------------------------------------------------- numbering
 
 def test_a_repeated_address_is_a_second_instance():

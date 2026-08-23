@@ -419,6 +419,22 @@ def test_a_value_needs_a_source_key():
     assert 'file' in report and 'parfile' in report
 
 
+@pytest.mark.parametrize('body, text', [
+    ("- title:\n    From Typewriting to Variable Fonts:",
+     'From Typewriting to Variable Fonts'),
+    ('- title: {a}', 'a'),
+])
+def test_one_key_and_no_value_is_named_as_an_unquoted_colon(body, text):
+    """The fingerprint from the directive: a fill that arrives as a mapping
+    whose single key is not a source key and whose value is null is, almost
+    always, an unquoted value ending in ':' (or a stray {word}). The message
+    says so and quotes the text back, instead of talking about source keys."""
+    report = failing(body)
+
+    assert 'one key and no value' in report
+    assert f"quote it: '{text}:'" in report
+
+
 def test_a_value_has_only_one_source_key():
     report = failing('- image:generic: {file: a.png, text: b}')
 

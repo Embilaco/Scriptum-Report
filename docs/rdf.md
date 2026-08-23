@@ -344,15 +344,26 @@ something implied. A unit suffix on any other value is just text.
 ## Quoting
 
 YAML gives a few characters structural meaning inside an unquoted value. Put
-the value in `'single quotes'` whenever it contains
+the value in `'single quotes'` whenever it
 
-- a colon followed by a space, or at the end — `'From Typewriting to Variable
-  Fonts:'`; unquoted, the text becomes a *key*;
-- a leading `#` (a comment), `- ` (a list item), `&`, `*`, `!`, `|`, `>`, `%`,
-  `@`, or a backtick;
-- `[`, `]`, `{`, `}` or a comma — inside a flow mapping `{...}` a comma splits
-  the value, so `{color: 'rgb(255,0,0)'}` needs the quotes;
-- quotes themselves (double the single quote inside single quotes: `'it''s'`).
+- contains a colon followed by a space, or ends with a colon — `'From
+  Typewriting to Variable Fonts:'`; unquoted, the text becomes a *key*;
+- starts with `- ` (a list item), `? ` (a complex key), `#` (a comment), `&`
+  (an anchor — the word is silently dropped), `*` (an alias), `!` (a tag),
+  `|` or `>` (a block scalar), `%`, `@`, or a backtick;
+- starts with `[` or `{` (a flow sequence or mapping), or contains a comma
+  inside a flow mapping — `{color: 'rgb(255,0,0)'}` needs the quotes because
+  the commas would split it;
+- contains a tab;
+- contains a quote: inside single quotes a single quote is written twice,
+  `'it''s'`.
+
+Every one of these is **refused with a message that names it** and shows the
+value quoted, at the line it is on — except one. ` #` after a value starts a
+comment, which is legal and common (`- head: 'Title'  # the main one`), so
+`- title: Results #1` silently becomes `Results` and nothing can tell that
+from a comment. Quote it: `'Results #1'`. (`Results#1`, without the space, is
+fine.)
 
 Leading-zero numbers are integers in YAML (`007` is `7`) — quote a part number
 or an extension. House style: quote prose anyway; it makes the boundary of a

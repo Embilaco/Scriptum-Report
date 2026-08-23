@@ -62,8 +62,8 @@ from ..namespaces import SECTION_NAMESPACES
 from . import addresses, fills
 from .addresses import Address
 from .document import CONTENT_KEY, GLOBAL_KEY, INCLUDE_KEY, read_fragment
-from .nodes import (YamlSource, describe, is_mapping, is_null, is_sequence,
-                    items, sequence)
+from .nodes import (YamlSource, describe, is_mapping, is_null, is_scalar,
+                    is_sequence, items, sequence)
 
 
 class Entry:
@@ -471,7 +471,13 @@ def _check_ladder(address, depth, ladder, value_node, report):
                 'is quoted.')
     elif is_sequence(value_node):
         hint = (' A sequence value is a body, so this reads as a container. '
-                "A fill's value is a scalar or a mapping.")
+                "A fill's value is a scalar or a mapping")
+        if all(is_scalar(item) for item in value_node.value):
+            # A body of bare items is never right; a value that starts with
+            # '- ' on its own line is the common way to get one by accident.
+            hint += (" -- and a value that starts with '- ' reads as a list "
+                     'item, so quote it if it is text')
+        hint += '.'
     report(f'{address.puretag} is at depth {depth}, where the namespace must '
            f'be {expected!r}, but it has {written}. '
            f'The ladder is: {" > ".join(order)}.{hint}')
