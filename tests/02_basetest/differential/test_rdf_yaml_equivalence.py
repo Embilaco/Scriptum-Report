@@ -60,7 +60,7 @@ WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
 #: (case directory relative to tests/, fixture stem, template file)
 CASES = [
     ('02_basetest/docx_basic/simple', 'word_simple', 'template.docx'),
-    ('02_basetest/docx_basic/images', 'word_images', 'template_image.docx'),
+    ('02_basetest/docx_basic/images', 'word_images', 'template.docx'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'template_table.docx'),
     ('04_examples/wordreport', 'word_input', 'template.docx'),
     ('04_examples/essay', 'essay', 'essay.docx'),
