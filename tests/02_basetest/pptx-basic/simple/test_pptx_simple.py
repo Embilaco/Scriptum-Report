@@ -126,15 +126,12 @@ def test_the_deck_carries_the_documents_title(tmp_path):
 
 
 def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
-    """``finish=True`` hands the saved deck to PowerPoint to re-save (Windows
-    only; a no-op elsewhere), and the re-save must not change what the deck
-    says. Where PowerPoint cannot finish -- absent, busy, or refusing the
-    call -- the runner prints the reason and the deck stays the plain save:
-    that reports here as xfailed with the reason, never as a failure. As of
-    2026-08-24 it xfails everywhere: the finish path passes Word's
-    ``Close(SaveChanges=True)`` to PowerPoint's ``Close()``, which takes no
-    arguments (``reportPptx.py``) -- this test turns green when that is
-    fixed."""
+    """``finish=True`` hands the saved deck to PowerPoint, which rewrites the
+    file (Windows only; a no-op elsewhere) -- and the re-save must not change
+    what the deck says. Where PowerPoint cannot finish -- absent, busy, or
+    refusing the call -- the runner prints the reason and the deck stays the
+    plain save: that reports here as xfailed with the reason, never as a
+    failure."""
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,

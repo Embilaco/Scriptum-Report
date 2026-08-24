@@ -440,9 +440,15 @@ class ManagedPptx:
                     except:
                         pass
                     ppt = powerp.Presentations.Open(in_file)
+                    # PowerPoint's Close() takes no SaveChanges argument (Word's
+                    # Document.Close does), and Save() alone no-ops on a deck
+                    # opened unmodified: mark it dirty so PowerPoint really
+                    # rewrites the file, then close plainly.
+                    ppt.Saved = False
+                    ppt.Save()
                     if createpdf:
                         ppt.SaveAs(out_file, FileFormat=ppSaveAsPDF)
-                    ppt.Close(SaveChanges=True)
+                    ppt.Close()
                     if doquit:
                         powerp.Quit()
                 except Exception as e:
