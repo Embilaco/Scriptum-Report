@@ -92,6 +92,28 @@ def test_namevalue_missing_file_falls_back_to_message(
     assert "missing.nv" in str(task.value.object)
 
 
+def test_nonascii_parameter_values_read_verbatim(
+    monkeypatch: pytest.MonkeyPatch, workspace: Path
+) -> None:
+    """Umlauts, accents and symbols in a parameter file arrive unchanged --
+    the file is read as UTF-8 like every other file-backed value (decided on
+    the values board; the platform-default read dropped or mangled them)."""
+    (workspace / "unicode.nv").write_text("Notes:Größe äöü ß ✓ 100 €\n",
+                                          encoding="utf-8")
+    monkeypatch.chdir(workspace)
+    document = _write_document(
+        workspace / "namevalue.yaml",
+        ["nvseparator: ':'"],
+        ["nv:notes: {parfile: unicode.nv, parameter: Notes}"],
+    )
+
+    rdf = ReportDataFile(str(document))
+    task = next(t for t in rdf.tasks if t.target == "nv:notes")
+    reader = NameValueReader(task.value.object)
+
+    assert reader["Notes"] == "Größe äöü ß ✓ 100 €"
+
+
 @pytest.mark.parametrize(
     "timestamp, expected",
     [

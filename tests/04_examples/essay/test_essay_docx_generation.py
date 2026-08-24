@@ -9,7 +9,9 @@ descriptions ``from: row1``), a conclusion with a closing picture, and one
 there proves none of that, so this module reads the document back:
 
 * what it *says*, against ``expected/essay.json`` (captured at `44267a8`
-  from the ``.rdf`` this fixture was translated from);
+  from the ``.rdf`` this fixture was translated from; one line re-captured
+  when file reads became UTF-8 -- the old reference held the mojibake of
+  ``essay_contemp.txt``'s en dash, the only non-ASCII in the corpus);
 * what it *shows*: the chapters in the order the document names them, the
   pictures at the blueprint's 12 cm width (and the conclusion's own), their
   captions, the two tables, the global title in every header.

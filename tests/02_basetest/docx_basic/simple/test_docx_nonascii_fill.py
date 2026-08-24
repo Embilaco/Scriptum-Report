@@ -5,11 +5,11 @@ the way may re-encode it. No case fixture pinned that: they are plain ASCII
 throughout, and Word's own smart-quote mangling is documented elsewhere. The
 document title takes the same trip into the core properties.
 
-The text-**file** route is pinned separately below, because it is broken in a
-platform-dependent way: ``text_value.content`` opens the file without an
-``encoding``, so the platform decides -- on Windows that is the ANSI codepage,
-and UTF-8 content mojibakes or fails to decode (the CSV reader beside it says
-``encoding='utf-8'`` explicitly). Reported as xfail wherever it happens.
+The text-**file** route is pinned separately below: this pin caught
+``text_value.content`` reading in the platform encoding (Windows ANSI could
+not decode the checkmark and the fill degraded to nothing, silently), and it
+now guards the decided fix -- the file is read as UTF-8, like every other
+file-backed value.
 """
 
 from pathlib import Path
@@ -17,7 +17,6 @@ import shutil
 import sys
 
 import docx
-import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = THIS_DIR.parent
@@ -74,15 +73,9 @@ def test_nonascii_values_reach_the_document_verbatim(tmp_path):
 
 
 def test_a_nonascii_text_file_reaches_the_document(tmp_path):
-    """Green where the platform's default encoding is UTF-8; xfailed where it
-    is not (Windows ANSI), because ``text_value.content`` leaves the encoding
-    to the platform. The fill degrades to nothing here rather than crashing,
-    which is exactly why it needs a mark to be seen at all."""
+    """The text file is read as UTF-8 on every platform."""
     finished = build(tmp_path,
                      '      - text:description: {file: unicode.txt}\n')
     texts = said(finished)
 
-    if not any(FILE_TEXT in text for text in texts):
-        pytest.xfail("text files are read in the platform encoding "
-                     "(text_value.content opens without encoding=) -- "
-                     f"{FILE_TEXT!r} did not arrive")
+    assert any(FILE_TEXT in text for text in texts), texts

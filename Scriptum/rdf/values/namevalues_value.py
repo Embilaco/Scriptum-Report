@@ -229,7 +229,7 @@ def _readRawNVfile(filename, separator=':',ticks="'"):
     multi[1,1]=2.0
     multi[1,2]=2.2
     """
-    lines = open(filename,'r').readlines()
+    lines = open(filename,'r',encoding='utf-8').readlines()
     newlines = []
     openline = False
     assembledvalue = '' 
