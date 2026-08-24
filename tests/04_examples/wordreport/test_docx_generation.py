@@ -44,6 +44,7 @@ said, normalise, reference, difference, portable, fold, comparable, drawings = (
     module.said, module.normalise, module.reference, module.difference,
     module.portable, module.fold, module.comparable, module.drawings)
 checkreport_comparison = module.checkreport_comparison
+com_quiet = module.com_quiet
 
 REFERENCE = THIS_DIR / 'expected' / 'word_input.json'
 
@@ -154,7 +155,8 @@ def test_the_checkreport_notebook_would_say_identical(tmp_path):
         finish=True,
         createpdf=False,
     )
-    report = checkreport_comparison(run_docx_case(config, tmp_path), REFERENCE)
+    with com_quiet():
+        report = checkreport_comparison(run_docx_case(config, tmp_path), REFERENCE)
     if report:
         pytest.xfail('no Word to refresh the appendix lists '
                      '(expected without Word/Windows) -- ' + report)

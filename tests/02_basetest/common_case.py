@@ -29,9 +29,12 @@ inline pictures of a Word paragraph with their sizes, :func:`shapes` and
 :func:`size_cm` do the same for the shapes of a slide.
 """
 
+import faulthandler
 import json
 import os
 import re
+import sys
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -179,6 +182,29 @@ def run_pptx_case(config: CaseConfig, tmp_path: Path) -> Path:
         os.chdir(current_dir)
 
     return output_path
+
+
+@contextmanager
+def com_quiet():
+    """Run a ``finish=True`` build without pytest's faulthandler dumps.
+
+    Quitting the Office instance a finish spawned produces first-chance COM
+    RPC errors while the proxies release (0x80010108 "disconnected",
+    0x800706be "call failed"). pywin32 handles them and the run is fine --
+    but pytest enables ``faulthandler``, whose Windows handler prints each
+    one as a "Windows fatal exception" stack dump and buries the real
+    output. Off for the COM stretch, restored to the real stderr afterwards
+    -- under capsys the captured ``sys.stderr`` has no ``fileno`` and a plain
+    ``enable()`` refuses it.
+    """
+    enabled = faulthandler.is_enabled()
+    if enabled:
+        faulthandler.disable()
+    try:
+        yield
+    finally:
+        if enabled and sys.__stderr__ is not None:
+            faulthandler.enable(file=sys.__stderr__)
 
 
 # ------------------------------------------------------------ reading back

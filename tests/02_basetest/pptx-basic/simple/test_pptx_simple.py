@@ -33,7 +33,7 @@ if str(CASE_ROOT) not in sys.path:
 from _setup_pptx_basic import *
 from common_case import CaseConfig, run_pptx_case
 from common_case import said, normalise, reference, difference, portable, fold, shapes, size_cm
-from common_case import checkreport_comparison
+from common_case import checkreport_comparison, com_quiet
 
 REFERENCE = THIS_DIR / 'expected' / 'powerpoint_simple.json'
 
@@ -143,7 +143,8 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
         finish=True,
         createpdf=False,
     )
-    deck = run_pptx_case(config, tmp_path)
+    with com_quiet():
+        deck = run_pptx_case(config, tmp_path)
     out = capsys.readouterr().out
 
     if 'failed to update' in out:
