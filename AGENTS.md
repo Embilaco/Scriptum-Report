@@ -5,6 +5,7 @@ This is a python application using python-pptx and python-docx to create doument
 - Install dependencies: `python -m pip install python-pptx python-docx`.
 - Tests are in folder tests.
 - Instructions for tests in tests/AGENTS.md
+- Instructions for virtual envs in tests/Instructions.md
 - Folder Scriptum contains the package
 
 ## Module organization
