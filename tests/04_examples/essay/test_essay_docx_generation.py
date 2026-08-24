@@ -20,6 +20,7 @@ import importlib.util
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -40,6 +41,7 @@ run_docx_case = module.run_docx_case
 said, normalise, reference, difference, portable, fold, drawings = (
     module.said, module.normalise, module.reference, module.difference,
     module.portable, module.fold, module.drawings)
+checkreport_comparison = module.checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'essay.json'
 
@@ -129,3 +131,14 @@ def test_chapters_pictures_tables_and_headers(tmp_path):
     for section in document.sections:
         assert [p.text for p in section.header.paragraphs if p.text.strip()] == [
             'From Typewriting to Variable Fonts...']
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with --
+    plain, no ``comparable()`` -- on a plain build (the notebook itself runs
+    ``finish=True``, which changes nothing a text comparison sees unless Word
+    refreshes a field). Green when the notebook would print IDENTICAL;
+    anything else reports as xfailed with the first difference."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

@@ -20,6 +20,7 @@ from pathlib import Path
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -29,6 +30,7 @@ if str(CASE_ROOT) not in sys.path:
 from _setup_docx_basic import *
 from common_case import CaseConfig, run_docx_case
 from common_case import said, normalise, reference, difference, portable, fold, drawings
+from common_case import checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'word_simple.json'
 
@@ -109,3 +111,13 @@ def test_the_documents_title_is_the_settings_default(tmp_path):
     document = docx.Document(build(tmp_path))
 
     assert document.core_properties.title == 'Autoreport'
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with --
+    plain, no ``comparable()`` -- on the same build as above. Green when the
+    notebook would print IDENTICAL; anything else reports as xfailed with the
+    first difference instead of staying out of the suite."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

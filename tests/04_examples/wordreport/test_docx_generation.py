@@ -22,6 +22,7 @@ import importlib.util
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +43,7 @@ run_docx_case = module.run_docx_case
 said, normalise, reference, difference, portable, fold, comparable, drawings = (
     module.said, module.normalise, module.reference, module.difference,
     module.portable, module.fold, module.comparable, module.drawings)
+checkreport_comparison = module.checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'word_input.json'
 
@@ -132,3 +134,16 @@ def test_pictures_tables_captions_and_headers(tmp_path):
         header = ' '.join(p.text for p in section.header.paragraphs)
         assert 'Report ID 4711' in header, header
         assert [drawings(p) for p in section.header.paragraphs if drawings(p)] == [[(0.8, 1.25)]]
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The plain comparison, without ``comparable()``: this reference was
+    captured from a ``finish=True`` run, so on a plain build the appendix
+    field results Word never refreshed differ -- exactly the lines
+    ``comparable()`` drops in the test above. The notebook builds
+    ``finish=True`` and prints IDENTICAL where Word is; a plain build cannot,
+    and that standing gap reports here as xfailed rather than staying
+    invisible."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

@@ -20,6 +20,7 @@ import sys
 
 import pptx
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -29,6 +30,7 @@ if str(CASE_ROOT) not in sys.path:
 from _setup_pptx_basic import *
 from common_case import CaseConfig, run_pptx_case
 from common_case import said, normalise, reference, difference, portable, fold, shapes, size_cm
+from common_case import checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'powerpoint_simple.json'
 
@@ -120,3 +122,14 @@ def test_the_deck_carries_the_documents_title(tmp_path):
     deck = pptx.Presentation(build(tmp_path))
 
     assert deck.core_properties.title == 'This is a bloody test document'
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with --
+    plain, digits and weekdays collapsed, nothing else -- on the same build
+    as above. Green when the notebook would print IDENTICAL; anything else
+    reports as xfailed with the first difference instead of staying out of
+    the suite."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

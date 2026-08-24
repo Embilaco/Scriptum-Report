@@ -22,6 +22,7 @@ import shutil
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -31,6 +32,7 @@ if str(CASE_ROOT) not in sys.path:
 from _setup_docx_basic import *
 from common_case import CaseConfig, run_docx_case
 from common_case import said, normalise, reference, difference, portable, fold, drawings
+from common_case import checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'word_images.json'
 
@@ -147,3 +149,14 @@ def test_a_header_shared_by_linked_sections_gets_its_picture_once(tmp_path):
     assert drawings(first.footer.paragraphs[1]) == [(0.8, 0.8)]
     allover = [p for p in document.paragraphs if p.text.startswith('ALLOVER')]
     assert [drawings(p) for p in allover] == [[(0.8, 0.8)], [(0.8, 0.8)]]
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with --
+    plain, no ``comparable()`` -- on a plain build (the notebook itself runs
+    ``finish=True``, which changes nothing a text comparison sees unless Word
+    refreshes a field). Green when the notebook would print IDENTICAL;
+    anything else reports as xfailed with the first difference."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

@@ -24,6 +24,7 @@ import sys
 import pptx
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_MEDIA_TYPE
 from pptx.util import Cm
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +45,7 @@ run_pptx_case = module.run_pptx_case
 said, normalise, reference, difference, portable, fold = (
     module.said, module.normalise, module.reference, module.difference,
     module.portable, module.fold)
+checkreport_comparison = module.checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'powerpoint_input.json'
 
@@ -142,3 +144,14 @@ def test_pictures_tables_and_videos_are_placed(tmp_path):
 
     assert len(back.shapes) == 0, 'BackCover takes nothing from the document'
     assert deck.core_properties.author.startswith('Scriptum ')
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with --
+    plain, digits and weekdays collapsed, nothing else -- on the same build
+    as above. Green when the notebook would print IDENTICAL; anything else
+    reports as xfailed with the first difference instead of staying out of
+    the suite."""
+    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

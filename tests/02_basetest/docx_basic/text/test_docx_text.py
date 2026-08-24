@@ -22,6 +22,7 @@ from pathlib import Path
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -31,6 +32,7 @@ if str(CASE_ROOT) not in sys.path:
 from _setup_docx_basic import *
 from common_case import CaseConfig, run_docx_case
 from common_case import said, normalise, reference, difference, portable, fold, drawings
+from common_case import checkreport_comparison
 
 REFERENCE = THIS_DIR / 'expected' / 'word_text.json'
 
@@ -113,3 +115,27 @@ def test_the_outline_the_includes_and_the_headers(tmp_path):
         assert 'Report ID 4711' in header and 'Date published: 01. August 2020' in header
         assert [drawings(p) for p in section.header.paragraphs if drawings(p)] == [[(0.8, 1.25)]]
         assert [p.text for p in section.footer.paragraphs if p.text.strip()] == ['Foot sec title ID 4711']
+
+
+def test_the_checkreport_notebook_would_say_identical(tmp_path):
+    """The comparison ``CheckReport.ipynb`` beside this file ends with, on
+    the workspace the notebook prepares: the case's own ``data/`` -- where
+    the case test above links the shared ``data_source`` pool. The two
+    workspaces hold different files, so the announcements differ and the
+    notebook does not print IDENTICAL against the pool-captured reference.
+    Green when the two agree; anything else reports as xfailed with the
+    first difference instead of staying out of the suite."""
+    config = CaseConfig(
+        name="report",
+        case_dir=THIS_DIR,
+        document_name="word_text.yaml",
+        template_doc_name="template.docx",
+        output_name="final_report.docx",
+        include_patterns=["*.yaml", "template.docx"],
+        data_source_dir=THIS_DIR / 'data',
+        finish=False,
+        createpdf=False,
+    )
+    report = checkreport_comparison(run_docx_case(config, tmp_path), REFERENCE)
+    if report:
+        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)

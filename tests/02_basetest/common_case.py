@@ -307,6 +307,26 @@ def difference(expected, got) -> str:
     return 'no difference'
 
 
+def checkreport_comparison(document, reference_path):
+    """The comparison the case's ``CheckReport.ipynb`` ends with, on this build.
+
+    The notebook compares plainly: :func:`said`, digits and weekday names
+    collapsed, nothing else. It runs the document from a relative path, so a
+    quoted path in an announcement reads ``data/...`` -- the runner builds
+    from an absolute one, and :func:`portable`/:func:`fold` reconstruct the
+    notebook's view of the same document. Deliberately **no**
+    :func:`comparable`: the notebook does not use it, and surfacing that gap
+    is part of what this comparison exists for.
+
+    Returns ``''`` when the notebook would print IDENTICAL, else the account
+    of the first difference.
+    """
+    document = Path(document)
+    got = normalise(portable(said(document), document.parent))
+    expected = [fold(line) for line in reference(reference_path)]
+    return '' if got == expected else difference(expected, got)
+
+
 # ----------------------------------------------------- what a document shows
 
 #: Both python-docx and python-pptx measure in EMU; sizes are read back in cm.
