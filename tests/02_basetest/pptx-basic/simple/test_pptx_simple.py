@@ -4,15 +4,18 @@
 (``TitleSlide`` ... ``BackCover``), placeholder texts, ``_global_`` values
 on every slide (reference, date and name), parameter-file values placed at
 a marker with ``left``/``top``, a CSV table described from its first row, a
-text file with extra ``info``/``more`` fills, and two pictures whose file is
-missing -- announced where the picture would be. A test that only checks the
-file is there proves none of that, so this module reads the deck back:
+text file with extra ``info``/``more`` fills, and two pudding pictures with
+descriptions -- one sized by ``height``, one pinned by ``left``/``top``
+(announced-missing pictures are the pptreport case's business). A test that
+only checks the file is there proves none of that, so this module reads the
+deck back:
 
 * what it *says*, against ``expected/powerpoint_simple.json`` (captured at
-  `44267a8` from the ``.rdf`` this fixture was translated from);
-* what it *shows*: the layouts in order, the two pictures with their sizes,
-  the table, the text boxes the parameter file and the text file produced,
-  and the two missing pictures announced rather than shown.
+  `44267a8` from the ``.rdf`` this fixture was translated from; re-captured
+  when the missing ``bootseal2.png`` fills became ``pudding.jpg``);
+* what it *shows*: the layouts in order, the pictures with their sizes,
+  the table, and the text boxes the parameter file and the text file
+  produced.
 """
 
 from pathlib import Path
@@ -99,12 +102,10 @@ def test_pictures_table_and_text_boxes_are_placed(tmp_path):
     assert table.table.cell(0, 0).text == 'Type'
     assert shapes(table_slide, MSO_SHAPE_TYPE.TEXT_BOX) == []
 
-    # both pictures of the next slide name a file that is not there: each is
-    # announced in a text box under its caption, and no picture is placed
-    assert pictures(pictures_slide) == []
-    announced = [shape.text_frame.text for shape in shapes(pictures_slide, MSO_SHAPE_TYPE.TEXT_BOX)
-                 if 'non existing image file' in shape.text_frame.text]
-    assert len(announced) == 2 and all('bootseal2.png' in text for text in announced)
+    # both pictures of the next slide are placed at their size: image:generic
+    # scaled to its 2 cm height request by the marker box, image:history
+    # pinned at left/top with its own proportions
+    assert pictures(pictures_slide) == [(1.21, 1.24), (2.96, 3.04)]
 
     # text:insert: the text file and its two extra fills, three boxes
     boxes = [shape.text_frame.text for shape in shapes(material, MSO_SHAPE_TYPE.TEXT_BOX)]

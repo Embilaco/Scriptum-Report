@@ -71,9 +71,9 @@ _content_:
       - title: Test B report
       - plant: Southpole
       - marker:content:
-          - image:generic: {file: bootseal2.png, description: a strange part, height: 2cm}
+          - image:generic: {file: pudding.jpg, description: a strange part, height: 2cm}
           - image:history:
-              file: bootseal2.png
+              file: pudding.jpg
               left: 13cm
               top: 2.5in
               description: the same strange part
