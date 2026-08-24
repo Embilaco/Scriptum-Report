@@ -1,6 +1,6 @@
 """The tables docx case, built and read back.
 
-``word_tables.yaml`` fills the title section of ``template_table.docx`` with
+``word_tables.yaml`` fills the title section of ``template.docx`` with
 tables from the case's own ``data/``: a fixed revisions table that takes the
 ``_global_`` author, ``table:inline`` from a CSV, a ``table:generic`` clone
 added at the marker, and ``table:orange`` -- a blueprint that lives in the
@@ -43,9 +43,9 @@ def build(tmp_path):
         name="report",
         case_dir=THIS_DIR,
         document_name="word_tables.yaml",
-        template_doc_name="template_table.docx",
+        template_doc_name="template.docx",
         output_name="final_report.docx",
-        include_patterns=["*.yaml", "template_table.docx"],
+        include_patterns=["*.yaml", "template.docx"],
         data_source_dir=THIS_DIR / 'data',
         finish=False,
         createpdf=False,

@@ -1,6 +1,6 @@
 """The text docx case, built and read back.
 
-``word_text.yaml`` is the ladder at work on ``template_text.docx``: a title
+``word_text.yaml`` is the ladder at work on ``template.docx``: a title
 section, a second section with a marker, two instances of the blueprint
 ``subsection:seconda`` (the first nesting a ``subsubsection`` and a
 ``sub3section``), a ``subsection:secondb`` whose marker takes text fills from
@@ -41,9 +41,9 @@ def build(tmp_path):
         name="report",
         case_dir=THIS_DIR,
         document_name="word_text.yaml",
-        template_doc_name="template_text.docx",
+        template_doc_name="template.docx",
         output_name="final_report.docx",
-        include_patterns=["*.yaml", "template_text.docx"],
+        include_patterns=["*.yaml", "template.docx"],
         data_source_dir=DATA_SOURCE,
         finish=False,
         createpdf=False,

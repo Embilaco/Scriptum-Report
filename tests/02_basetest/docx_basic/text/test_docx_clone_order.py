@@ -15,7 +15,7 @@ it (``claimSubAnchor``): an earlier blueprint the data never used must not
 stay at the front, or the next clone goes in upstream of the block it follows,
 which is the defect reproduced here on two of the shipped templates.
 
-``template_text.docx`` is the right template for most of this: ``section:
+``template.docx`` is the right template for most of this: ``section:
 second`` holds ``<subsection:seconda template>`` -- with a nested
 ``<subsubsection:secondsub1 template>`` whose body says *Secondsub1* -- and
 then ``<subsection:secondb template>``. The one case it cannot express, a
@@ -35,7 +35,7 @@ if str(CASE_ROOT) not in sys.path:
 
 from _setup_docx_basic import *          # noqa: F401,F403  (brings reset_state)
 
-TEMPLATE = 'template_text.docx'
+TEMPLATE = 'template.docx'
 MARKS = ('ZZintro', 'ZZsibling', 'ZZfirst', 'ZZsecond')
 
 HEADER = ('_scriptum_:\n'

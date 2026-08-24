@@ -25,7 +25,7 @@ _content_:
           - text:description: This is a subsection A of section second
           - marker:content:
               - text:italicred: {file: bootseal.txt}
-              - text:italicred: {file: dolor.txt}
+              - text:green: {file: dolor.txt}
               - text:italicred: {file: donotexist.txt}
           - subsubsection:secondsub1:
               - item: This is s subsection ITEM head
