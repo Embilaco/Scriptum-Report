@@ -156,8 +156,11 @@ things to add at the `<marker:name/>` tag of the template:
 
 Each entry inside a marker creates a new element from the template block its
 address names — `image:generic`, `table:generic` — and places it at the marker.
-A fill *outside* a marker never creates anything: it targets something the
-template already contains. Markers may repeat and may interleave with fills.
+The block may live in `<section:template>` or carry the `template` argument
+anywhere in the document; if the same name exists in both places, the template
+section wins and the run warns about the ambiguity. A fill *outside* a marker
+never creates anything: it targets something the template already contains.
+Markers may repeat and may interleave with fills.
 
 ### Includes
 
