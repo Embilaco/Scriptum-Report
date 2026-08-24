@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Scriptum-Report"
-version = "1.2.1"
+version = "2.0.0"
 description = "Generate DOCX and PPTX reports from templates using python-docx and python-pptx."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -47,6 +47,8 @@ windows = ["pywin32>=306"]
 dates = ["python-dateutil>=2.8.2"]
 # Everything needed to develop and test this package on Windows.
 dev = ["pytest>=7.0", "pywin32>=306", "python-dateutil>=2.8.2"]
+# Building and uploading a release -- see Distribution.md.
+release = ["build>=1.0", "twine>=5.0"]
 
 [tool.setuptools]
 script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py",
