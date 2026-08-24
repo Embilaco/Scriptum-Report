@@ -111,3 +111,12 @@ def test_pictures_table_and_text_boxes_are_placed(tmp_path):
 
     assert len(back.shapes) == 0, 'BackCover takes nothing from the document'
     assert deck.core_properties.author.startswith('Scriptum ')
+
+
+def test_the_deck_carries_the_documents_title(tmp_path):
+    """``setproperties=True`` writes ``rdf.settings.documenttitle`` into the
+    core properties. The runner used to overwrite it with a hard-coded
+    'AutoReport' afterwards, so a broken ``setproperties`` went unseen."""
+    deck = pptx.Presentation(build(tmp_path))
+
+    assert deck.core_properties.title == 'This is a bloody test document'

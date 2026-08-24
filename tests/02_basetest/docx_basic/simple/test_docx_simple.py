@@ -101,3 +101,11 @@ def test_the_picture_the_tables_and_the_headers(tmp_path):
         assert [p.text for p in section.footer.paragraphs if p.text.strip()] == ['pg. 2']
 
     assert document.core_properties.author.startswith('Scriptum ')
+
+
+def test_the_documents_title_is_the_settings_default(tmp_path):
+    """``word_simple.yaml`` sets no ``documenttitle``, so ``setproperties``
+    writes the settings default -- the pptx twin pins the set case."""
+    document = docx.Document(build(tmp_path))
+
+    assert document.core_properties.title == 'Autoreport'

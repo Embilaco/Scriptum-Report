@@ -172,9 +172,8 @@ def run_pptx_case(config: CaseConfig, tmp_path: Path) -> Path:
         )
 
         output_path = workspace / config.output_name
-        document.document.core_properties.title='AutoReport'
         document.remove_slide(0)
-    
+
         document.save(config.output_name, finish=config.finish, createpdf=config.createpdf)
     finally:
         os.chdir(current_dir)
