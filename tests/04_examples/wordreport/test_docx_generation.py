@@ -137,13 +137,24 @@ def test_pictures_tables_captions_and_headers(tmp_path):
 
 
 def test_the_checkreport_notebook_would_say_identical(tmp_path):
-    """The plain comparison, without ``comparable()``: this reference was
-    captured from a ``finish=True`` run, so on a plain build the appendix
-    field results Word never refreshed differ -- exactly the lines
-    ``comparable()`` drops in the test above. The notebook builds
-    ``finish=True`` and prints IDENTICAL where Word is; a plain build cannot,
-    and that standing gap reports here as xfailed rather than staying
-    invisible."""
-    report = checkreport_comparison(build(tmp_path), REFERENCE)
+    """The plain comparison, without ``comparable()``, on a ``finish=True``
+    build -- the way the notebook builds. The reference was captured from a
+    finished run (`e60f4e0`), so where Word refreshes the appendix lists the
+    comparison is IDENTICAL. On a system without Word the lists keep the
+    template's stale entries and differ in exactly those field lines --
+    expected behaviour there, reported as xfailed, never as a failure."""
+    config = CaseConfig(
+        name="report",
+        case_dir=THIS_DIR,
+        document_name="word_input.yaml",
+        template_doc_name="template.docx",
+        output_name="final_report.docx",
+        include_patterns=["*.yaml", "template.docx"],
+        data_source_dir=THIS_DIR / 'data',
+        finish=True,
+        createpdf=False,
+    )
+    report = checkreport_comparison(run_docx_case(config, tmp_path), REFERENCE)
     if report:
-        pytest.xfail('CheckReport.ipynb would not say IDENTICAL -- ' + report)
+        pytest.xfail('no Word to refresh the appendix lists '
+                     '(expected without Word/Windows) -- ' + report)
