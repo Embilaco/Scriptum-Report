@@ -1,0 +1,14 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_content_:
+  - section:instruction_bc:
+      - subsection:instruction:
+          - parameter: {parfile: foo.nv, parameter: Hello world parameter}
+          - head: Instruction 1
+          - marker:content:
+              - image:generic: {file: instruction1.png, description: instruction one}
+              - image:generic: {file: instruction2.png, description: instruction two}
+              - image:generic: {file: instruction3.png, description: instruction three}

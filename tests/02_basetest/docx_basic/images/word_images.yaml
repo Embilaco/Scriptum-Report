@@ -1,0 +1,25 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  image:allover: {file: camera.png, height: 8mm}
+  image:header: {file: pudding.jpg, height: 1cm}
+
+_content_:
+  - section:one:
+      - image:main: {file: pudding.jpg}
+      - image:footer: {file: pudding.jpg, height: 1.5cm}
+
+  - section:two:
+      - image:inline: {file: camera.png, description: cheese}
+      - image:existing: {file: not-existing.png, description: 'what else?'}
+      - marker:content:
+          - image:generic: {file: screw.png, description: a screw thing }
+          - image:generic: {file: curve_test.png, description: 'curve ...'}
+          - image:lonely: {file: screw.png}
+          - image:lonely: {file: not-existing.png}
+          - icon:rocket: a rocket
+          - image:small: {file: curve_test.png, description: 'small curve ...'}
+          - image:small: {file: screw.png, description: a screw thing again}

@@ -53,6 +53,13 @@ class DocImageBlockElement(StructuredElement):
 
             #print(imagename,width,height)
             found = image_par.replaceTag(self.tag, "")
+            if found is None:
+                # The tag is no longer in the paragraph: a header or footer
+                # shared by linked sections is unfolded into each of them, so
+                # a global fill meets the same paragraph once per section and
+                # the first visit has already placed the picture.
+                self.tag.burn()
+                return
             try:
                 found.add_picture(imagename, width=width, height=height)
             except UnrecognizedImageError:
@@ -87,21 +94,9 @@ class DocImageBlockElement(StructuredElement):
             ]
 
         if newname:
-            if self.subtype == "structure":
-                obj = newElements[0]
-                tag = obj.tags[0]
-                obj.replaceTag(tag, f"<{newname}>")
-                tag.rewriteTag(newname)
-
-                obj = newElements[-1]
-                tag = obj.tags[-1]
-                obj.replaceTag(tag, f"</{newname}>")
-                tag.rewriteTag(newname)
-            else:
-                obj = newElements[0]
-                tag = obj.tags[0]
-                obj.replaceTag(tag, f"<{newname}/>")
-                tag.rewriteTag(newname)
+            from ..template import numberTag
+            numberTag(newElements[0], newElements[0].tags[0], newname,
+                      selfclosing=self.subtype != "structure")
 
         newUnfoldedElements = []
         for element in newElements:

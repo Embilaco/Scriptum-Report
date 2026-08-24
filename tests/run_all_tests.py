@@ -17,7 +17,7 @@ def runTestInDir(dir, opt="-q"):
     print(result.stdout)
 
 # %%
-runTestInDir(curdir / '02_basetest' / 'rdf')
+runTestInDir(curdir / '02_basetest' / 'yaml_loader')
 
 # %%
 runTestInDir(curdir / '02_basetest' / 'values' )

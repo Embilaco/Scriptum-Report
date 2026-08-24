@@ -32,7 +32,9 @@ class Template:
 
         else:
             self.type = 'simple'
-            self.path = ['section:template',ttype.puretag] # simple tags are always in the template section, even if not ?
+            # simple tags are always in the template section, even if not ?
+            # Canonical, like every other path in the tree.
+            self.path = ['section:template::1', ttype.canonical]
             self.elements = [element]
             
     def inspect(self):
@@ -41,6 +43,27 @@ class Template:
         for elem in self.elements:
             print(f'  element: {elem}')
         print(f'TEMPLATE (end): {self.path}')
+
+def numberTag(element, tag, canonical, selfclosing=False):
+    """Number a cloned element's tag instead of renaming it.
+
+    ``canonical`` is the new instance's four-slot address and its last slot is
+    the number. The tag keeps the name the template wrote and gains ``id=N``,
+    which is what keeps ``global`` -- matching on ``puretag`` -- reaching every
+    clone: renaming made each one invisible to it.
+
+    Only an opening (or self-closing) tag is numbered. Open and close are
+    matched on ``puretag``, which is now untouched, so a closing tag needs
+    nothing -- as in XML, where attributes belong to the opening tag.
+
+    The replacement text is computed before the tag changes, because
+    ``replaceTag`` has to match what is still written in the document.
+    """
+    instance = canonical.rsplit(':', 1)[-1] or '1'
+    numbered = tag.withInstance(instance)
+    element.replaceTag(tag, f'<{numbered}/>' if selfclosing else f'<{numbered}>')
+    tag.setInstance(instance)
+
 
 def copy_table_before(anchor_paragraph, source_table):
     """Return copy of `source_table`, inserted directly before `anchor_paragraph`."""

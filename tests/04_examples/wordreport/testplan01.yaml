@@ -1,0 +1,19 @@
+- subsection:testplan:
+    - preparation:id: Foo 1
+    - date:analysis: {date: today}
+    - text:description: How it was received
+
+    - subsubsection:tabular:
+        - head: Tabular testplans
+        - text:description: Tabular ...
+        - marker:content:
+            - table:test: {file: testplan2.csv, description: {from: row1}}
+
+    - subsubsection:critics:
+        - head: PRESS
+        - text:description: What the press wrote...
+        - marker:content:
+            - image:generic: {file: press.png, description: The first photo of a pudding in space}
+            - text:warning: be careful with your spoon
+            - text:bold: it tasted like home
+            - text:italicred: my mom did it better

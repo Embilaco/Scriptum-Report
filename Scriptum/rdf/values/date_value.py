@@ -1,11 +1,14 @@
-"""Helpers for parsing date values."""
+"""A date or time, stamped when the document is read."""
 
 import re
 from datetime import datetime
 
 try:
     from dateutil import parser as date_parser
+    HAS_DATEUTIL = True
 except ModuleNotFoundError:  # pragma: no cover - fallback for environments without python-dateutil
+    HAS_DATEUTIL = False
+
     class _SimpleDateParser:
         """Lightweight fallback parser approximating :mod:`dateutil.parser`."""
 
@@ -44,116 +47,120 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for environments with
 
     date_parser = _SimpleDateParser()
 
-from ..common import removeQuotes
+
+_NUMERIC = re.compile(r'^[-+]?\d+(?:\.\d+)?$')
+
+#: The epoch, local time -- what an unreadable spec degrades to.
+EPOCH = datetime.fromtimestamp(0)
 
 
 class DateValue:
-    """DateValues are either
-    date:now                      -> date:now
-    date:now:format               -> date:now:'%d. %b %Y -- %H:%M:%S'
-    date:today                    -> date:today
-    date:today:format             -> date:today:'%d. %b %Y'
-    date:integer-timestamp        -> date:1231231230
-    date:integer-timestamp:format -> date:1231231230:'%d. %b %Y -- %H:%M:%S'
-    date:quoted-timestring        -> date:'12/15/22 14:24:59'
-    date:quoted-timestring:format -> date:'12/15/22 14:24:59':'%m.%d.%y %H:%M:%S'
+    """A date, formatted **in the constructor** -- the one value type that is
+    fully eager (see *Dates are stamped at parse time* on the values board).
+    Everything is **naive local time**: ``now`` is the local clock, a
+    timestamp is converted to local time, and no time zone is ever attached.
+
+    ``spec`` is what to evaluate, exactly as the document gives it:
+
+    ==================  ======================================================
+    ``now``             the current date and time; default format
+                        ``settings.datetimeformat``. Any case.
+    ``today``           the current date; default format ``settings.dateformat``.
+                        Any case.
+    a number            a Unix timestamp -- an ``int``/``float``, or a string
+                        of digits; 13 digits or more are taken as milliseconds
+    any other string    a date, read by ``dateutil`` (or the bundled fallback
+                        parser when it is absent, which knows ISO 8601 and a
+                        handful of US-ordered forms). ``dateutil`` reads an
+                        ambiguous ``05/06/22`` month-first; ISO 8601
+                        (``2022-12-15 14:24:59``) is the form that cannot be
+                        misread.
+    ==================  ======================================================
+
+    ``format`` is the strftime pattern, given separately -- ``{date: now,
+    format: '%H:%M:%S'}`` -- so a colon in either part is just a character.
+    The text format packed spec and pattern into one ``date:spec:'fmt'`` value
+    that this class then split on ``:`` with quote tracking; once YAML had
+    consumed the quotes around a date string, a time inside it was split like
+    a delimiter (``'12/15/22 14:24:59'`` read as 14:00 with the pattern
+    ``24:59``). Taking the parts apart is what fixed it.
+
+    **It does not raise, and it does not stay silent either.** Like every
+    value class it degrades -- a spec that does not parse becomes the epoch, a
+    pattern ``strftime`` rejects falls back to ``settings.dateformat`` -- but
+    it says so: ``valid`` is False and ``problem`` names what went wrong, the
+    way ``ColorValue`` reports an unrecognised colour. The loader reads those
+    and refuses the document with the problem as a diagnostic, so a stray
+    ``01. Jan 1970`` never reaches a page from a document; the degradation
+    only matters to a caller constructing the class by hand. Note that
+    ``strftime`` rejects an unknown directive on Windows only (glibc prints it
+    literally), so that half is platform-dependent by nature.
     """
-    def __init__(self, v: str, settings={}):
-        
-        if v.startswith('now'):
-            v = v.replace('now', '', 1)
-            if v.startswith(':') and len(v) > 1:
-                self.format = removeQuotes(v[1:])
-            else:
-                self.format = settings.datetimeformat
+
+    def __init__(self, spec, settings, format=None):
+        problem = None
+        keyword = spec.strip().lower() if isinstance(spec, str) else None
+
+        if keyword == 'now':
             dt = datetime.now()
-            value = dt.strftime(self.format)
-        elif v.startswith('today'):
-            v = v.replace('today', '', 1)
-            if v.startswith(':') and len(v) > 1:
-                self.format = removeQuotes(v[1:])
-            else:
-                self.format = settings.dateformat
+            default = settings.datetimeformat
+        elif keyword == 'today':
             dt = datetime.today()
-            value = dt.strftime(self.format)
+            default = settings.dateformat
         else:
-            tokens = []
-            current = []
-            quote_char = None
-
-            for ch in v:
-                if ch in {"'", '"'}:
-                    if quote_char is None:
-                        quote_char = ch
-                    elif quote_char == ch:
-                        quote_char = None
-                    current.append(ch)
-                elif ch == ':' and quote_char is None:
-                    tokens.append(''.join(current))
-                    current = []
-                else:
-                    current.append(ch)
-
-            tokens.append(''.join(current))
-
-            dt = None
-            explicit_format = None
-
-            numeric_re = re.compile(r'^[-+]?\d+(?:\.\d+)?$')
-
-            for i in range(1, len(tokens) + 1):
-                candidate_value = ':'.join(tokens[:i]).strip()
-                candidate_format = ':'.join(tokens[i:]).strip() if i < len(tokens) else ''
-
-                value_text = removeQuotes(candidate_value)
-                format_text = removeQuotes(candidate_format) if candidate_format else ''
-
-                if not value_text:
-                    continue
-
-                parsed_dt = None
-
-                if numeric_re.match(value_text):
-                    try:
-                        ts_value = float(value_text)
-                        if '.' not in value_text and len(value_text.lstrip('+-')) >= 13:
-                            ts_value /= 1000.0
-                        parsed_dt = datetime.fromtimestamp(ts_value)
-                    except Exception:
-                        parsed_dt = None
-
-                if parsed_dt is None:
-                    try:
-                        parsed_dt = date_parser.parse(value_text)
-                    except Exception:
-                        continue
-
-                dt = parsed_dt
-                explicit_format = format_text or None
-                break
-
+            dt = self._parse(spec)
+            default = settings.datetimeformat
             if dt is None:
-                dt = datetime.fromtimestamp(0)
+                problem = f'{spec!r} is not a date'
+                if not HAS_DATEUTIL:
+                    problem += (' (python-dateutil is not installed; without it only '
+                                'ISO 8601 and a few common forms are recognised)')
+                dt = EPOCH
 
-            if explicit_format:
-                self.format = explicit_format
-            else:
-                self.format = settings.datetimeformat
-
-            try:
-                value = dt.strftime(self.format)
-            except Exception:
-                value = dt.strftime(settings.dateformat)
-
-        self.value = value
+        self.format = format if format else default
         self.dt = dt
+
+        try:
+            self.value = dt.strftime(self.format)
+        except (ValueError, TypeError) as error:
+            problem = problem or f'{self.format!r} is not a strftime pattern: {error}'
+            self.value = dt.strftime(settings.dateformat)
+
+        self.valid = problem is None
+        self.problem = problem
+
+    @staticmethod
+    def _parse(spec):
+        """A timestamp or a date string to a datetime, or None."""
+        if isinstance(spec, bool) or spec is None:
+            return None
+        text = str(spec).strip()
+        if not text:
+            return None
+
+        if isinstance(spec, (int, float)) or _NUMERIC.match(text):
+            try:
+                stamp = float(text)
+                if '.' not in text and len(text.lstrip('+-')) >= 13:
+                    stamp /= 1000.0
+                return datetime.fromtimestamp(stamp)
+            except (ValueError, OverflowError, OSError):
+                return None
+
+        try:
+            return date_parser.parse(text)
+        except (ValueError, OverflowError, TypeError):
+            return None
 
     @property
     def content(self):
         return str(self)
 
     def __repr__(self) -> str:
-        return f"'{self.value}' - use format '{self.format}'"
+        shown = f"'{self.value}' - use format '{self.format}'"
+        if not self.valid:
+            shown += f' - invalid: {self.problem}'
+        return shown
 
     def __str__(self) -> str:
         return self.value

@@ -64,24 +64,10 @@ import Scriptum.rdf.reportDataFile as rdf_module # pyright: ignore[reportMissing
 ReportDataFile = rdf_module.ReportDataFile
 ReportTask = rdf_module.ReportTask
 
-@pytest.fixture(autouse=True)
-def reset_state():
-    """Reset global state in ReportDataFile and ReportTask between tests."""
-    ReportTask._serial = 0
-    ReportTask._tree = {}
-    ReportTask._allPaths = {}
-    ReportTask._newPaths = {}
-    ReportDataFile._depth = 0
-    ReportDataFile._rlimit = 10
-    ReportDataFile._global_settings = {}
-    yield
-    ReportTask._serial = 0
-    ReportTask._tree = {}
-    ReportTask._allPaths = {}
-    ReportTask._newPaths = {}
-    ReportDataFile._depth = 0
-    ReportDataFile._rlimit = 10
-    ReportDataFile._global_settings = {}
+# There is no autouse reset fixture any more. The text parser kept
+# process-global state (a numbering tree and a serial counter on the classes)
+# that had to be cleared between tests; the YAML reader keeps none, so two
+# documents in one interpreter do not see each other.
 
 def setupTestEnvironment(tmp_path, data_source, report_source, include_patterns):
     """setup the test environment based on and for pytest"""

@@ -5,35 +5,44 @@
 #   S C R I P T U M
 #
 
-"""Section namespaces for the rdf address grammar.
+"""Section namespaces -- the ladder a report document nests along.
 
-An address in a report data file is a dotted path of ``namespace:name``
-segments, and which namespaces are legal depends on the document type:
-Word nests sections, PowerPoint has only slides.
+A container in a report document is addressed ``namespace:name``, and which
+namespace is legal at which depth depends on the document type: Word nests
+sections, PowerPoint has only slides. Depth in ``_content_`` *is* depth in
+this ladder, so the loader checks every container against the table for the
+depth it sits at (``Scriptum/rdf/loader/entries.py``).
 
 These tables used to live in the ``_docx`` and ``_pptx`` packages, which
 forced ``rdf`` to import both back ends -- and therefore both python-docx
-and python-pptx -- merely to parse a text file.  They describe the *rdf
-address grammar*, not the Office APIs, so they belong here.  ``rdf`` now
-depends on nothing outside itself; the back ends depend on ``rdf``.
+and python-pptx -- merely to read a document.  They describe the *address
+grammar*, not the Office APIs, so they belong here.  ``rdf`` depends on
+nothing outside itself; the back ends depend on ``rdf``.
 
 Supporting another document type (LibreOffice, HTML, ...) means registering
-a namespace here or through :func:`register_documenttype`. The parser reads
+a namespace here or through :func:`register_documenttype`. The loader reads
 this registry and needs no change.
 
-A namespace table has three keys:
+A namespace table has four keys:
 
 ``order``
-    Namespace names, outermost first. A relative address may descend
-    exactly one level at a time; naming a shallower level truncates the
-    current root back to it.
+    Namespace names, outermost first -- the ladder as a diagnostic spells it
+    (``section > subsection > ...``).
 ``names``
-    Depth -> namespace name, used to validate an absolute address segment
-    by segment.
+    Depth -> namespace name: what a container at that depth must be called.
 ``mandatory``
-    When true, the segment at depth *n* must use ``names[n]`` (Word). When
+    When true, a container at depth *n* must use ``names[n]`` (Word). When
     false, bare names are accepted too (PowerPoint, where a slide is
     addressed by its layout name).
+``always_copy``
+    Whether the template holds blueprints only. PowerPoint's holds layouts, so
+    every mention of one means a new slide and the reuse question never
+    arises. Word's holds real sections, so the first instance of an address
+    fills the block already there and only later ones are clones.
+
+    This is a property of the *format*, not of the ladder, which is why it is
+    its own key rather than being inferred from ``mandatory`` -- the two happen
+    to agree today and there is no reason they must.
 """
 
 # --------------------------------------------------------------- docx
@@ -60,6 +69,7 @@ docx_sections = {
     'order': DOCX_SECTION_ORDER,
     'names': DOCX_SECTION_NAMES,
     'mandatory': True,
+    'always_copy': False,
 }
 
 # --------------------------------------------------------------- pptx
@@ -74,12 +84,13 @@ pptx_sections = {
     'order': PPTX_SECTION_ORDER,
     'names': PPTX_SECTION_NAMES,
     'mandatory': False,
+    'always_copy': True,
 }
 
 # ----------------------------------------------------------- registry
 
-#: Value of ``*documenttype`` -> namespace table. Membership of this mapping
-#: is what makes a ``*documenttype`` valid, so the parser holds no list of
+#: Value of ``documenttype`` -> namespace table. Membership of this mapping
+#: is what makes a ``documenttype`` valid, so the loader holds no list of
 #: known formats of its own.
 SECTION_NAMESPACES = {
     'docx': docx_sections,
@@ -87,13 +98,14 @@ SECTION_NAMESPACES = {
 }
 
 
-def register_documenttype(documenttype, order, names, mandatory=True):
-    """Make a new ``*documenttype`` known to the rdf parser.
+def register_documenttype(documenttype, order, names, mandatory=True,
+                          always_copy=False):
+    """Make a new ``documenttype`` known to the loader.
 
     Intended for a back end that adds a format -- it registers its address
-    grammar and the parser accepts ``*documenttype=<name>`` from then on.
-    The tables are copied, so a caller cannot mutate the registry by holding
-    on to what it passed in.
+    grammar and the ``_scriptum_`` block accepts ``documenttype: <name>``
+    from then on. The tables are copied, so a caller cannot mutate the
+    registry by holding on to what it passed in.
 
     Returns the stored namespace table.
     """
@@ -103,6 +115,7 @@ def register_documenttype(documenttype, order, names, mandatory=True):
         'order': list(order),
         'names': dict(names),
         'mandatory': bool(mandatory),
+        'always_copy': bool(always_copy),
     }
     return SECTION_NAMESPACES[documenttype]
 

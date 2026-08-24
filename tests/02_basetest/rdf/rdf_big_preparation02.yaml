@@ -1,0 +1,12 @@
+- subsection:preparation:
+    - preparation:id: pig
+    - text:description: foo answer
+    - subsubsection:requisites:
+        - text:description: to write down
+        - marker:content:
+            - table:left: {file: foo.txt, description: 'hi ho...'}
+    - subsubsection:todo:
+        - todo:id: 1
+        - text:description: pre instruction
+        - marker:content:
+            - table:generic: {file: bar.csv, description: {from: row1}}

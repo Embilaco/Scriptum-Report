@@ -1,0 +1,2 @@
+- image:generic: {file: verycold.png, description: too cold}
+- text:generic: {file: cold.txt}

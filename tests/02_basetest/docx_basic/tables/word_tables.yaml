@@ -1,0 +1,21 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: ID 007
+  date:published: 01. August 2020
+  report:version: 1.0
+  report:status: Draft
+  author: James Bond
+
+_content_:
+  - section:title:
+      - date:creation: {date: now}
+      - table:inline: {file: instructionsrocket.csv, description: rocket preparation}
+      - marker:content:
+          - table:generic: {file: technologies.csv, description: 'tech isn''t it' }
+      - table:orange: {file: table2.csv, description: {from: row1}}
+      - marker:content:
+          - table:orange: {file: technologies.csv}

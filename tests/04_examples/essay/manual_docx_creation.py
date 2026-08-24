@@ -6,7 +6,7 @@
 #
 import Scriptum
 
-base_rdf = 'essay.rdf'
+base_rdf = 'essay.yaml'
 rdf = Scriptum.ReportDataFile(base_rdf)
 
 document = Scriptum.ManagedDocx('essay.docx')

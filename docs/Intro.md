@@ -13,7 +13,7 @@ this document is "work in progress"
 
  1. Overview
  2. The templates
- 3. The RDF-files
+ 3. The report documents
  4. Run and finish
  
 
@@ -66,13 +66,13 @@ The size of the content depends on the final requirements and it is simple to me
 
 Color management is yet in development as many other features are.
 
-## 3. RDF-files
+## 3. The report documents
 
-RDF (Report Data File) is a text file format that allows to connect content with the layout. It is the fuel for the driver Scriptum, how to add and place the content into the templates.
+The report data file is a YAML document (`.yaml`) that connects content with the layout. It is the fuel for the driver Scriptum, how to add and place the content into the templates: its structure nests the way the template nests, every entry names a tag of the template as its address, and the value is what goes there.
 
-The tags described before are internally split and converted to "addresses" for the elements that will be further used.
+The tags described before are the "addresses" the document writes against.
 
-This is a huge chapter for itself and thus details can be found in [rdf.md](./rdf.md)
+This is a huge chapter for itself and thus details can be found in [rdf.md](./rdf.md). (Earlier versions read a hand-written line format with the extension `.rdf`; it is gone, and `ReportDataFile` reads `.yaml` only.)
 
 ## 4. Run and finish
 
@@ -83,7 +83,7 @@ Finally, this is quite simple as:
 
 ```python
 import Scriptum
-rdf = Scriptum.ReportDataFile('report_word.rdf')
+rdf = Scriptum.ReportDataFile('report_word.yaml')
 mydoc = Scriptum.ManagedDocx('template.docx')
 mydoc.typesetting(rdf)
 mydoc.save('result_word.docx',finish=True, createpdf=True)
@@ -98,7 +98,7 @@ or
 
 ```python
 import Scriptum
-rdf = Scriptum.ReportDataFile('report_ppt.rdf')
+rdf = Scriptum.ReportDataFile('report_ppt.yaml')
 myppt = Scriptum.ManagedPptx('template.pptx')
 myppt.artist(rdf)
 myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)

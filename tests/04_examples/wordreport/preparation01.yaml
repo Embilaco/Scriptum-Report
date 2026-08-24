@@ -1,0 +1,20 @@
+- subsection:preparation:
+    - preparation:id: PREP 1
+    - text:description: How it looks
+
+    - subsubsection:prereq:
+        - text:description: PREP 1 - still OK?
+        - marker:content:
+            - table:left: {file: wide.csv, description: 'hi ho...'}
+
+    - subsubsection:task:
+        - task:id: A
+        - text:description: PREP 1 - task a
+        - marker:content:
+            - table:generic: {file: miscdata.csv, description: {from: row1}}
+
+    - subsubsection:task:
+        - task:id: B
+        - text:description: PREP 1 - task b
+        - marker:content:
+            - table:generic: {file: timevalue.csv, description: {from: row1}}

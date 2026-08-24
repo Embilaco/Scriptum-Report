@@ -1,0 +1,20 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: Test a Screw
+  date:published: 25. Nov 2025
+  report:version: 1.1
+  report:status: Draft
+
+_content_:
+  - section:title:
+      - report:product_name: A Screw
+      - report:designer_name: Mr. X
+      - report:reason: In order to screw it up
+      - image:mainmodel: {file: screw.png}
+      - text:description: {file: title.txt}
+      - date:creation: {date: now}
+      - author: Thomas

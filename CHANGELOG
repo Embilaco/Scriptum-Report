@@ -1,3 +1,5 @@
+unreleased (2.0.0 when it ships) - the report data file is a YAML document (.yaml); the hand-written .rdf text format and its parser are removed; scripts/rdf2yaml.py converts an existing .rdf base as a starting point
+unreleased - default date formats are ISO 8601 ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S') instead of the locale forms '%x'/'%c'; a date that does not read as a date is refused
 unreleased - removed *timeformat, a setting from an early version that was never implemented
 1.2.1 - 2025/11/30 - early package fix
 1.2.0 - 2025/11/28 - first PyPi release

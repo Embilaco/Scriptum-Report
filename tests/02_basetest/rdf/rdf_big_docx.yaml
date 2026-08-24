@@ -1,0 +1,56 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: ID 4711
+  date:published: 01. August 2020
+  report:version: 1.0
+  report:status: Draft
+
+_content_:
+  - section:title:
+      - report:product_name: A pudding
+      - report:designer_name: Mr. X
+      - report:menu: {parfile: SomeParameters.nv, parameter: MenuTitle}
+      - image:mainmodel: {file: pudding.jpg}
+      - text:description: {file: dolor.txt}
+      - date:creation: {date: now}
+      - author: Thomas
+
+  - section:instruction_bc:
+      - text:description: These are the cooking instructions
+      - image:inline: {file: instruction2.png, description: temperatures}
+      - table:inline: {file: instructiongeneral.csv, description: temperatures}
+
+      - subsection:instruction:
+          - head: Instruction 1
+          - text:description: There is a finish applied
+          - marker:content:
+              - image:generic: {file: instruction1.png, description: instruction one}
+              - image:generic: {file: instruction1b.png, description: instruction one other view}
+
+      - subsection:instruction:
+          - head: Serving
+          - text:description: This instruction adds a single instruction at the front
+          - marker:content:
+              - image:generic: {file: instruction2.png, description: instruction two}
+              - table:generic: {file: instruction2.csv, description: instruction two}
+
+      - subsection:bc:
+          - head: Dishes
+          - text:description: A simple instruction
+          - marker:content:
+              - image:generic: {file: plate1.png, description: plate}
+              - text:generic: {file: plate1.txt}
+              - _include_: 'rdf_big_instructions*.yaml'
+
+  - section:tool:
+      - table:tools: {file: tools.csv}
+      - _include_: 'rdf_big_tool*.yaml'
+
+  - section:preparations:
+      - text:description: A short description of the dinner
+      - whatever: This is the end of the day!
+      - _include_: 'rdf_big_preparation0?.yaml'

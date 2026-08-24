@@ -1,0 +1,5 @@
+- subsection:tool:
+    - tool_id: MyTools
+    - tool_name: Spoons
+    - marker:content:
+        - table:narrow: {file: spoon.par, description: exact definition of the one spoon}
