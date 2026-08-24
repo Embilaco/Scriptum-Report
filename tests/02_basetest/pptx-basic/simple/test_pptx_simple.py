@@ -124,6 +124,38 @@ def test_the_deck_carries_the_documents_title(tmp_path):
     assert deck.core_properties.title == 'This is a bloody test document'
 
 
+def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
+    """``finish=True`` hands the saved deck to PowerPoint to re-save (Windows
+    only; a no-op elsewhere), and the re-save must not change what the deck
+    says. Where PowerPoint cannot finish -- absent, busy, or refusing the
+    call -- the runner prints the reason and the deck stays the plain save:
+    that reports here as xfailed with the reason, never as a failure. As of
+    2026-08-24 it xfails everywhere: the finish path passes Word's
+    ``Close(SaveChanges=True)`` to PowerPoint's ``Close()``, which takes no
+    arguments (``reportPptx.py``) -- this test turns green when that is
+    fixed."""
+    config = CaseConfig(
+        name="report",
+        case_dir=THIS_DIR,
+        document_name="powerpoint_simple.yaml",
+        template_doc_name="template.pptx",
+        output_name="final_report.pptx",
+        include_patterns=["*.yaml", "template.pptx"],
+        data_source_dir=DATA_SOURCE,
+        finish=True,
+        createpdf=False,
+    )
+    deck = run_pptx_case(config, tmp_path)
+    out = capsys.readouterr().out
+
+    if 'failed to update' in out:
+        tail = ' '.join(out[out.index('failed to update'):].split())
+        pytest.xfail('PowerPoint could not finish the deck -- ' + tail[:200])
+
+    report = checkreport_comparison(deck, REFERENCE)
+    assert report == '', report
+
+
 def test_the_checkreport_notebook_would_say_identical(tmp_path):
     """The comparison ``CheckReport.ipynb`` beside this file ends with --
     plain, digits and weekdays collapsed, nothing else -- on the same build

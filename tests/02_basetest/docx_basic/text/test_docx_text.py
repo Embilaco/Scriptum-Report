@@ -22,6 +22,7 @@ the document back:
 """
 
 from pathlib import Path
+import shutil
 import sys
 
 import docx
@@ -122,6 +123,47 @@ def test_the_outline_the_includes_and_the_headers(tmp_path):
         assert 'Report ID 4711' in header and 'Date published: 01. August 2020' in header
         assert [drawings(p) for p in section.header.paragraphs if drawings(p)] == [[(0.8, 1.25)]]
         assert [p.text for p in section.footer.paragraphs if p.text.strip()] == ['Foot sec title ID 4711']
+
+
+def test_a_linked_header_gets_its_global_text_once(tmp_path):
+    """A section whose header and footer are linked to the previous one reads
+    the same paragraphs, so the ``_global_`` text fills (report:id,
+    date:published, the footer line) meet each paragraph once per section.
+    The first visit fills and consumes the tag; the second must leave the
+    text alone -- neither doubled nor failed. Pinned for pictures in the
+    images case, for text here."""
+    case = tmp_path / 'case'
+    case.mkdir()
+    for name in ('word_text.yaml', 'textinclude1.yaml'):
+        shutil.copy(THIS_DIR / name, case)
+    template = docx.Document(THIS_DIR / 'template.docx')
+    template.sections[1].header.is_linked_to_previous = True
+    template.sections[1].footer.is_linked_to_previous = True
+    template.save(case / 'linked.docx')
+
+    config = CaseConfig(
+        name="report",
+        case_dir=case,
+        document_name="word_text.yaml",
+        template_doc_name="linked.docx",
+        output_name="final_report.docx",
+        include_patterns=["*.yaml", "linked.docx"],
+        data_source_dir=THIS_DIR / 'data',
+        finish=False,
+        createpdf=False,
+    )
+    document = docx.Document(run_docx_case(config, tmp_path))
+
+    assert all(s.header.is_linked_to_previous for s in document.sections[1:])
+    first = document.sections[0]
+    header = ' '.join(p.text for p in first.header.paragraphs)
+    assert header.count('Report ID 4711') == 1
+    assert header.count('Date published: 01. August 2020') == 1
+    assert [p.text for p in first.footer.paragraphs if p.text.strip()] == \
+        ['Foot sec title ID 4711']
+    leftover = [p.text for p in first.header.paragraphs + first.footer.paragraphs
+                if '<' in p.text]
+    assert not leftover
 
 
 def test_the_checkreport_notebook_would_say_identical(tmp_path):
