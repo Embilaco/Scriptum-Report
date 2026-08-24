@@ -6,6 +6,8 @@ from typing import Any, Iterable, Mapping, Optional
 from .units import units
 
 
+# dataclass: __init__/__repr__/__eq__ are generated from the fields below;
+# frozen=True forbids reassignment, so instances are immutable and hashable.
 @dataclass(frozen=True)
 class BoundingBox:
     """Simple representation of a rectangular area in EMUs."""

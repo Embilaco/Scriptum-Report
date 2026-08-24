@@ -18,6 +18,8 @@ except ModuleNotFoundError:  # pragma: no cover - executed only when Pillow miss
     sys.modules.setdefault("PIL.Image", pil_image_module)
 
 
+# pytest fixture: injected by argument name -- each test that takes a
+# 'workspace' parameter gets a fresh directory under pytest's per-test tmp_path.
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
     workdir = tmp_path / "workspace"

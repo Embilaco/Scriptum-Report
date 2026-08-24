@@ -76,8 +76,9 @@ Notebook kernels:
   .venv3XX\Scripts\python.exe -m ipykernel install --user --name scriptum-dev-3XX --display-name "Scriptum dev (3.XX)"
   ```
 
-- The `CheckYamlReport.ipynb` notebooks name the kernel to pick in their first
-  cells and verify it in code — update those cells when the venv changes.
+- The `CheckReport.ipynb` notebooks verify in their first code cell that
+  `Scriptum` imports from their own worktree; the advice they print points
+  here, so a venv swap needs no edits in them.
 
 ## Checklist for the next change
 
@@ -85,5 +86,5 @@ Notebook kernels:
 - [ ] Binding + freeze + suite verified per worktree and venv
 - [ ] Old venv folders deleted
 - [ ] VSCode interpreter reselected; kernelspec under `%APPDATA%\jupyter\kernels` replaced
-- [ ] First cells of the `CheckYamlReport.ipynb` notebooks updated
+- [ ] Each notebook reopened once on the new kernel (its first cell checks it)
 - [ ] Claude memory (`dev-environment-layout`) and any docs naming the venv updated

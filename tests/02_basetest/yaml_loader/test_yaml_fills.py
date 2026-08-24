@@ -350,6 +350,8 @@ def _strftime_rejects_an_unknown_directive():
     return False
 
 
+# skipif evaluates the probe at collection time -- on platforms whose strftime
+# accepts unknown directives (glibc) the test is skipped, with the reason shown.
 @pytest.mark.skipif(not _strftime_rejects_an_unknown_directive(),
                     reason='glibc prints an unknown directive literally; '
                            'only Windows strftime rejects it')

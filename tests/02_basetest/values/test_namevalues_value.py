@@ -7,6 +7,8 @@ from _setup_values import *
 from Scriptum.rdf.values.namevalues_value import NameValueReader, strToTime # pyright: ignore[reportMissingImports]
 
 
+# pytest fixture: injected by argument name -- each test that takes a
+# 'workspace' parameter gets a fresh directory under pytest's per-test tmp_path.
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
     workdir = tmp_path / "workspace"

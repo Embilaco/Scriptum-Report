@@ -45,6 +45,7 @@ import Scriptum  # type: ignore
 
 
 
+# dataclass: __init__/__repr__/__eq__ are generated from the annotated fields.
 @dataclass
 class CaseConfig:
     """Configuration for a document generation scenario.

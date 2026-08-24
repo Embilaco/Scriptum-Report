@@ -7,6 +7,8 @@ import pytest
 from _setup_values import *
 
 
+# pytest fixture: injected by argument name -- each test that takes a
+# 'workspace' parameter gets a fresh directory under pytest's per-test tmp_path.
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
     """Create a working directory with access to the shared sample data."""
