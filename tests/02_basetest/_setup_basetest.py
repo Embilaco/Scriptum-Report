@@ -1,6 +1,6 @@
-"""Shared setup helpers for docx case tests."""
+"""Shared setup for the 02_basetest tree."""
 
-COVERAGE = 'EXAMPLES'
+COVERAGE = 'BASETEST'
 
 import importlib.util
 from pathlib import Path

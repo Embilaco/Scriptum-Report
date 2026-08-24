@@ -1,4 +1,4 @@
-"""Shared setup helpers for docx case tests."""
+"""Shared setup helpers for the 04_examples cases."""
 
 COVERAGE = 'EXAMPLES'
 
