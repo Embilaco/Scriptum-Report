@@ -1,5 +1,5 @@
 # Subfolder overview
-This is the docx part o the main module and collects all functions and modules that are specific to docx (word)
+This is the docx part of the main module and collects all functions and modules that are specific to docx (word)
 
 ## Usage and Test Instructions
 - This folder requires python-docx to be installed.

@@ -243,6 +243,12 @@ Exactly **one source key**, its companions, and any number of modifiers:
 CSV, under `video:` a movie. The address says *what* the bytes are, the mapping
 says *where* they come from.
 
+File-backed values — text files, parameter files, CSVs — are read as **UTF-8**
+on every platform. (Until 2026-08-24 text and parameter files were read in the
+platform encoding, so the same document rendered umlauts differently per
+machine; a legacy ANSI-encoded file with non-ASCII content now fails loudly
+instead of appearing to work.)
+
 ### Text
 
 ```yaml

@@ -1,5 +1,5 @@
 # Subfolder overview
-This is the pptx part o the main module and collects all functions and modules that are specific to pptx
+This is the pptx part of the main module and collects all functions and modules that are specific to pptx
 
 ## Usage and Test Instructions
 - This folder requires python-pptx to be installed.

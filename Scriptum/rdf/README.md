@@ -25,6 +25,7 @@ format is described in `docs/rdf.md`.
 ## rdf.values PROVIDES
    class Value - the wrapper a back end reads (type, subtype, tostring, content, load())
    multiple class *Value - value classes for the various values of a ReportTask
+   file-backed values (text files, parameter files, CSV tables) are read as UTF-8 on every platform
 
 ## MODULE rdf.namespaces PROVIDES
    the section ladder per document type (`SECTION_NAMESPACES`) and `register_documenttype`

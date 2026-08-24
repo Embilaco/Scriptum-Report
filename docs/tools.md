@@ -39,10 +39,11 @@ silently cleared, a namespace not on the ladder -- is decided the way the old
 parser or the hand-translated corpus decided it and marked with a `# CHECK:`
 comment in the output, so the places to look at are the places with a comment.
 The result is then read the way Scriptum reads it and the diagnostics printed;
-fix what it refuses (see [rdf.md](./rdf.md)), and the document is done. On the
-project's own corpus the converter reproduces the hand translations for ten of
-twelve documents exactly; the other two differ where the old format was
-ambiguous.
+fix what it refuses (see [rdf.md](./rdf.md)), and the document is done. The
+project's own `.rdf` corpus went with the parser; the two historical fixtures
+that survive, embedded in `tests/02_basetest/convert/test_rdf2yaml.py`, convert
+to their hand translations exactly, and the decisions the translation could not
+make mechanically are pinned in `tests/02_basetest/yaml_loader/test_yaml_corpus.py`.
 
 ## Convert video files and generate poster_frame_images
 

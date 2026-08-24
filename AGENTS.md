@@ -1,15 +1,18 @@
 # Project Overview
-This is a python application using python-pptx and python-docx to create douments from templates.
+This is a python application using python-pptx and python-docx to create documents (DOCX, PPTX) from templates. The content comes from a YAML report document — see docs/Intro.md for the concept and docs/rdf.md for the format.
 
 ## Build and Test Instructions
-- Install dependencies: `python -m pip install python-pptx python-docx`.
-- Tests are in folder tests.
+- Install for development: `python -m pip install -e ".[dev]"` — brings the runtime dependencies (python-docx, python-pptx, Pillow, PyYAML) plus pytest, pywin32 and python-dateutil.
+- Tests are in folder tests; run them from there with every venv the worktree carries: `cd tests`, then `../.venv3XX/Scripts/python.exe -m pytest -q`. Green means all of them.
 - Instructions for tests in tests/AGENTS.md
-- Instructions for virtual envs in tests/Instructions.md
-- Folder Scriptum contains the package
+- Instructions for virtual envs and Python version changes in tests/Instructions.md
+- Folder Scriptum contains the package (see Scriptum/AGENTS.md), docs the format documentation, scripts the shipped helpers (docs/tools.md).
 
 ## Module organization
-- `import Scriptum` will import the whole module.
-- In case `Scriptum`cannot imported consider adding its root folder into `sys.path`.
+- `import Scriptum` will import the whole package.
+- In case `Scriptum` cannot be imported, prefer the editable install above over adding folders to `sys.path`.
 
-
+## Working rules
+- One logical change per commit, reasoning in the message; stage explicit paths.
+- A user-visible change gets a terse line in the CHANGELOG `unreleased` block.
+- The architecture is mapped in a Spatial project (MCP connector `spatial-scriptum`, registered per worktree); when the connector is available, prefer its briefing and stale-check over re-deriving structure, and record decisions there.

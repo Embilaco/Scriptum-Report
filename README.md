@@ -29,6 +29,11 @@ see https://github.com/Embilaco/Scriptum-Report
 
 pip install Scriptum-Report
 
+Optional extras: `Scriptum-Report[windows]` installs `pywin32` for the
+finishing step (re-save and PDF export through a running Word/PowerPoint,
+Windows only); `Scriptum-Report[dates]` installs `python-dateutil` for richer
+date parsing.
+
 ### License
 
 This project is dual-licensed:

@@ -27,9 +27,9 @@ Scriptum is not build from scratch, it works only with the python packages pytho
 
 Both packages facilitate the XML-syntax given by Microsoft (https://docs.microsoft.com/en-us/dotnet/api/microsoft.office.core) for these document formats, thus they are quite open and flexible, even if not everything is obvious and simple.
 
-It is - as long as documents are created, opened or changed - independent from the underlying system. Thus it runs on any OS as long as the Python packages are available. However, certain things in Microsoft documents require the tools themselves, for instance a TableOfContents object cannot be updated from Python, it requires a running Word (c). Thus the final touch requires the tools themselves. Currently the win32com.client API in Python is required as well, and there has been no testing of how to do this in the context of Office 365.
+It is - as long as documents are created, opened or changed - independent from the underlying system. Thus it runs on any OS as long as the Python packages are available. However, certain things in Microsoft documents require the tools themselves, for instance a TableOfContents object cannot be updated from Python, it requires a running Word (c). Thus the final touch requires the tools themselves; it uses the win32com.client API from the optional `pywin32` package (`pip install Scriptum-Report[windows]`), and there has been no testing of how to do this in the context of Office 365.
 
-Scriptum tries to mimic the LaTeX principles to seperate content and mark-up. It further takes the concept of a "style" represented by a template and transfers everything, repeatable and automatable to Microsoft Office.
+Scriptum tries to mimic the LaTeX principles to separate content and mark-up. It further takes the concept of a "style" represented by a template and transfers everything, repeatable and automatable to Microsoft Office.
 
 ## 2. The templates
 
@@ -50,7 +50,7 @@ Every other `<section:xxx>` stays where it is and as it is.
 
 Nesting elements like `<subsection:...>` can be reused inside the parent element as long as there is a `template` argument in the nesting element. It will be just handled as a template and reused when requested.
 
-A `breakbefore` argument will trigger a pagepreak before this element whenever a second or a third of these elements is created.
+A `breakbefore` argument will trigger a pagebreak before this element whenever a second or a third of these elements is created.
 
 A `<marker:foo/>` tag is used to place the content into different nested levels. 
 
@@ -76,7 +76,7 @@ This is a huge chapter for itself and thus details can be found in [rdf.md](./rd
 
 ## 4. Run and finish
 
-(prereq: change to folder where the files below are located and Scriptum is in your enviroment, see INSTALL)
+(prereq: change to the folder where the files below are located and Scriptum is in your environment, see the Install section of the README)
 
 Finally, this is quite simple as:
 
@@ -110,5 +110,5 @@ myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)
     
 
 
-The arguments `finish=True` and `createpdf=True` are valid on a Windows OS only, with an installed Word in this case. 
+The arguments `finish=True` and `createpdf=True` take effect on Windows only, with an installed Word or PowerPoint respectively: the finished file is re-saved by the Office application itself and, with `createpdf=True`, exported as a PDF beside it. Elsewhere they are ignored with a message.
 
