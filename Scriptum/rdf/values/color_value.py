@@ -166,12 +166,36 @@ class ColorValue:
 
     HEX_RE = re.compile(r"^#?(?P<hex>[0-9a-fA-F]{6})$")
 
-    def __init__(self, color: str):
-        if not isinstance(color, str) or not color.strip():
-            raise ValueError("color value must be a non-empty string")
+    #: ``rgb(255, 0, 0)``, whitespace anywhere inside ignored.
+    #:
+    #: A channel outside 0-255 is refused rather than clamped: a clamped colour
+    #: is a wrong colour nobody was told about.
+    RGB_RE = re.compile(
+        r"^rgb\(\s*(?P<r>\d{1,3})\s*,\s*(?P<g>\d{1,3})\s*,"
+        r"\s*(?P<b>\d{1,3})\s*\)$"
+    )
 
+    # Deliberately NOT accepted: the three-digit shorthand '#f00'.
+    #
+    # It would make any three hex-ish letters a colour -- 'bad' quietly becomes
+    # BBAADD, 'ace' AACCEE, '100' 110000 -- so a typo would silently produce
+    # *a* colour instead of being reported. Since the YAML loader now reports
+    # an unrecognised colour rather than letting the fallback stand, catching
+    # the typo is worth more than the shorthand, which is cheap to write out
+    # as 'ff0000'.
+
+    #: Used when a colour cannot be understood. Every consumer still gets a
+    #: usable RRGGBB string, because there is no way to write an explanatory
+    #: sentence into a colour the way the other value types do.
+    FALLBACK = "000000"
+
+    def __init__(self, color):
         self._raw = color
         self._normalized = self._normalize(color)
+        #: False when the input was not understood and FALLBACK is in use.
+        self.valid = self._normalized is not None
+        if not self.valid:
+            self._normalized = self.FALLBACK
 
     # ------------------------------------------------------------------
     # exposed helpers
@@ -203,7 +227,12 @@ class ColorValue:
 
     # ------------------------------------------------------------------
     # helpers
-    def _normalize(self, value: str) -> str:
+    def _normalize(self, value):
+        """Return the RRGGBB form, or None when *value* is not a colour."""
+
+        if not isinstance(value, str) or not value.strip():
+            return None
+
         candidate = value.strip().lower()
 
         if candidate in self.COLOR_MAP:
@@ -213,13 +242,24 @@ class ColorValue:
         if match:
             return match.group("hex").upper()
 
-        raise ValueError(f"Unknown color value: {value!r}")
+        match = self.RGB_RE.match(candidate)
+        if match:
+            channels = [int(match.group(name)) for name in ('r', 'g', 'b')]
+            if all(0 <= channel <= 255 for channel in channels):
+                return '{:02X}{:02X}{:02X}'.format(*channels)
+            return None
+
+        return None
 
     # ------------------------------------------------------------------
-    def __str__(self) -> str:  # pragma: no cover - debug helper
-        return f"ColorValue({self._normalized})"
+    def __str__(self) -> str:
+        if self.valid:
+            return f"ColorValue({self._normalized})"
+        return f"unknown color {self._raw!r}, using {self._normalized}"
 
-    def __repr__(self) -> str:  # pragma: no cover - debug helper
-        return f"color: {self._normalized} (raw={self._raw!r})"
+    def __repr__(self) -> str:
+        if self.valid:
+            return f"color: {self._normalized} (raw={self._raw!r})"
+        return f"color: {self._normalized} (raw={self._raw!r}, NOT RECOGNISED - fallback)"
 
     

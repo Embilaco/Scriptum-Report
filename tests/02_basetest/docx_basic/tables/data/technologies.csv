@@ -1,0 +1,6 @@
+Comparison of writing and typography technologies.
+Technology;Typical Period;Key Strengths;Key Limitations
+Mechanical typewriter;Late 19th-mid 20th century;Reliable, legible, standardized documents, no electricity required.;Fixed typeface and size, limited correction, physical wear and jams.
+Electric typewriter;Mid-late 20th century;Lighter touch, higher speed, some models with interchangeable typefaces.;Still tied to paper, limited layout options, mechanical maintenance required.
+Word processor / PC;1970s-present;Easy editing, storage, and duplication, multiple fonts, rich layout control.;Requires hardware, software, and power, risk of distraction and version chaos.
+Modern digital typography (OpenType, variable fonts, color fonts);2000s-present;Huge design space, responsive typography, multilingual support, sophisticated letterforms.;Complexity of choice, uneven support for advanced features across platforms.

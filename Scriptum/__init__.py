@@ -20,7 +20,7 @@
 # openxml by Microsoft see http://officeopenxml.com/ 
 #
 # by  temmel007@gmail.com
-# 2020-2025
+# 2020-2026
 
 # License, see licenses and LICENSE.md
 #
@@ -39,7 +39,7 @@ from pathlib import Path
 
 # if True or os.environ.get('DEBUG'): sys.excepthook = debug_hook
 
-__version__ = "1.2.1"
+__version__ = "2.0.0"
 version = __version__
 
 licenses = [ 'SPDX-Identifier: PolyForm-Noncommercial-1.0.0', 'SPDX-Identifier: LicenseRef-SCRIPTUM-Commercial' ]

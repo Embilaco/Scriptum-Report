@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Scriptum-Report"
-version = "1.2.1"
+version = "2.0.0"
 description = "Generate DOCX and PPTX reports from templates using python-docx and python-pptx."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,11 @@ authors = [
 dependencies = [
   "python-docx>=1.2.00",
   "python-pptx>=1.0.00",
-  "Pillow>=10.0.0"
+  "Pillow>=10.0.0",
+  # Report documents are YAML. Read through a loader restricted to the 1.2
+  # core schema -- see Scriptum/rdf/loader/dialect.py for why the default
+  # 1.1 typing is not usable here.
+  "PyYAML>=6.0"
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -25,11 +29,31 @@ classifiers = [
   "Topic :: Software Development :: Libraries"
 ]
 
+[project.urls]
+Homepage = "https://github.com/Embilaco/Scriptum-Report"
+Repository = "https://github.com/Embilaco/Scriptum-Report"
+Documentation = "https://github.com/Embilaco/Scriptum-Report/blob/main/docs/Intro.md"
+Changelog = "https://github.com/Embilaco/Scriptum-Report/blob/main/CHANGELOG"
+
+[project.optional-dependencies]
+# Running the test suite.
+test = ["pytest>=7.0"]
+# Windows-only finishing: refresh fields/TOC and export PDF via a running Office.
+# Imported conditionally (os.name == 'nt'), so the package works without it.
+windows = ["pywin32>=306"]
+# Richer date parsing. Without it DateValue falls back to a bundled minimal
+# parser that understands fewer formats, so date handling differs between
+# environments unless this is installed.
+dates = ["python-dateutil>=2.8.2"]
+# Everything needed to develop and test this package on Windows.
+dev = ["pytest>=7.0", "pywin32>=306", "python-dateutil>=2.8.2"]
+# Building and uploading a release -- see Distribution.md.
+release = ["build>=1.0", "twine>=5.0"]
+
 [tool.setuptools]
-script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py", 
-                 "scripts/check_pptx.py", "scripts/check_rdf.py" ]
+script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py",
+                 "scripts/check_pptx.py", "scripts/check_rdf.py", "scripts/rdf2yaml.py" ]
 
 [tool.setuptools.packages.find]
 include = ["Scriptum*", "CHANGELOG", "docs"]
 exclude = ["tests**","tests*","*tests*"]
-

@@ -73,7 +73,13 @@ class Tag:
             elif len(ns_name) == 3:
                 self.ns, self.name, self.child = ns_name
             else:
-                self.tagtype == 'invalid:ns_name'
+                # This branch was written with '==' instead of '=', which made
+                # it a no-op: a tag with four or more colon-separated segments
+                # was accepted as a valid 'simple' tag, with ns, name and child
+                # all left as None, and then quietly matched nothing instead of
+                # being reported. The address grammar has three segments at
+                # most, so anything longer is an error and has to say so.
+                self.tagtype = 'invalid:ns_name'
             
             args = {}
             if [ c for c in NOT_ALLOWED_IN_ARGS if c in ''.join(tagcontent[1:]) ]:
@@ -92,7 +98,80 @@ class Tag:
 
         if 'invalid' in self.tagtype:
             self.puretag = ''
-    
+
+    @property
+    def instance(self):
+        """Which instance of its template this tag is. Defaults to 1.
+
+        The instance rides as an argument -- ``<head id=2/>`` -- rather than in
+        the name. A tag with no ``id`` is instance 1, which is what lets a
+        pristine template be read without editing it: every block in one is the
+        first of its kind.
+
+        Readability is the reason it is an argument. Opening a generated
+        document and finding ``<head id=2/>`` says what it is; ``<head_c002/>``
+        says only that something renamed it. It also repairs a real
+        inconsistency: ``global`` matches on ``puretag``, so renaming a clone
+        made every clone invisible to it, while an argument leaves the puretag
+        alone.
+
+        A non-integer id reads as 1 rather than raising. This is a document
+        somebody typed into Word, and a mistyped number should not stop the run
+        before the diagnostics that would explain it.
+        """
+        try:
+            return int(self.args.get('id', 1))
+        except (TypeError, ValueError):
+            return 1
+
+    @property
+    def canonical(self):
+        """This tag's four-slot address: ``namespace:name:child:id``.
+
+        A single-segment tag leaves the **namespace** slot empty -- ``<head/>``
+        is ``:head::1``, not ``head:head::1``. The tag sets namespace and name
+        to the same word, which duplicates the value and makes "is there a
+        namespace?" unanswerable; the slots keep them apart.
+        """
+        parts = self.puretag.split(':') if self.puretag else ['']
+        namespace, name, child = '', parts[0], ''
+        if len(parts) == 2:
+            namespace, name = parts
+        elif len(parts) > 2:
+            namespace, name, child = parts[0], parts[1], parts[2]
+        return f'{namespace}:{name}:{child}:{self.instance}'
+
+    def withInstance(self, number):
+        """This tag's text, numbered -- **without** changing this tag.
+
+        A caller replacing the tag in a document has to match on the text that
+        is still there, so the new text is computed first and applied after.
+
+        Numbering makes an instance, and an instance is never a blueprint: the
+        ``template`` argument is dropped along with any old ``id``. A clone
+        that still said ``template`` would read as a blueprint to anything
+        that decides by that argument -- and be pruned with the blueprints at
+        the end, content and all. The nested blueprints a clone carries keep
+        the argument: their tags are not the one being numbered.
+        """
+        head, _, rest = self.tagtext.partition(' ')
+        keep = [part for part in rest.split()
+                if not part.lower().startswith('id=')
+                and part.lower() != 'template']
+        return ' '.join([head] + keep + [f'id={number}'])
+
+    def setInstance(self, number):
+        """Number this tag, in place, by writing an ``id`` argument.
+
+        What a clone does instead of being renamed, so ``puretag`` is untouched
+        and the tag stays readable. Returns the new tag text.
+        """
+        self.args = dict(self.args)
+        self.args['id'] = str(number)
+        self.args.pop('template', None)
+        self.tagtext = self.withInstance(number)
+        return self.tagtext
+
     def getLength(self, name, units):
         """try to extract an arg with name name 
         usually name='width' or 'height' but can be 'top', 'left' and so on
@@ -232,6 +311,26 @@ def getTag(text):
 def getReTag(tag: Tag):
     pattern = OPENING+tag.tagtext+CLOSING
     return re.compile(pattern,flags=RECOMPILEFLAGS)
+
+def puretagOf(address: str) -> str:
+    """The tag as a template spells it, from a four-slot canonical address.
+
+    ``subsection:instruction::2`` is written ``<subsection:instruction>`` and
+    ``:head::1`` is written ``<head/>`` -- an empty namespace slot means the
+    name stands alone. Anything that is not four slots comes back unchanged, so
+    a caller may pass either form.
+
+    A template is looked up by the name a document writes, never by an
+    instance: there is one blueprint however many copies are made of it.
+    """
+    parts = address.split(':')
+    if len(parts) != 4:
+        return address
+    namespace, name, child, _instance = parts
+    if not namespace:
+        return name
+    return f'{namespace}:{name}:{child}' if child else f'{namespace}:{name}'
+
 
 def createTag(tagtext:str):
     return Tag("<"+tagtext+"/>")

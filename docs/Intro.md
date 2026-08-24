@@ -13,7 +13,7 @@ this document is "work in progress"
 
  1. Overview
  2. The templates
- 3. The RDF-files
+ 3. The report documents
  4. Run and finish
  
 
@@ -27,9 +27,9 @@ Scriptum is not build from scratch, it works only with the python packages pytho
 
 Both packages facilitate the XML-syntax given by Microsoft (https://docs.microsoft.com/en-us/dotnet/api/microsoft.office.core) for these document formats, thus they are quite open and flexible, even if not everything is obvious and simple.
 
-It is - as long as documents are created, opened or changed - independent from the underlying system. Thus it runs on any OS as long as the Python packages are available. However, certain things in Microsoft documents require the tools themselves, for instance a TableOfContents object cannot be updated from Python, it requires a running Word (c). Thus the final touch requires the tools themselves. Currently the win32com.client API in Python is required as well, and there has been no testing of how to do this in the context of Office 365.
+It is - as long as documents are created, opened or changed - independent from the underlying system. Thus it runs on any OS as long as the Python packages are available. However, certain things in Microsoft documents require the tools themselves, for instance a TableOfContents object cannot be updated from Python, it requires a running Word (c). Thus the final touch requires the tools themselves; it uses the win32com.client API from the optional `pywin32` package (`pip install Scriptum-Report[windows]`), and there has been no testing of how to do this in the context of Office 365.
 
-Scriptum tries to mimic the LaTeX principles to seperate content and mark-up. It further takes the concept of a "style" represented by a template and transfers everything, repeatable and automatable to Microsoft Office.
+Scriptum tries to mimic the LaTeX principles to separate content and mark-up. It further takes the concept of a "style" represented by a template and transfers everything, repeatable and automatable to Microsoft Office.
 
 ## 2. The templates
 
@@ -50,7 +50,7 @@ Every other `<section:xxx>` stays where it is and as it is.
 
 Nesting elements like `<subsection:...>` can be reused inside the parent element as long as there is a `template` argument in the nesting element. It will be just handled as a template and reused when requested.
 
-A `breakbefore` argument will trigger a pagepreak before this element whenever a second or a third of these elements is created.
+A `breakbefore` argument will trigger a pagebreak before this element whenever a second or a third of these elements is created.
 
 A `<marker:foo/>` tag is used to place the content into different nested levels. 
 
@@ -66,24 +66,24 @@ The size of the content depends on the final requirements and it is simple to me
 
 Color management is yet in development as many other features are.
 
-## 3. RDF-files
+## 3. The report documents
 
-RDF (Report Data File) is a text file format that allows to connect content with the layout. It is the fuel for the driver Scriptum, how to add and place the content into the templates.
+The report data file is a YAML document (`.yaml`) that connects content with the layout. It is the fuel for the driver Scriptum, how to add and place the content into the templates: its structure nests the way the template nests, every entry names a tag of the template as its address, and the value is what goes there.
 
-The tags described before are internally split and converted to "addresses" for the elements that will be further used.
+The tags described before are the "addresses" the document writes against.
 
-This is a huge chapter for itself and thus details can be found in [rdf.md](./rdf.md)
+This is a huge chapter for itself and thus details can be found in [rdf.md](./rdf.md). (Earlier versions read a hand-written line format with the extension `.rdf`; it is gone, and `ReportDataFile` reads `.yaml` only.)
 
 ## 4. Run and finish
 
-(prereq: change to folder where the files below are located and Scriptum is in your enviroment, see INSTALL)
+(prereq: change to the folder where the files below are located and Scriptum is in your environment, see the Install section of the README)
 
 Finally, this is quite simple as:
 
 
 ```python
 import Scriptum
-rdf = Scriptum.ReportDataFile('report_word.rdf')
+rdf = Scriptum.ReportDataFile('report_word.yaml')
 mydoc = Scriptum.ManagedDocx('template.docx')
 mydoc.typesetting(rdf)
 mydoc.save('result_word.docx',finish=True, createpdf=True)
@@ -98,7 +98,7 @@ or
 
 ```python
 import Scriptum
-rdf = Scriptum.ReportDataFile('report_ppt.rdf')
+rdf = Scriptum.ReportDataFile('report_ppt.yaml')
 myppt = Scriptum.ManagedPptx('template.pptx')
 myppt.artist(rdf)
 myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)
@@ -110,5 +110,5 @@ myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)
     
 
 
-The arguments `finish=True` and `createpdf=True` are valid on a Windows OS only, with an installed Word in this case. 
+The arguments `finish=True` and `createpdf=True` take effect on Windows only, with an installed Word or PowerPoint respectively: the finished file is re-saved by the Office application itself and, with `createpdf=True`, exported as a PDF beside it. Elsewhere they are ignored with a message.
 

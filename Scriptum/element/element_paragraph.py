@@ -8,7 +8,6 @@
 from typing import Any, Optional
 
 from ..tag.tag import Tag, getReTag
-from ..rdf.tasks.report_task import ReportTask
 from .base import Element, replaceTextInRuns
 
 VISIBLE_CHARS = 20

@@ -1,18 +1,31 @@
-# collect classes and functions to read `report-data-files` *.rdf
+# collect classes and functions to read report documents (`*.yaml`)
 
-## MODULE rdf.reportDataFile PROVIDES 
-   class ReportDataFile - reads rdf-files and is the entry to all the rest
-         public functions: group and autoGroup
-      
-     * This class reads .rdf-file or nested structures of those
-     * It extracts "tasks" (list of ReportTask) from each line of that file which contain  itself path,value pairs
-     * a path is a location inside the document
-     * a value is the content and operation to be done
-     * tasks may have modifiers - describing modifications of the task
-     * print(rdf-object) - delivers inspection of the content
+The package keeps its name -- `rdf`, the *report data file* -- and reads a YAML
+document; the hand-written `.rdf` text format it was named after is gone. The
+format is described in `docs/rdf.md`.
 
-## MODULE rdf.tasks.report_task PROVIDES 
-   class ReportTask - what to do, finalize the tasks to do by path and value
+## MODULE rdf.reportDataFile PROVIDES
+   class ReportDataFile - reads a `.yaml` report document and is the entry to all the rest
 
-## rdf.values PROVIDES 
- multiple class *Value - value classes for the various values of a ReportTask
+     * reads the root document and every fragment it `_include_`s, through `rdf.loader`
+     * refuses anything that is not a `.yaml`/`.yml` path, with a message
+     * extracts "tasks" (list of ReportTask), one per entry of the document: a path, a value, what to do
+     * a path is a location inside the document template
+     * a value is the content, and an operation (apply/copy/add) is what to do with it
+     * tasks may have modifiers - the entry's extra keys
+     * a document with mistakes raises with every diagnostic; `errors` holds them as strings
+     * `inspect()` - one dict per task; `showFiles()` - which of the files named exist
+
+## PACKAGE rdf.loader PROVIDES
+   the YAML reader: dialect (YAML 1.2 core schema), diagnostics, nodes, document, addresses, entries, fills, tasks; `load(path)` is the front door
+
+## MODULE rdf.tasks.report_task PROVIDES
+   class ReportTask - what to do, by address and value; the only thing a back end receives
+
+## rdf.values PROVIDES
+   class Value - the wrapper a back end reads (type, subtype, tostring, content, load())
+   multiple class *Value - value classes for the various values of a ReportTask
+   file-backed values (text files, parameter files, CSV tables) are read as UTF-8 on every platform
+
+## MODULE rdf.namespaces PROVIDES
+   the section ladder per document type (`SECTION_NAMESPACES`) and `register_documenttype`

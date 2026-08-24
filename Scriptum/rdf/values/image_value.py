@@ -7,8 +7,6 @@
 # covers some image AND video processing tools
 # for now avoid using opencv2 or similar
 
-from PIL import Image
-
 class ImageValue:
     """from task to content used in elements etc."""
     def __init__(self, filename: str, exists: bool):
@@ -23,6 +21,11 @@ class ImageValue:
     def content(self):
         if self.exists:
             if not self._parsed:
+                # imported here, not at module level: parsing an .rdf that
+                # places no images must not require Pillow, so that rdf stays
+                # usable on its own.
+                from PIL import Image
+
                 self._parsed = content = Image.open(self.filename)
             else:
                 content = self._parsed

@@ -37,18 +37,18 @@ which means: we always ever start with a letter. This might evolve, but some lim
 
 A tag is this:
 `namespace:name` or `name` only, both have to start with a letter and cannot include and non-ascii letters, but may include numbers.
-Arguments after a ` `  blank cannot include colons `:` or blanks itself, the bank divides different arguments. The equal sign is not used yet.
+Arguments after a ` ` blank cannot include colons `:` or blanks themselves; the blank divides different arguments. An argument can carry a value with `=`, as in `width=9cm`.
 
 ## Other characters
 
  * Comma `,` or semicolon `;` are useful only in `<comment: bla, bla, bla/>` which is a ignored tag
- * The equal character `=` is yet only used for the `width=` and `height=` argument for images.
+ * The equal character `=` gives an argument a value: `width=`/`height=` on images, `name=` in the config-table tags.
 
 ## Special arguments:
 
  - `template` (not used in Powerpoint)
 
-The element defined in one of the section itself is a template. This is allowed only in opening elements, while the closing element is the marker to append further copies of that template.
+The `template` argument flags a block as a *blueprint*: every instance the report document writes is a clone, the first included, and further instances follow the last one used. A section-ladder blueprint is pruned from the finished document; a `table:`/`image:` block flagged in the content ships unchanged if unused. A blueprint may live in `<section:template>` or, flagged this way, anywhere — see [rdf.md](./rdf.md) for the lookup rules when a name exists in both places. The argument belongs on the opening tag only.
 
 ### Example:
 

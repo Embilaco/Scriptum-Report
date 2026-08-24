@@ -5,15 +5,14 @@
 #
 
 from datetime import datetime
-from ..common import removeQuotes
 
 class NameValue:
     """from task.value to content used in elements etc.
-    
+
     take a task to extract content and hold it
 
-    rdf content read by ReportDataFile:
-    .position=parfile:somefile.nv:parameter to look for
+    written in the document as
+    - position: {parfile: somefile.nv, parameter: parameter to look for}
     file somefile.nv
     parameter to look for:value
 
@@ -23,7 +22,7 @@ class NameValue:
         self.subtype = 'parameterfile'
         self.filename = filename
         self.exists = exists
-        self.parameter = removeQuotes(parname)
+        self.parameter = str(parname)
         self.separator = settings.nvseparator
         self.datetimeformat = settings.datetimeformat
         self.floatformat = settings.floatformat
@@ -230,7 +229,7 @@ def _readRawNVfile(filename, separator=':',ticks="'"):
     multi[1,1]=2.0
     multi[1,2]=2.2
     """
-    lines = open(filename,'r').readlines()
+    lines = open(filename,'r',encoding='utf-8').readlines()
     newlines = []
     openline = False
     assembledvalue = '' 

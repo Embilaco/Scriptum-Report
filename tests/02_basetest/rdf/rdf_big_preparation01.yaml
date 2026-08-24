@@ -1,0 +1,8 @@
+- subsection:preparation:
+    - preparation:id: Blabla-1
+    - text:description: bar
+    - subsubsection:requisites:
+        - text:description: foo
+        - marker:content:
+            - table:left: {file: todo.txt, description: 'hi ho...'}
+    - _include_: rdf_big_preparation01sub.yaml

@@ -1,19 +1,61 @@
-"""Task definitions for RDF report parsing."""
+"""The task: one instruction for a back end, and the only thing it receives."""
 
-from ..values import Value
-
-count_string = '_c%03d'
+#: ``path[0]`` of a task that fills everywhere rather than at one address.
+#: A back end recognises a global task by this. It follows the document
+#: key so the two cannot drift apart.
+GLOBAL_ROOT = '_global_'
 
 
 class ReportTask:
-    """A task is mostly one line in a rdf file with an instruction what to do."""
+    """One instruction: an address, a value, and what to do with them.
 
-    # get a list of all already existing tasks to be able to get
-    # a serial and new naming in case of duplicates
-    _serial = 0
-    _tree = {}  # list of dicts of dicts of dicts...
-    _allPaths = {}
-    _newPaths = {}
+    The loader builds these (``Scriptum/rdf/loader/tasks.py``) and a back end
+    consumes them; it never sees the document text. So the attributes are the
+    contract between reader and renderer:
+
+    ``myAddress``
+        the **instance** address as a list of canonical four-slot segments --
+        ``['section:a::1', 'subsection:b::2', ':head::1']`` -- which joins with
+        ``.`` for an addressbook lookup; ``[0]`` is the section, ``[:-1]`` the
+        parent and ``[-1]`` the element itself.
+    ``path``
+        the **template** address: the ancestors as template names, without
+        instance numbers. For a structural task it ends with the block being
+        applied or copied, because that is what ``findTemplate`` looks up.
+    ``target``
+        the template name of the element to fill -- the tag as written in the
+        ``.docx`` or ``.pptx``. Empty for a structural task.
+    ``value``
+        the typed :class:`~Scriptum.rdf.values.Value`.
+    ``what``
+        ``''`` (fill), ``apply``, ``copy`` or ``add`` -- the structural
+        operation, decided by the loader from the instance id.
+    ``where``
+        the marker an ``add`` lands at.
+    ``actions``
+        the modifiers, each itself a ``Value``; already applied to the value
+        for the types that read them (tables take their caption from one).
+    ``modified``
+        whether ``what``, ``where`` or ``actions`` mean anything.
+    ``finaltarget``
+        ``myAddress[-1]`` -- the instance address of the element.
+    ``serial``
+        the task's position in the list, 1-based, assigned by the loader once
+        the list is complete. Tasks come out in document order, so it is also
+        the execution order.
+
+    ``target`` and ``myAddress[-1]`` say different things, which is the point:
+    the template name and the instance address. The ``.rdf`` text format gave
+    the first instance the same string for both and renamed only the repeats
+    (``foo_c002``), so a blueprint and a copy of it shared one name by accident
+    of which was written first.
+
+    There is no class state here. The text parser kept a process-global tree
+    to number repeats; a YAML document's instance numbers come from its own
+    nesting, assigned while the loader walks, so nothing has to be remembered
+    between documents.
+    """
+
     _debug = False
 
     @classmethod
@@ -22,117 +64,21 @@ class ReportTask:
 
         cls._debug = bool(enabled)
 
-    def __init__(self, root=[], line: str = '', settings={}, **modifier):
-        """Create a new task.
+    def __init__(self, myAddress, path, target, value,
+                 what='', where='', actions=None):
+        self.serial = 0
+        self.myAddress = list(myAddress)
+        self.path = list(path)
+        self.target = target
+        self.value = value
+        self.what = what
+        self.where = where
+        self.actions = dict(actions) if actions else {}
+        self.modified = bool(what or where or self.actions)
+        self.finaltarget = self.myAddress[-1] if self.myAddress else ''
 
-        Args:
-            root: list of strings from _currentroot in ReportDataFile.
-            line: string with the line always as 'key=value'.
-            settings: dict with configuration options.
-            modifier: optional modifiers like what/where/actions.
-        """
-
-        # just a counter for each element
-        ReportTask._serial += 1
-        self.serial = ReportTask._serial
-        
-        #self.newPath = None
-        path, value = line.split('=', 1)
-        path = path.lower().strip().split('.')  # creates a list of strings to be appended to root
-
-        # target is the last element before the '='
-        # never more than one target with same name in the same section!
-        self.target = path[-1]
-        # path is usually empty or the rest between root and target
-        path = path[:-1]
-        value = value.strip()  # value is everything behind the '='
-
-        self.path = root[:]  # copy
-        if path:
-            self.path += path
-
-        # required for TaskGroup class only
-        self.length = 1
-
-        # further evaluate value
-        self.value = Value(value, settings, target=self.target.split(':')[0])
-
-        self.what = ''
-        self.where = ''
-        self.actions = {}
-        self.copyifrequired = False
-
-        # mods on that object
-        if modifier:
-            self.modified = True
-            self.what = modifier.get('what', '')
-            self.where = modifier.get('where', '')
-            self.actions = modifier.get('actions', {})
-            self.copyifrequired = modifier.get('ifrequired', False)
-            if self.actions:
-                # can be used, e.g. in tables
-                self.value.applyActions(self.actions)
-        else:
-            self.modified = False
-
-        # this can be either a section (namespace) == copy or a + == add
-        # thus chance is high to have multiple of these inside and a
-        # numbering is required. Mostly for docx
-
-        targetPath = self.path
-        if self.target:
-            targetPath += [self.target]
-
-        self.checkPath(targetPath)
-
-        #if self.path[-1] != self.myAddress[-1]:
-        # define rewritten, new target
-        if self.target:
-            self.finaltarget = self.myAddress[-1]
-
-    def checkPath(self, targetPath):
-        """Check if that path exists already in Class._tree."""
-
-        subtree = ReportTask._tree
-        rootname = []  # root
-        subcount = 0
-        for tp in targetPath[:-1]:
-            if tp in subtree:
-                subname, _, subtree = subtree[tp]
-            else:
-                subtree[tp] = [tp, 1, {}]
-                subname, _, subtree = subtree[tp]
-            rootname += [subname]
-        # last element
-        tp = targetPath[-1]
-        if tp in subtree:
-            subname, subcount, _ = subtree[tp]
-            subcount += 1
-            subname = f'{tp}_c{subcount:03d}'
-            subtree[tp] = [subname, subcount, {}]
-        else:
-            subtree[tp] = [tp, 1, {}]
-            subname, _, _ = subtree[tp]
-        rootname += [subname]
-
-        self.myAddress = rootname
-
-        # record duplicate paths
-        fullpath = '.'.join(targetPath)
-        if fullpath in ReportTask._allPaths:
-            ReportTask._newPaths.setdefault(fullpath, []).append('.'.join(rootname))
-        else:
-            ReportTask._allPaths[fullpath] = '.'.join(rootname)
-
-        if self.copyifrequired:
-            # remove the copy attribute from self.what when myAdress and path are the same
-            # this will not work with PPTX but is required for DOCX!!!
-            #print('difference', self.myAddress, self.path)
-            # we have to check only the last element as the intermediate element should have been added anyhow?
-            # @TODO verify that nothing is lost in complex structures
-            if self.myAddress[-1] == self.path[-1]:
-                if self.what == 'copy':
-                    self.what = 'apply'
+        if self.actions:
+            self.value.applyActions(self.actions)
 
     def __repr__(self) -> str:
         rval = '   ' + '.'.join(self.path) + ' = ' + self.value.__repr__()
@@ -160,14 +106,5 @@ class ReportTask:
                 r['where'] = self.where
             if self.actions:
                 r['actions'] = self.actions
-        #if self.newPath:
-        #    r['newPath'] = self.newPath
 
         return r
-
-    @property
-    def getPath(self):
-        #if self.newPath:
-        #    return self.newPath
-        #else:
-        return self.path

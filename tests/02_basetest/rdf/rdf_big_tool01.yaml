@@ -1,0 +1,7 @@
+- subsection:tool:
+    - tool_id: pepper
+    - tool_name: Red Pepper
+    - tool_domain_long: Red pepper, Peppermint Inc. Singapure
+    - tool_parameters: a b c
+    - marker:content:
+        - table:narrow: {file: tool.par, description: some details}

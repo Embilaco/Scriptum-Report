@@ -6,6 +6,11 @@ from pptx.presentation import Presentation
 from pptx.oxml.slide import CT_SlideLayout
 from pptx.enum.shapes import PP_PLACEHOLDER_TYPE, MSO_SHAPE_TYPE
 
+# The slide namespace table now lives in `rdf`, which must not depend on
+# this package -- see rdf/namespaces.py. Re-exported here so existing
+# imports keep working.
+from ..rdf.namespaces import pptx_sections
+
 class PPTXTypes:
     CT_SlideLayout = CT_SlideLayout
     Presentation = Presentation       
@@ -57,20 +62,6 @@ known_shape_types = {
     MSO_SHAPE_TYPE.WEB_VIDEO: 'unsupported', #  "Web video"
     MSO_SHAPE_TYPE.MIXED: 'unsupported', #  "Multiple shape types (read-only)"
 }
-
-# what is the name and level
-sectionnames = {
-    0: 'slide',
-    # is there anything more?
-}
-
-#sectionorder = [ sectionnames[i] for i in range(max(sectionnames.keys()))]
-sectionorder = [ 'slide' ]
-
-pptx_sections = { 'order': sectionorder,
-                  'names': sectionnames,
-                  'mandatory': False
-                  }
 
 __all__ = ['PPTXTypes', 
            'known_placeholder_types',

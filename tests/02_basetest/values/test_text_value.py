@@ -1,13 +1,14 @@
-"""Tests for :mod:`rdf.values.text_value`."""
+"""Tests for :mod:`rdf.values.text_value`, through a report document."""
 
-import sys
-import types
 from pathlib import Path
 
 import pytest
 
-from _local_test_setup import *
+from _setup_values import *
 
+
+# pytest fixture: injected by argument name -- each test that takes a
+# 'workspace' parameter gets a fresh directory under pytest's per-test tmp_path.
 @pytest.fixture
 def workspace(tmp_path: Path) -> Path:
     """Create a working directory with access to the shared sample data."""
@@ -18,8 +19,17 @@ def workspace(tmp_path: Path) -> Path:
     return workdir
 
 
-def _write_rdf(path: Path, lines: list[str]) -> Path:
-    path.write_text("\n".join(lines))
+def _write_document(path: Path, value: str) -> Path:
+    """A document whose one fill is ``text:description`` with *value*."""
+    path.write_text("\n".join([
+        "_scriptum_:",
+        "  version: 4",
+        "  documenttype: docx",
+        "  datadir: ./data",
+        "_content_:",
+        "  - section:content:",
+        f"      - text:description: {value}",
+    ]), encoding='utf-8')
     return path
 
 
@@ -27,19 +37,11 @@ def test_text_value_temperatures_existing_file(monkeypatch: pytest.MonkeyPatch, 
     """Loading a referenced text file returns its full content."""
 
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "text_value.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=./data",
-            "section:content",
-            ".text:description=file:dolor.txt",
-        ],
-    )
+    document = _write_document(workspace / "text_value.yaml", "{file: dolor.txt}")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = next(t for t in rdf.tasks if t.target == "text:description")
+    assert task.value.type == 'file' and task.value.subtype == 'text'
     task.value.load()
 
     with Path(DATA_SOURCE / "dolor.txt").open() as stream:
@@ -52,42 +54,24 @@ def test_text_value_missing_file_returns_placeholder(
 ) -> None:
     """Missing files fall back to a helpful placeholder message."""
 
-    missing = workspace / "data" / "does_not_exist.txt"
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "text_missing.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "*datadir=./data",
-            "section:content",
-            ".text:description=file:does_not_exist.txt",
-        ],
-    )
+    document = _write_document(workspace / "text_missing.yaml", "{file: does_not_exist.txt}")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = next(t for t in rdf.tasks if t.target == "text:description")
     task.value.load()
 
     assert "non existing file" in task.value.content
     assert "does_not_exist.txt" in task.value.content
-    
+
 
 def test_text_value_embedded_literal(monkeypatch: pytest.MonkeyPatch, workspace: Path) -> None:
-    """Quoted text is passed through without touching the filesystem."""
+    """A scalar is text, and is passed through without touching the filesystem."""
 
     monkeypatch.chdir(workspace)
-    rdf_path = _write_rdf(
-        workspace / "text_literal.rdf",
-        [
-            "*version=100",
-            "*documenttype=docx",
-            "section:content",
-            ".text:description='Embedded literal line'",
-        ],
-    )
+    document = _write_document(workspace / "text_literal.yaml", "'Embedded literal line'")
 
-    rdf = ReportDataFile(str(rdf_path), _root=[])
+    rdf = ReportDataFile(str(document))
     task = next(t for t in rdf.tasks if t.target == "text:description")
     task.value.load()
 

@@ -29,12 +29,12 @@ from .base import genericFill
 from .base import extractFontAndDecorators
 from .attrs import getColorFromSolidFill
 from .templates import makeTemplate
-from ..tag.tag import getTag
+from ..tag.tag import getTag, puretagOf
 from .shapes import getShapes
 from .slide import Slide
 from .. import version
 
-from ..rdf.tasks.report_task import ReportTask
+from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 
 # and what not
 #_NOT_ALLOWED = '\\,:;~+*#&%$' # by default OPENING and CLOSING will be added to this list, never tested for unicode characters
@@ -282,7 +282,7 @@ class ManagedPptx:
 
         #print(section,path,'T',target)
         
-        if section == 'global':
+        if section == GLOBAL_ROOT:
             # find globally all elements with that tag
             # collect them all to complete them at the end of everything
             self.collectglobal += [(target,task)]
@@ -302,7 +302,9 @@ class ManagedPptx:
             # adding content which does not yet exist requires templates
             # to be added where a @marker:content exists as general shape and target
             # we need to find the task.where first
-            mpath = [task.where]
+            # task.where is the marker's canonical four-slot address;
+            # tag_in_ph is keyed by puretag, as the layout spells it.
+            mpath = [puretagOf(task.where)]
             elems = self.findElements(path=mpath)
             # print('add', elems)
             if not elems:
@@ -438,9 +440,15 @@ class ManagedPptx:
                     except:
                         pass
                     ppt = powerp.Presentations.Open(in_file)
+                    # PowerPoint's Close() takes no SaveChanges argument (Word's
+                    # Document.Close does), and Save() alone no-ops on a deck
+                    # opened unmodified: mark it dirty so PowerPoint really
+                    # rewrites the file, then close plainly.
+                    ppt.Saved = False
+                    ppt.Save()
                     if createpdf:
                         ppt.SaveAs(out_file, FileFormat=ppSaveAsPDF)
-                    ppt.Close(SaveChanges=True)
+                    ppt.Close()
                     if doquit:
                         powerp.Quit()
                 except Exception as e:

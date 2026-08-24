@@ -1,7 +1,0 @@
-# include to general report
-# this is tool x
-section:tools.subsection:tool
-.tool_ID='MyTools'
-.tool_name='Spoons'
-@marker:content
-  +table:narrow=file:spoon.par+description='exact definition of the one spoon'

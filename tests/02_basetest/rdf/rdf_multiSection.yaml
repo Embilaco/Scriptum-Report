@@ -1,0 +1,15 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+
+_global_:
+  setup: 1
+
+_content_:
+  - section:instruction_bc:
+      - subsection:instruction:
+          - head: Concentrated Force
+          - subsubsection:detail:
+              - float: 1.4
+              - integer: 42
+              - text:description: This instruction adds a single instruction at the front

@@ -6,10 +6,10 @@
 #
 import Scriptum
 
-base_rdf = 'powerpoint_input.rdf'
+base_rdf = 'powerpoint_input.yaml'
 rdf = Scriptum.ReportDataFile(base_rdf)
 
-document = Scriptum.ManagedDocx('template.pptx')
+document = Scriptum.ManagedPptx('template.pptx')
 document.artist(
     rdf,
     directfill=True,

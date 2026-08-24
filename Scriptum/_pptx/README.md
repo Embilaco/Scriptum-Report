@@ -1,9 +1,9 @@
 # Subfolder overview
-This is the pptx part o the main module and collects all functions and modules that are specific to pptx
+This is the pptx part of the main module and collects all functions and modules that are specific to pptx
 
 ## Usage and Test Instructions
 - This folder requires python-pptx to be installed.
-- Tests are in global folder tests/01_current/CreatePPTfromTemplate.ipynb.
+- Tests live under tests/: the pptx cases in tests/02_basetest/pptx-basic/ (each with a test_*.py that builds the deck and compares it with its expected/ reference) and the full example in tests/04_examples/pptreport/.
   
 ## Organization
 - the module `reportPptx.py` is the main entry

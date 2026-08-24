@@ -1,0 +1,16 @@
+[
+ "TEST section one",
+ "MAIN",
+ "ALLOVER",
+ "no file with image: 'data\\\\not-existing.png'",
+ "Picture: is already existing +",
+ "Blablabla",
+ "ALLOVER",
+ "Figure #: a screw thing",
+ "Extra paragraph inside the generic image",
+ "Figure #: curve ...",
+ "Extra paragraph inside the generic image",
+ "no file with image: 'data\\\\not-existing.png'",
+ "Figure #: small curve ...",
+ "Figure #: a screw thing again"
+]

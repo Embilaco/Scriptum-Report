@@ -1,0 +1,48 @@
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_global_:
+  report:id: ID 4711
+  date:published: 01. August 2020
+  report:version: 1.0
+  report:status: Draft
+
+_content_:
+  - section:title:
+      - text:description: {file: title.txt}
+      - date:creation: {date: now}
+      - author: Thomas
+
+  - section:second:
+      - text:description: This is the second section
+      - marker:content:
+          - text:blue: Where will this end?
+
+      - subsection:seconda:
+          - head: Header 1
+          - text:description: This is a subsection A of section second
+          - marker:content:
+              - text:italicred: {file: bootseal.txt}
+              - text:green: {file: dolor.txt}
+              - text:italicred: {file: donotexist.txt}
+          - subsubsection:secondsub1:
+              - item: This is s subsection ITEM head
+              - sub3section:secondsubsubi:
+                  - subitem: This is s subsubsection SUBITEM head
+
+      - subsection:seconda:
+          - head: Header 2
+          - text:description: This is a another subsection A of section second
+          - marker:content:
+              - text:bold: {file: nonsense.txt}
+              - text:bold: {file: donotexist.txt}
+
+      - subsection:secondb:
+          - head: Header 3
+          - text:description: This is a subsection B of section second
+          - marker:content:
+              - text:green: {file: dolor.txt}
+              - _include_: 'textinclude*.yaml'
+              - text:green: 'Some last words...'

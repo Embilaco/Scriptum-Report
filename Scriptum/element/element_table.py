@@ -8,9 +8,8 @@
 from typing import Any, Optional
 
 from ..tag.tag import Tag
-from ..rdf.tasks.report_task import ReportTask
 from .base import Element
-from ..rdf.values import Table
+from .protocols import TableSource
 
 # generic class that can work on tables 
 
@@ -55,7 +54,7 @@ class TableElement(Element):
         # can we delete as well? should we?
         # yet not possible, need to create a low level function
 
-    def fillTable(self, tableValueObject: Table) -> None:
+    def fillTable(self, tableValueObject: TableSource) -> None:
         """how to fill a table
         
         """
@@ -77,8 +76,8 @@ class TableElement(Element):
                         #print('EXCEPTION',e)
                         pass
         else:
-            # add a message
-            table.rows[0].cells[0].text = str(tableValueObject.object)
+            # add a message: the source explains itself when it does not exist
+            table.rows[0].cells[0].text = str(tableValueObject)
 
 
     

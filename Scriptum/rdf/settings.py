@@ -1,14 +1,18 @@
 
 
 class SETTINGS:
-    """store all current settings for every current RDF-file"""
+    """store all current settings for every current report document"""
     version        = 0
-    # see: https://docs.python.org/3/library/datetime.html
-    dateformat     = '%x'
-    #timeformat    = '%X' # unused
-    datetimeformat = '%c'
+    # strftime patterns, see: https://docs.python.org/3/library/datetime.html
+    # ISO 8601 by default: unambiguous, sortable, and the same in every
+    # process. The C library's locale forms '%x' / '%c' were the defaults
+    # before 2026-08-23; they render '08/23/26' / 'Sun Aug 23 14:05:09 2026' in
+    # a plain Python process and follow the process locale the moment a host
+    # calls setlocale(), so the same document read differently in a notebook
+    # and on the command line. Both remain available as explicit settings.
+    dateformat     = '%Y-%m-%d'
+    datetimeformat = '%Y-%m-%d %H:%M:%S'
     datadir        = '.' # for almost all and global data, files etc.
-    #dirmode        = False # deprecated, new in version 2, to allow individual datadir in each section or slide
     nvseparator    = ':' # new in version 2
     csvseparator   = ';' # new in version 3
     floatformat    = '7.4f' # new in version 3
@@ -23,7 +27,6 @@ class SETTINGS:
             self.dateformat = settings.dateformat
             self.datetimeformat = settings.datetimeformat
             self.datadir = settings.datadir
-            #self.dirmode = settings.dirmode
             self.nvseparator = settings.nvseparator
             self.csvseparator = settings.csvseparator
             self.floatformat = settings.floatformat

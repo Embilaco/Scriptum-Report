@@ -31,7 +31,9 @@ class TextValue:
     @property
     def content(self):
         if self.exists:
-            with open(self.filename, 'r') as f:
+            # UTF-8 like every other file-backed value; the platform default
+            # made the same document behave differently per machine.
+            with open(self.filename, 'r', encoding='utf-8') as f:
                 content = '\n'.join(f.readlines())
         else:
             content = str(self)
