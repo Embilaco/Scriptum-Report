@@ -250,7 +250,10 @@ File-backed values — text files, parameter files, CSVs — are read as **UTF-8
 on every platform. (Until 2026-08-24 text and parameter files were read in the
 platform encoding, so the same document rendered umlauts differently per
 machine; a legacy ANSI-encoded file with non-ASCII content now fails loudly
-instead of appearing to work.)
+instead of appearing to work.) A text file's line breaks arrive in the
+document **as written** — one break in the file is one break in the report.
+(Until 2026-08-25 every break doubled into a blank line, unnoticed while the
+text fixtures were single-line.)
 
 ### Text
 
