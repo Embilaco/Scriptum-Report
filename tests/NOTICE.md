@@ -18,7 +18,7 @@ scaled or cropped from their sources for test use.
   [Wikimedia Commons, File:Die Schreibmaschine Sholes Glidden, Remington&Sons
   Typerwriter Co. Ilion N.Y. (USA), 1876 02.jpg](https://commons.wikimedia.org/wiki/File:Die_Schreibmaschine_Sholes_Glidden,_Remington%26Sons_Typerwriter_Co._Ilion_N.Y._(USA),_1876_02.jpg).
   License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- **`04_examples/essay/data/ibmselectric.png`** — IBM Selectric II typewriter
+- **`04_examples/essay/data/ibmselectric.jpg`** — IBM Selectric II typewriter
   (model 96C). Author: *Norsk Teknisk Museum*. Source:
   [Wikimedia Commons, File:IBM Selectric II model 96C.jpg](https://commons.wikimedia.org/wiki/File:IBM_Selectric_II_model_96C.jpg).
   License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
