@@ -1,0 +1,6 @@
+# What the sdist carries beyond the package itself. setuptools reads the
+# working tree, not git -- without the prune, its legacy default rules once
+# swept a gitignored local tests/test_debug.py into a release tarball.
+prune tests
+graft docs
+include CHANGELOG

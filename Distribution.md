@@ -54,6 +54,20 @@ its own current `setuptools`, which the PEP 639 license expression in
 may still sit there. Either empty `dist/` first or always address files by
 explicit version below.
 
+**What ships where**: the *wheel* carries the `Scriptum` package plus the
+`script-files` of `pyproject.toml`, nothing else. The *sdist* additionally
+carries `docs/`, `CHANGELOG`, the licenses and the standard metadata — and
+**never** `tests/`: `MANIFEST.in` prunes it, because setuptools reads the
+working tree rather than git and its legacy rules once swept a gitignored
+local `tests/test_debug.py` (with an absolute path inside) into the tarball.
+After changing what ships, always list the built artifacts before uploading:
+
+```
+python - <<'PY'
+import tarfile; print(*tarfile.open('dist/scriptum_report-<version>.tar.gz').getnames(), sep='\n')
+PY
+```
+
 ## 3. Check before uploading
 
 ```
