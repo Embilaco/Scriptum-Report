@@ -60,3 +60,37 @@ def test_tables(monkeypatch: MonkeyPatch, tmp_path: Path):
 
     missing = next(t for t in tables if t.value.object.filename.endswith('table4.csv'))
     assert not missing.value.object.exists
+
+
+def test_an_empty_csv_cell_reads_as_a_blank(monkeypatch: MonkeyPatch, tmp_path: Path):
+    """Decided 2026-08-25: an empty cell -- written empty, or missing from a
+    short row -- reads as a single blank, so the table fill really overwrites
+    a template cell instead of letting its sample text show through (which is
+    exactly what the tables case's in-content blueprint used to pin)."""
+
+    workdir = tmp_path / "workspace"
+    workdir.mkdir()
+    (workdir / "data").mkdir()
+    (workdir / "data" / "holes.csv").write_text(
+        "a;;c\nshort\nx;y;z\n", encoding='utf-8')
+
+    base = workdir / "holes.yaml"
+    base.write_text("\n".join([
+        "_scriptum_:",
+        "  version: 4",
+        "  documenttype: docx",
+        "  datadir: ./data",
+        "_content_:",
+        "  - section:new:",
+        "      - table:generic: {file: holes.csv}",
+    ]), encoding='utf-8')
+
+    monkeypatch.chdir(workdir)
+    rdf = ReportDataFile(str(base))
+    task = next(t for t in rdf.tasks if t.target == 'table:generic')
+    task.value.load()
+
+    assert task.value.content.data == [
+        ['a', ' ', 'c'],
+        ['short', ' ', ' '],
+        ['x', 'y', 'z']]

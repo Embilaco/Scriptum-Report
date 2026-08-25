@@ -79,10 +79,15 @@ class CSVTable:
     and replaced by a "insert" and the content
 
     @row can be used with 'description' only for now
-    
-    otherwise 
+
+    otherwise
     ignore blank lines and lines starting with a hash #
-    fill missing values by setting count of columns to the largest value   
+    fill missing values by setting count of columns to the largest value
+
+    an empty cell -- written empty, or missing from a short row -- reads as
+    a single blank ' ', so the fill overwrites whatever sample text a
+    template's table carries there instead of letting it show through
+    (decided 2026-08-25)
     """
     def __init__(self, obj: TableValue, actions: dict):
         self.cols =0
@@ -118,23 +123,30 @@ class CSVTable:
             self.rows = len(data)
             self.cols = max([ len(r) for r in data ])
 
-            # refill if there is any row shorter than max
+            # refill if there is any row shorter than max (it used to append
+            # a single '' however short the row was, which left cells beyond
+            # it unwritten -- and template sample text showing through)
             for r in data:
                 if len(r) < self.cols:
-                    r += ['']
-            
+                    r += [''] * (self.cols - len(r))
+
             fformat = (f"{{:{obj.floatformat}}}").format
             newdata = []
             for r in data:
                 row = []
                 for v in r:
-                    try:
-                        v = int(v)
-                    except:
+                    if v == '':
+                        # an empty cell reads as a blank so the fill really
+                        # overwrites the template's cell
+                        v = ' '
+                    else:
                         try:
-                            v = fformat(float(v))
+                            v = int(v)
                         except:
-                            pass
+                            try:
+                                v = fformat(float(v))
+                            except:
+                                pass
                     row += [v]
                 newdata += [row]
             self.data = newdata
