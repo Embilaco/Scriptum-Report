@@ -34,7 +34,10 @@ def _write_document(path: Path, value: str) -> Path:
 
 
 def test_text_value_temperatures_existing_file(monkeypatch: pytest.MonkeyPatch, workspace: Path) -> None:
-    """Loading a referenced text file returns its full content."""
+    """Loading a referenced text file returns its content **as written** --
+    the breaks the file has, not one more. (The old readlines-join doubled
+    every line break, so a multi-line file rendered with a blank line after
+    every line; unnoticed while every text fixture was a single line.)"""
 
     monkeypatch.chdir(workspace)
     document = _write_document(workspace / "text_value.yaml", "{file: dolor.txt}")
@@ -44,9 +47,10 @@ def test_text_value_temperatures_existing_file(monkeypatch: pytest.MonkeyPatch, 
     assert task.value.type == 'file' and task.value.subtype == 'text'
     task.value.load()
 
-    with Path(DATA_SOURCE / "dolor.txt").open() as stream:
-        expected = "\n".join(stream.readlines())
+    with Path(DATA_SOURCE / "dolor.txt").open(encoding='utf-8') as stream:
+        expected = stream.read()
     assert task.value.content == expected
+    assert '\n\n' not in task.value.content, 'the readlines-join doubling is back'
 
 
 def test_text_value_missing_file_returns_placeholder(

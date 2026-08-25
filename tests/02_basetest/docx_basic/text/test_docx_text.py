@@ -105,7 +105,7 @@ def test_the_outline_the_includes_and_the_headers(tmp_path):
     # announced where they were asked for
     texts = [p.text for p in document.paragraphs]
     assert sum(text.startswith('Lorem ipsum') for text in texts) == 3
-    assert sum(text.startswith('Boot seals') for text in texts) == 2
+    assert sum(text.startswith('The moon fell') for text in texts) == 2
     assert sum(text.startswith('A title is everything') for text in texts) == 1
     announced = [text for text in texts if text.startswith('file ') and text.endswith('not found')]
     assert len(announced) == 4
