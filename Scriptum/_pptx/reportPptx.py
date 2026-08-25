@@ -21,8 +21,6 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
 
 import os
-if os.name == 'nt':
-    import win32com.client
 
 #from .pptElement import PptElement
 from .base import genericFill
@@ -419,7 +417,19 @@ class ManagedPptx:
         self.document.save(filename)
         
         if finish:
-            if os.name == 'nt':
+            if os.name != 'nt':
+                print(f'Running on {os.name} will prevent any finishing work...')
+            else:
+                # win32com is imported at finish time, not at module import:
+                # a Windows install without pywin32 keeps a working back end,
+                # and only the one step that needs Office reports the gap.
+                try:
+                    import win32com.client
+                except ImportError:
+                    print('finishing needs pywin32 -- the Scriptum-Report[windows] '
+                          'extra; the presentation is saved, but unfinished')
+                    return
+
                 in_file = os.path.abspath(filename)
                 out_file = os.path.abspath(os.path.splitext(os.path.basename(filename))[0]+'.pdf')
                 ppSaveAsPDF = 32
@@ -450,6 +460,3 @@ class ManagedPptx:
                         powerp.Quit()
                 except Exception as e:
                     print(f'failed to update and save as PDF\nReason:\n{e}')
-
-            else:
-                print(f'Running on {os.name} will prevent any finishing work...')
