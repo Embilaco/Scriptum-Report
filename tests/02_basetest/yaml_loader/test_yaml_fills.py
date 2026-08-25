@@ -112,6 +112,50 @@ def test_a_real_boolean_is_refused_rather_than_coerced():
     assert 'Quote it' in report
 
 
+# ---------------------------------------------------- block scalars, UTF-8
+
+#: Real-world text beyond ASCII: every kind a report actually carries.
+#: (No ASCII apostrophes -- the tests wrap these in single quotes.)
+UTF8_SERIES = [
+    '„Gerade“ und ‚einfache‘ Anführungszeichen',
+    '«Guillemets» und ‹einfache›',
+    'Gedankenstrich — Halbgeviert – Ellipse …',
+    'Accents: àâçéèêëîïôùûüÿ und ÄÖÜ äöü ß',
+    'Symbols: © ® µ € £ § ½ ¼ ✓ ° ±',
+    'Emoji: 😀 🚀 🔧 📊',
+]
+
+
+@pytest.mark.parametrize('written', UTF8_SERIES)
+def test_utf8_text_arrives_verbatim(written):
+    fill = one(f"- head: '{written}'")
+
+    assert fill.value.type == 'str'
+    assert str(fill.value) == written
+
+
+def test_a_block_scalar_keeps_its_line_breaks():
+    """``|`` -- documented as the way to write genuinely multi-line text
+    since the format existed, and never exercised anywhere. The breaks stay,
+    and the scalar ends with the single newline that YAML's clip mode keeps."""
+    fill = one('- text:note: |\n'
+               '    Erste Zeile — „gerade“ ✓\n'
+               '    Zweite Zeile ‚einfach‘ … 😀\n')
+
+    assert fill.value.type == 'str'
+    assert str(fill.value) == ('Erste Zeile — „gerade“ ✓\n'
+                               'Zweite Zeile ‚einfach‘ … 😀\n')
+
+
+def test_a_folded_scalar_folds_the_breaks_to_spaces():
+    """``>`` -- the other documented block form: one line arrives."""
+    fill = one('- text:note: >\n'
+               '    wrapped in the document,\n'
+               '    one line in the report\n')
+
+    assert str(fill.value) == 'wrapped in the document, one line in the report\n'
+
+
 def test_a_colour_is_chosen_by_the_target_and_not_by_the_value():
     """``color`` selects ColorValue whatever shape the value has -- which is
     the text format's rule, kept, because it is semantic."""

@@ -17,6 +17,7 @@ import shutil
 import sys
 
 import docx
+import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = THIS_DIR.parent
@@ -45,6 +46,8 @@ def build(tmp_path, extra=''):
     shutil.copy(THIS_DIR / 'template.docx', tmp_path)
     (tmp_path / 'data').mkdir()
     (tmp_path / 'data' / 'unicode.txt').write_text(FILE_TEXT, encoding='utf-8')
+    (tmp_path / 'data' / 'series.txt').write_text('\n'.join(UTF8_SERIES),
+                                                  encoding='utf-8')
     (tmp_path / 'case.yaml').write_text(DOCUMENT.format(extra=extra),
                                         encoding='utf-8')
     os.chdir(tmp_path)
@@ -79,3 +82,61 @@ def test_a_nonascii_text_file_reaches_the_document(tmp_path):
     texts = said(finished)
 
     assert any(FILE_TEXT in text for text in texts), texts
+
+
+# ---------------------------------------------------- block scalars, UTF-8
+
+#: The same series the yaml_loader pins at parse level, here through a real
+#: Word fill: quotation marks of three schools, dashes, accents, symbols,
+#: emoji. (No ASCII apostrophes -- the fills wrap these in single quotes.)
+UTF8_SERIES = [
+    '„Gerade“ und ‚einfache‘ Anführungszeichen',
+    '«Guillemets» und ‹einfache›',
+    'Gedankenstrich — Halbgeviert – Ellipse …',
+    'Accents: àâçéèêëîïôùûüÿ und ÄÖÜ äöü ß',
+    'Symbols: © ® µ € £ § ½ ¼ ✓ ° ±',
+    'Emoji: 😀 🚀 🔧 📊',
+]
+
+BLOCK_LINES = ['Erste Zeile — „gerade“ Anführung ✓',
+               'Zweite Zeile ‚einfach‘ … 😀',
+               'Dritte Zeile mit €-Zeichen']
+
+
+@pytest.mark.parametrize('line', UTF8_SERIES)
+def test_utf8_values_reach_the_document_verbatim(line, tmp_path):
+    """The series through the plain value route, one line per build -- the
+    template's title section has only so many description tags."""
+    texts = said(build(tmp_path, f"      - text:description: '{line}'\n"))
+
+    assert any(line in text for text in texts), (line, texts)
+
+
+def test_a_utf8_text_file_reaches_the_document_line_by_line(tmp_path):
+    """The series again, through the file route."""
+    finished = build(tmp_path,
+                     '      - text:description: {file: series.txt}\n')
+    texts = said(finished)
+
+    for line in UTF8_SERIES:
+        assert any(line in text for text in texts), (line, texts)
+
+
+def test_a_block_scalar_fill_keeps_its_line_breaks(tmp_path):
+    """``|`` through a Word fill: the breaks arrive in the document."""
+    extra = ('      - text:description: |\n'
+             + ''.join(f'          {line}\n' for line in BLOCK_LINES))
+    texts = said(build(tmp_path, extra))
+
+    assert any('\n'.join(BLOCK_LINES) in text for text in texts), texts
+
+
+def test_a_folded_scalar_fill_arrives_as_one_line(tmp_path):
+    """``>`` through a Word fill: one line arrives."""
+    extra = ('      - text:description: >\n'
+             '          wrapped in the document,\n'
+             '          one line in the report\n')
+    texts = said(build(tmp_path, extra))
+
+    assert any('wrapped in the document, one line in the report' in text
+               for text in texts), texts
