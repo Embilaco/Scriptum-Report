@@ -223,7 +223,10 @@ reads as structure.
 colour target (`color`, or any `color:…` address) reads its value as a colour:
 a name (`red`, `steelblue`), six hex digits with or without `#` (`ff0000` —
 unquoted `#ff0000` is a YAML comment), or `rgb(255, 0, 0)`. An unrecognised
-colour is an error rather than silently black.
+colour is an error rather than silently black. A colour does its visible work
+as a **modifier** on another fill, where it paints the text that fill writes
+(see *Modifiers*); a bare colour target parses and is checked, but no back
+end paints anything with it yet.
 
 ### Mappings: where the bytes come from, and how
 
@@ -363,6 +366,24 @@ value (`description: {from: row1}`), but no modifiers of its own.
 **Lengths** — `width`, `height`, `top`, `left`, `bottom`, `right` — need a
 unit: `cm`, `mm`, `in` (or `inch`), `pt`. `width: 4` is an error, not four of
 something implied. A unit suffix on any other value is just text.
+
+**Colour** — a `color` modifier paints the font of the text its fill writes,
+in Word and PowerPoint alike:
+
+```yaml
+- report:status: {text: DRAFT, color: 'B00020'}   # corporate signal red
+- head:
+    text: Serving
+    color: steelblue                              # or rgb(70, 130, 180)
+```
+
+The paint lands exactly on the run that received the text, so template text
+around the tag keeps its own colour. It works wherever a fill writes text —
+direct fills, `_global_` fills, text-file and parameter-file fills, and a
+PowerPoint template clone added at a marker. What has no text takes no
+colour: images, videos and table fills ignore it (a table's look comes from
+the template's own cells). The notation is that of a colour target, and an
+unrecognised colour is an error at read time, not a silently black word.
 
 ## Quoting
 

@@ -15,6 +15,7 @@
 
 from docx import Document
 from docx.oxml.ns import qn
+from docx.shared import RGBColor
 from .section import Sections
 from ..rdf.namespaces import docx_sections
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
@@ -118,9 +119,10 @@ class ManagedDocx:
                     # tag, and the text to match on is what is written
                     # there. The instance rides as an `id` argument now,
                     # so a clone's tag still reads `text:description`.
-                    self.fillGeneric(t.puretag,t,e,value)
+                    self.fillGeneric(t.puretag,t,e,value,
+                                     task.actions if task.modified else None)
 
-    def fillGeneric(self, target: str, tag: Tag, elem, value):
+    def fillGeneric(self, target: str, tag: Tag, elem, value, actions=None):
         """always do that loop for paragraph type elements and text value types"""
         #obj = determineElement(elem)
         value.load()
@@ -154,6 +156,13 @@ class ManagedDocx:
                     # into the paragraph where the parameter belonged.
                     value.load()
                     found.text = str(value.content)
+
+        # a color modifier paints the font of the text this fill wrote --
+        # only where a run came back, so template text is never touched
+        if actions and hasattr(found, 'font'):
+            colour = actions.get('color')
+            if colour is not None and colour.type == 'color':
+                found.font.color.rgb = RGBColor.from_string(colour.object.for_docx)
 
     def typesetting(self, rdf, 
                     addcopy=True, 

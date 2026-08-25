@@ -77,17 +77,25 @@ def replaceTextInRuns(
     #print('>>>',text,runraster, foundraster)
     
     # now we run the foundraster reversed since we replace which changes the indices of the matches at the right
+    # startrun is the run that HOLDS the replacement afterwards, and it holds
+    # nothing else: the replacement goes into the first run the match fully
+    # covers, never appended onto a run that kept template text around the
+    # tag. That makes the returned run safe both to paint (a color modifier
+    # colours exactly the written text) and to overwrite whole (a file-backed
+    # fill sets .text on it later). It used to be whatever run a match
+    # touched last -- usually an emptied tail run, so painting showed nothing.
     startrun: Optional[Any] = None
     for s,e in reversed(foundraster):
         #print('loop',s,e,text[s:e])
         eir = -1
         for ir,rr in enumerate(runraster):
             #print(s,e,rr,ir)
-            if s>=rr: 
+            if s>=rr:
                 sir = ir
             if e <= rr and eir == -1:
                 eir = ir
         injected = False
+        kept_prefix = None
         #print('SE', sir, eir)
         for ir in range(sir,eir):
             r = runs[ir]
@@ -96,7 +104,6 @@ def replaceTextInRuns(
                 # fully clean some runs
                 #print('case 1')
                 r.text = ''
-                startrun = r
             elif runraster[ir] <= s and runraster[ir+1] >= e:
                 # fully inside
                 #print('case 2')
@@ -106,19 +113,25 @@ def replaceTextInRuns(
             elif runraster[ir] <= s and runraster[ir+1] > s:
                 # middle of one run it starts
                 #print('case 3', r.text, s-runraster[ir], r.text[:s-runraster[ir]])
-                startrun = r
                 r.text = r.text[:s-runraster[ir]]
+                kept_prefix = r
             elif runraster[ir] <= e and runraster[ir+1] > e:
                 # middle of one run it ends
                 #print('case 4', r.text, e-runraster[ir], r.text[e-runraster[ir]:])
                 r.text = r.text[e-runraster[ir]:]
             else:
                 print('ERROR: uncaught situation, results might be unexpected')
-                
-            if not injected:
-                r.text += replace
+
+            if not injected and not r.text:
+                r.text = replace
+                startrun = r
                 injected = True
-        #print()        
+        if not injected and kept_prefix is not None:
+            # the match covered no run whole (a tag split over exactly two
+            # runs, template text on both sides): append after the prefix
+            kept_prefix.text += replace
+            startrun = kept_prefix
+        #print()
     #print('rt end   ',paragraph.text)
     return startrun
 

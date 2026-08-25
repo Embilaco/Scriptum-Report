@@ -517,6 +517,27 @@ def test_scale_is_not_a_length():
     assert fill.actions['scale'].type == 'float'
 
 
+def test_a_colour_modifier_is_a_colour():
+    """``color`` selects ColorValue as a modifier too -- the back ends paint
+    the filled text with it. Written as corporate hex here: quoted, because
+    an all-digit hex would otherwise arrive as a number."""
+    fill = one("- report:status: {text: DRAFT, color: 'B00020'}")
+
+    colour = fill.actions['color']
+    assert colour.type == 'color'
+    assert isinstance(colour.object, ColorValue)
+    assert colour.object.for_docx == 'B00020'
+    assert colour.object.for_pptx == (176, 0, 32)
+
+
+def test_an_unrecognised_colour_modifier_is_reported():
+    """Reported at parse time like a colour target -- not silently black,
+    and not silently dropped like the text format's modifiers."""
+    report = failing('- report:status: {text: DRAFT, color: not-a-colour}')
+
+    assert 'is not a colour' in report
+
+
 def test_a_modifier_may_carry_its_own_source():
     fill = one('- video:clip: {file: c.mp4, image:poster: {file: c.gif}}')
 
