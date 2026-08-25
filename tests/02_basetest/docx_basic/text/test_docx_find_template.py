@@ -9,10 +9,13 @@ blueprint **ships**, by the same decision.
 
 The document uses the colliding name the way the tables fixture uses
 ``table:orange``: instance 1 fills the in-content blueprint in place,
-instance 2 is added at the marker and resolved by bare name. (Using the name
-*only* through the marker is a different, unsettled story: the lookup takes
-the collision winner but the fill follows the address to the in-content
-namesake -- filed as a question on the DOCX board, not pinned here.)
+instance 2 is added at the marker and resolved by bare name. Using the name
+*only* through the marker splits the two halves of the add -- the lookup
+takes the collision winner while the fill follows the ::1 address to the
+in-content namesake, so the clone ships empty and the content lands in the
+blueprint where it stands. Decided on the DOCX board's question
+(2026-08-25): the behaviour stays and the split is **warned about**, which
+the last test pins.
 
 Templates are built in-test, the way ``test_docx_clone_order.py`` builds its
 own; like there, each carries a ``section:template`` -- ``typesetting``
@@ -45,6 +48,11 @@ BODY = ('  - section:mix:\n'
         '      - table:dup: {file: mini1.csv}\n'
         '      - marker:content:\n'
         '          - table:dup: {file: mini2.csv}\n')
+
+#: The colliding name used ONLY through the marker: the add is instance ::1.
+ADD_ONLY_BODY = ('  - section:mix:\n'
+                 '      - marker:content:\n'
+                 '          - table:dup: {file: mini2.csv}\n')
 
 
 def blueprint(document, fingerprint, *, flagged):
@@ -85,7 +93,7 @@ def collision_template(*, in_template_section):
     return document
 
 
-def generate(tmp_path, template):
+def generate(tmp_path, template, body=BODY):
     """Build the collision document and return its tables."""
     import Scriptum
 
@@ -93,7 +101,7 @@ def generate(tmp_path, template):
     (tmp_path / 'data').mkdir(exist_ok=True)
     (tmp_path / 'data' / 'mini1.csv').write_text('ZZinplace\n', encoding='utf-8')
     (tmp_path / 'data' / 'mini2.csv').write_text('ZZadded\n', encoding='utf-8')
-    (tmp_path / 'case.yaml').write_text(HEADER + BODY, encoding='utf-8')
+    (tmp_path / 'case.yaml').write_text(HEADER + body, encoding='utf-8')
 
     os.chdir(tmp_path)
     rdf = Scriptum.ReportDataFile('case.yaml')
@@ -143,3 +151,28 @@ def test_without_a_template_section_hit_the_first_flagged_block_wins(tmp_path, c
     assert not any(text.startswith('ZZ') for text in cells(tables[2])), \
         'the losing blueprint is untouched'
     assert "template 'table:dup' is ambiguous" in out
+
+
+def test_an_add_only_use_of_the_colliding_name_is_warned_about(tmp_path, capsys):
+    """The unsettled story, settled (question on the DOCX board, decided
+    2026-08-25, option 1): the name's only use is the marker add, so its
+    address is instance ::1 -- the lookup clones the collision winner to the
+    marker, the fill follows the address to the flagged in-content namesake.
+    The behaviour stays exactly that -- the clone ships empty, the content
+    lands in the blueprint where it stands -- and the split is now warned
+    about, naming the landing."""
+    tables = generate(tmp_path, collision_template(in_template_section=True),
+                      body=ADD_ONLY_BODY)
+    out = capsys.readouterr().out
+
+    assert fingerprints(tables) == ['FromTemplateSection', 'FromContent'], \
+        'the clone at the marker, then the in-content blueprint it did not fill'
+    assert not any(text.startswith('ZZ') for text in cells(tables[0])), \
+        'the clone at the marker stays empty'
+    assert 'ZZadded' in cells(tables[1]), \
+        'the content lands in the blueprint where it stands'
+    warning = next((line for line in out.splitlines()
+                    if 'the clone stays empty' in line), '')
+    assert warning, 'the split is warned about'
+    assert "'table:dup'" in warning and 'section:mix::1.table:dup::1' in warning, \
+        'the warning names the added template and where the fill lands'

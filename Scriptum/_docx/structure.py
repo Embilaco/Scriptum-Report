@@ -262,9 +262,13 @@ class StructuredElement:
         #yield from newiter
         return newiter
 
-    def findExact(self, path):
+    def findExact(self, path, warn=True):
         """expect a list with entries, that start with path
-        we will found either one or nothing """
+        we will found either one or nothing
+
+        warn=False keeps a miss quiet -- for callers that probe where a
+        path WOULD land (the add-collision diagnosis) rather than expect
+        it to exist"""
 
         l = len(path)
         result = []
@@ -303,7 +307,7 @@ class StructuredElement:
                         print(f'exact nothing {t} {e.path} <?> {path}')
                 pass
 
-        if not result:
+        if not result and warn:
             print(f'WARNING: No exact match: {path}')
 
         return result

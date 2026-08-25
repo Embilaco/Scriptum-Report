@@ -287,7 +287,22 @@ class ManagedDocx:
                         anchor = where[0][1]
                         tpl = self.sections.findTemplate(t.target)
                         #print('   add tpl and anchor 0', t.myAddress, where, anchor, tpl)
-                        
+
+                        # When this add is the name's ONLY use, its address is
+                        # instance ::1 -- and the fill stage's findExact will
+                        # resolve that to the flagged in-content namesake, not
+                        # to the clone placed here: the content lands in the
+                        # blueprint where it stands and the clone stays empty.
+                        # Diagnosed, not changed (decided on question
+                        # 6d0fb2bff28c, option 1: warn on the collision).
+                        landing = parent.findExact(t.myAddress, warn=False)
+                        if landing and getattr(landing[0][1], 'isTemplate', False):
+                            print(f"WARNING: the add of {t.target!r} at {t.where!r} fills "
+                                  f"{'.'.join(t.myAddress)}, which is the flagged in-content "
+                                  f"block, not the clone placed at the marker -- the clone "
+                                  f"stays empty. Fill instance 1 in place first, or rename "
+                                  f"one of the same-named templates.")
+
                         if tpl:
                             #print('   add tpl and anchor 1', parent)
                             newElement = tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1], newname=t.myAddress[-1], section=root)
