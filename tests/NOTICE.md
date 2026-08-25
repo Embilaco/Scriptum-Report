@@ -36,3 +36,10 @@ scaled or cropped from their sources for test use.
   [Instruktion](https://de.wiktionary.org/wiki/Instruktion). Authors:
   Wiktionary contributors. License:
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- **`data_source/world_avi.avi`**, **`world_avi.mp4`**, **`world_mp4.mp4`**
+  and the poster frames **`world_avi_poster.jpg`**,
+  **`world_mp4_poster.jpg`** — Earth-at-night ("Black Marble") animation and
+  stills. Credit: [NASA](https://www.nasa.gov/). NASA material is a U.S.
+  government work, generally not protected by copyright, and is used per
+  NASA's
+  [media usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/).
