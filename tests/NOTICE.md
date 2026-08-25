@@ -22,7 +22,7 @@ scaled or cropped from their sources for test use.
   (model 96C). Author: *Norsk Teknisk Museum*. Source:
   [Wikimedia Commons, File:IBM Selectric II model 96C.jpg](https://commons.wikimedia.org/wiki/File:IBM_Selectric_II_model_96C.jpg).
   License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- **`04_examples/wordreport/data/fridge.jpg`** and **`fridge.png`** — a
+- **`04_examples/wordreport/data/fridge.jpg`** — a
   General Electric "Monitor-Top" refrigerator. Author: *Magi Media*. Source:
   [Wikimedia Commons, File:Monitor refer.jpg](https://commons.wikimedia.org/wiki/File:Monitor_refer.jpg).
   License: [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) /
