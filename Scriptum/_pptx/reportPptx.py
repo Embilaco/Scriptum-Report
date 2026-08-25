@@ -431,15 +431,12 @@ class ManagedPptx:
                     except:
                         powerp = win32com.client.Dispatch('PowerPoint.Application')
                         doquit = True
-                    #print('Visbility:',powerp.Visible,powerp.Version)
-                    try:
-                        #When an application is launched by the user, the Visible and UserControl properties 
-                        #of the Application object are both set to True. When the UserControl property is set to True, 
-                        #it isn't possible to set the Visible property of the object to False.
-                        powerp.Visible = False # not allowed/working for PPT!???
-                    except:
-                        pass
-                    ppt = powerp.Presentations.Open(in_file)
+                    # PowerPoint refuses Visible = False on the application
+                    # (and with UserControl = True it cannot be hidden at
+                    # all), so the deck is opened without a window instead:
+                    # nothing appears on the desktop, and a PowerPoint the
+                    # user already has open keeps its own windows untouched.
+                    ppt = powerp.Presentations.Open(in_file, WithWindow=False)
                     # PowerPoint's Close() takes no SaveChanges argument (Word's
                     # Document.Close does), and Save() alone no-ops on a deck
                     # opened unmodified: mark it dirty so PowerPoint really

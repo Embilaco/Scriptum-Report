@@ -128,10 +128,13 @@ def test_the_deck_carries_the_documents_title(tmp_path):
 def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
     """``finish=True`` hands the saved deck to PowerPoint, which rewrites the
     file (Windows only; a no-op elsewhere) -- and the re-save must not change
-    what the deck says. Where PowerPoint cannot finish -- absent, busy, or
-    refusing the call -- the runner prints the reason and the deck stays the
-    plain save: that reports here as xfailed with the reason, never as a
-    failure."""
+    what the deck says. ``createpdf=True`` rides along so the PDF export is
+    pinned too; before this it was exercised only by the manual scripts. The
+    deck is opened ``WithWindow=False``, so a suite run puts no PowerPoint
+    window on the desktop -- if one starts flashing up again, that regressed.
+    Where PowerPoint cannot finish -- absent, busy, or refusing the call --
+    the runner prints the reason and the deck stays the plain save: that
+    reports here as xfailed with the reason, never as a failure."""
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
@@ -141,7 +144,7 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
         include_patterns=["*.yaml", "template.pptx"],
         data_source_dir=DATA_SOURCE,
         finish=True,
-        createpdf=False,
+        createpdf=True,
     )
     with com_quiet():
         deck = run_pptx_case(config, tmp_path)
@@ -153,6 +156,8 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
 
     report = checkreport_comparison(deck, REFERENCE)
     assert report == '', report
+    pdf = deck.parent / 'final_report.pdf'
+    assert pdf.exists() and pdf.stat().st_size > 0, 'createpdf left no PDF beside the deck'
 
 
 def test_the_checkreport_notebook_would_say_identical(tmp_path):
