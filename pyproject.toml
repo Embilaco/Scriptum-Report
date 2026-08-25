@@ -54,6 +54,9 @@ release = ["build>=1.0", "twine>=5.0"]
 script-files = [ "scripts/convert_video.sh", "scripts/convert_video.py", "scripts/check_docx.py",
                  "scripts/check_pptx.py", "scripts/check_rdf.py", "scripts/rdf2yaml.py" ]
 
+# Package discovery finds importable packages only; CHANGELOG and docs are
+# carried by the sdist via MANIFEST.in (they are not packages and listing
+# them here never shipped them).
 [tool.setuptools.packages.find]
-include = ["Scriptum*", "CHANGELOG", "docs"]
-exclude = ["tests**","tests*","*tests*"]
+include = ["Scriptum*"]
+exclude = ["tests**", "tests*", "*tests*"]
