@@ -10,9 +10,7 @@ descriptions -- one sized by ``height``, one pinned by ``left``/``top``
 only checks the file is there proves none of that, so this module reads the
 deck back:
 
-* what it *says*, against ``expected/powerpoint_simple.json`` (captured at
-  `44267a8` from the ``.rdf`` this fixture was translated from; re-captured
-  when the missing ``bootseal2.png`` fills became ``pudding.jpg``);
+* what it *says*, against ``expected/powerpoint_simple.json`` ;
 * what it *shows*: the layouts in order, the pictures with their sizes,
   the table, and the text boxes the parameter file and the text file
   produced.

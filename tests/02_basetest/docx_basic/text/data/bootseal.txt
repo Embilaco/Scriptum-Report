@@ -1,1 +1,6 @@
-Boot seals are used to protect constant velocity joints and steering mechanisms in automobiles. These flexible components must accommodate the motions associated with angulation of the steering mechanism. Some regions of the boot seal are always in contact with an internal metal shaft, while other areas come into contact with the metal shaft during angulation. In addition, the boot seal may also come into contact with itself, both internally and externally. The contacting regions affect the performance and longevity of the boot seal.
+Boot seals are used to protect constant velocity joints and steering mechanisms in automobiles.
+These flexible components must accommodate the motions associated with angulation of the
+steering mechanism. Some regions of the boot seal are always in contact with an internal metal shaft,
+while other areas come into contact with the metal shaft during angulation. In addition,
+the boot seal may also come into contact with itself, both internally and externally.
+The contacting regions affect the performance and longevity of the boot seal.
