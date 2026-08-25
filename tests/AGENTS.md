@@ -41,3 +41,6 @@ the worktree carries before committing.
 The notebooks beside the tests are manual companions, not collected by
 pytest: each `CheckReport.ipynb` spreads its case test out cell by cell so
 you can look at every stage.
+
+Third-party material in the fixtures is credited in `NOTICE.md` beside this
+file — keep it current when fixtures change hands or sources.
