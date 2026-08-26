@@ -45,6 +45,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip('docx')    # every registered case builds a Word document
+
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 if str(TESTS_ROOT / '02_basetest') not in sys.path:
     sys.path.append(str(TESTS_ROOT / '02_basetest'))

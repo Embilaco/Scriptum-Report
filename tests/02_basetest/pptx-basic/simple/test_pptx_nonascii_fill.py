@@ -14,8 +14,9 @@ from pathlib import Path
 import shutil
 import sys
 
-import pptx
 import pytest
+
+pptx = pytest.importorskip('pptx')
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = THIS_DIR.parent

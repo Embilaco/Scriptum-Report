@@ -26,6 +26,8 @@
 #
 
 import sys
+from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
 
 # import os, ipdb
@@ -39,8 +41,9 @@ from pathlib import Path
 
 # if True or os.environ.get('DEBUG'): sys.excepthook = debug_hook
 
-__version__ = "2.0.0"
-version = __version__
+# The number itself lives in version.py, a leaf the back ends may read --
+# they stamp it into document properties and must not import this package.
+from .version import version, __version__
 
 licenses = [ 'SPDX-Identifier: PolyForm-Noncommercial-1.0.0', 'SPDX-Identifier: LicenseRef-SCRIPTUM-Commercial' ]
 
@@ -53,25 +56,53 @@ if str(_PROJECT_ROOT) not in sys.path:
 # all the enduser requires is this:
 from .rdf.reportDataFile import ReportDataFile
 
-__all__ = ['ReportDataFile', 'version', '__version__', 'licenses']
+__all__ = ['ReportDataFile', 'ManagedDocx', 'ManagedPptx',
+           'version', '__version__', 'licenses']
 
-# and this
-try:  
-    from ._docx.reportDocx import ManagedDocx  # type: ignore
-except Exception as e:  
-    print(f'Skip docx generation, package import failed: \n    {e}')
-else:
-    __all__.append('ManagedDocx')
+# The back ends load lazily (PEP 562): importing Scriptum touches neither
+# python-docx nor python-pptx, so the core -- reading report documents --
+# works with either library absent or broken. The first access to
+# ManagedDocx/ManagedPptx imports its back end; with the library missing
+# that access raises a ModuleNotFoundError naming the package to install.
+_BACKENDS = {
+    'ManagedDocx': ('python-docx', '._docx.reportDocx'),
+    'ManagedPptx': ('python-pptx', '._pptx.reportPptx'),
+}
 
-# and this
-try:  
-    from ._pptx.reportPptx import ManagedPptx  # type: ignore
-except Exception as e:  
-    print(f'Skip pptx generation, package import failed \n    {e}')
-else:
-    __all__.append('ManagedPptx')
 
-# do we need to react when we cannot import both of them?
+def __getattr__(name):
+    if name in _BACKENDS:
+        distribution, source = _BACKENDS[name]
+        try:
+            attribute = getattr(import_module(source, __name__), name)
+        except Exception as error:
+            raise ModuleNotFoundError(
+                f'{name} needs {distribution}, which did not load '
+                f'(pip install {distribution}): {error}') from error
+        globals()[name] = attribute
+        return attribute
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_BACKENDS))
+
+
+# A tool with no back end at all makes no sense: without both libraries it
+# can read report documents but generate nothing, and someone should hear
+# about that once, at import, not per attribute. A probe that raises counts
+# as unavailable -- broken metadata is as unusable as absence.
+def _importable(module):
+    try:
+        return find_spec(module) is not None
+    except Exception:
+        return False
+
+
+if not _importable('docx') and not _importable('pptx'):
+    print('WARNING: neither python-docx nor python-pptx is installed -- '
+          'Scriptum can read report documents but cannot generate anything. '
+          'Install python-docx and/or python-pptx.')
 
 __path__ = [str(_PACKAGE_ROOT)]
 
@@ -79,3 +110,6 @@ del _PACKAGE_ROOT
 del _PROJECT_ROOT
 del Path
 del sys
+# import_module stays: __getattr__ needs it whenever a back end first loads
+del find_spec
+del _importable

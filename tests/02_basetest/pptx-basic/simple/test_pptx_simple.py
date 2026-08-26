@@ -19,9 +19,10 @@ deck back:
 from pathlib import Path
 import sys
 
-import pptx
-from pptx.enum.shapes import MSO_SHAPE_TYPE
 import pytest
+
+pptx = pytest.importorskip('pptx')
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent

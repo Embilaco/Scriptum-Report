@@ -21,9 +21,10 @@ import os
 import sys
 from pathlib import Path
 
-import docx
-import pptx
 import pytest
+
+docx = pytest.importorskip('docx')
+pptx = pytest.importorskip('pptx')
 
 import Scriptum
 from Scriptum._docx.reportDocx import ManagedDocx

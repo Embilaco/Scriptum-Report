@@ -15,7 +15,9 @@ from pathlib import Path
 import shutil
 import sys
 
-import pptx
+import pytest
+
+pptx = pytest.importorskip('pptx')
 from pptx.dml.color import RGBColor
 
 THIS_DIR = Path(__file__).resolve().parent

@@ -25,8 +25,9 @@ from pathlib import Path
 import shutil
 import sys
 
-import docx
 import pytest
+
+docx = pytest.importorskip('docx')
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent

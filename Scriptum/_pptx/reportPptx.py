@@ -30,7 +30,7 @@ from .templates import makeTemplate
 from ..tag.tag import getTag, puretagOf
 from .shapes import getShapes
 from .slide import Slide
-from .. import version
+from ..version import version
 
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 

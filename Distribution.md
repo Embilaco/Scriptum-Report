@@ -20,7 +20,7 @@ itself is two commands, everything around it is what makes the upload boring.
 ## 1. Prepare the release
 
 - `pyproject.toml`: bump `version`.
-- `Scriptum/__init__.py`: bump `__version__` too — the back ends stamp
+- `Scriptum/version.py`: bump `__version__` too — the back ends stamp
   `Scriptum {version}` into every document's author property, and the two
   numbers must agree.
 - `CHANGELOG`: date the `unreleased` lines with the version

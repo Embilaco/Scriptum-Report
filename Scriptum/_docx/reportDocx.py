@@ -23,7 +23,7 @@ from ..tag import Tag
 
 import os
 
-from .. import version
+from ..version import version
 
 class ManagedDocx:
     def __init__(self, document: str, debug=False):

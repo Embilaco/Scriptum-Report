@@ -9,6 +9,10 @@ the branch is exercised here with a recording element rather than a deck.
 from pathlib import Path
 import sys
 
+import pytest
+
+pytest.importorskip('pptx')             # Scriptum._pptx needs the library
+
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = THIS_DIR.parent
 if str(CASE_ROOT) not in sys.path:

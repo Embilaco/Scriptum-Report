@@ -11,6 +11,9 @@ picture quietly parked at the slide edge, which no text comparison sees.
 
 from types import SimpleNamespace
 
+import pytest
+
+pytest.importorskip('pptx')             # Scriptum._pptx needs the library
 from pptx.util import Cm
 
 from Scriptum._pptx.template_utils import (

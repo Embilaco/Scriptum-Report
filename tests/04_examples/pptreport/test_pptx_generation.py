@@ -21,10 +21,11 @@ from pathlib import Path
 import importlib.util
 import sys
 
-import pptx
+import pytest
+
+pptx = pytest.importorskip('pptx')
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_MEDIA_TYPE
 from pptx.util import Cm
-import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
