@@ -133,7 +133,10 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
     window on the desktop -- if one starts flashing up again, that regressed.
     Where PowerPoint cannot finish -- absent, busy, or refusing the call --
     the runner prints the reason and the deck stays the plain save: that
-    reports here as xfailed with the reason, never as a failure."""
+    reports here as xfailed with the reason, never as a failure. Three
+    prints say so -- the COM failure, the off-Windows note, the missing
+    pywin32 note -- and all three must be caught: the first CI run on
+    ubuntu failed exactly here, because only the COM message was."""
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
@@ -149,8 +152,12 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
         deck = run_pptx_case(config, tmp_path)
     out = capsys.readouterr().out
 
-    if 'failed to update' in out:
-        tail = ' '.join(out[out.index('failed to update'):].split())
+    unfinished = next((signal for signal in ('failed to update',
+                                             'will prevent any finishing work',
+                                             'finishing needs pywin32')
+                       if signal in out), None)
+    if unfinished:
+        tail = ' '.join(out[out.index(unfinished):].split())
         pytest.xfail('PowerPoint could not finish the deck -- ' + tail[:200])
 
     report = checkreport_comparison(deck, REFERENCE)
