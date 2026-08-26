@@ -3,19 +3,17 @@
 `8c3c210` widened the bare-name lookup -- what an ``add`` at a marker carries
 -- to every block flagged ``template``; the shipped templates keep blueprint
 names unique, so the collision rules ran on trust: the template section
-outranks an in-content blueprint, any multi-hit is warned about (names being
-documented as unique), and the loser is not touched -- an unused in-content
-blueprint **ships**, by the same decision.
+outranks an in-content blueprint, and any multi-hit is warned about (names
+being documented as unique).
 
-The document uses the colliding name the way the tables fixture uses
-``table:orange``: instance 1 fills the in-content blueprint in place,
-instance 2 is added at the marker and resolved by bare name. Using the name
-*only* through the marker splits the two halves of the add -- the lookup
-takes the collision winner while the fill follows the ::1 address to the
-in-content namesake, so the clone ships empty and the content lands in the
-blueprint where it stands. Decided on the DOCX board's question
-(2026-08-25): the behaviour stays and the split is **warned about**, which
-the last test pins.
+Since the ladder rule was extended to in-content blocks (*Flagged is never
+content, uniformly*, DOCX board, 2026-08-26), a flagged block is a blueprint
+everywhere: instance 1 of ``table:dup`` is a clone standing exactly where
+the blueprint stood, an unused blueprint -- the collision loser included --
+is pruned instead of shipping with its sample text, and an add-only use no
+longer splits: the fill skips the flagged namesake and lands in the clone
+the add placed at the marker, so the old two-halves warning is gone along
+with the behaviour it warned about.
 
 Templates are built in-test, the way ``test_docx_clone_order.py`` builds its
 own; like there, each carries a ``section:template`` -- ``typesetting``
@@ -125,15 +123,16 @@ def cells(table):
 def test_the_template_section_wins_the_collision(tmp_path, capsys):
     """The add clones the ``section:template`` blueprint, not the in-content
     one -- and says so: a multi-hit is warned about even when the ranking
-    settles it. Instance 1 fills the in-content blueprint in place, which
-    then ships; the template section itself is removed as always."""
+    settles it. Instance 1 is a clone of the in-content blueprint, standing
+    exactly where the blueprint stood -- same fingerprint, same spot, the
+    blueprint itself pruned; the template section is removed as always."""
     tables = generate(tmp_path, collision_template(in_template_section=True))
     out = capsys.readouterr().out
 
     assert fingerprints(tables) == ['FromTemplateSection', 'FromContent'], \
-        'the clone at the marker first, then the in-place-filled blueprint'
+        'the clone at the marker first, then the clone in the blueprint spot'
     assert 'ZZadded' in cells(tables[0]), 'the marker add got its own CSV'
-    assert 'ZZinplace' in cells(tables[1]), 'instance 1 filled in place'
+    assert 'ZZinplace' in cells(tables[1]), 'instance 1 filled where the blueprint stood'
     assert "template 'table:dup' is ambiguous" in out
     assert 'section:template' in out.split('is ambiguous', 1)[1].splitlines()[0], \
         'the warning lists the hits, the template section first'
@@ -141,40 +140,33 @@ def test_the_template_section_wins_the_collision(tmp_path, capsys):
 
 def test_without_a_template_section_hit_the_first_flagged_block_wins(tmp_path, capsys):
     """Both blueprints live in content sections: the first in document order
-    is cloned to the marker, the ambiguity is still warned about, and the
-    unused loser ships on unchanged."""
+    is cloned to the marker, the ambiguity is still warned about -- and the
+    unused loser is pruned, not shipped."""
     tables = generate(tmp_path, collision_template(in_template_section=False))
     out = capsys.readouterr().out
 
-    assert fingerprints(tables) == ['FromContent', 'FromContent', 'FromSecond'], \
-        'the clone of the first flagged block, then the two shipping blueprints'
+    assert fingerprints(tables) == ['FromContent', 'FromContent'], \
+        'the clone at the marker, the clone in the blueprint spot -- no loser'
     assert 'ZZadded' in cells(tables[0])
     assert 'ZZinplace' in cells(tables[1])
-    assert not any(text.startswith('ZZ') for text in cells(tables[2])), \
-        'the losing blueprint is untouched'
     assert "template 'table:dup' is ambiguous" in out
 
 
-def test_an_add_only_use_of_the_colliding_name_is_warned_about(tmp_path, capsys):
-    """The unsettled story, settled (question on the DOCX board, decided
-    2026-08-25, option 1): the name's only use is the marker add, so its
-    address is instance ::1 -- the lookup clones the collision winner to the
-    marker, the fill follows the address to the flagged in-content namesake.
-    The behaviour stays exactly that -- the clone ships empty, the content
-    lands in the blueprint where it stands -- and the split is now warned
-    about, naming the landing."""
+def test_an_add_only_use_of_the_colliding_name_fills_the_clone(tmp_path, capsys):
+    """The old two-halves split is gone: the name's only use is the marker
+    add, so its address is instance ::1 -- the lookup clones the collision
+    winner to the marker, and the fill, skipping the flagged namesake,
+    lands in exactly that clone. The unused in-content blueprint is pruned;
+    nothing is left to warn about (the ``0a518d0`` warning went with the
+    behaviour -- *Flagged is never content, uniformly*, DOCX board)."""
     tables = generate(tmp_path, collision_template(in_template_section=True),
                       body=ADD_ONLY_BODY)
     out = capsys.readouterr().out
 
-    assert fingerprints(tables) == ['FromTemplateSection', 'FromContent'], \
-        'the clone at the marker, then the in-content blueprint it did not fill'
-    assert not any(text.startswith('ZZ') for text in cells(tables[0])), \
-        'the clone at the marker stays empty'
-    assert 'ZZadded' in cells(tables[1]), \
-        'the content lands in the blueprint where it stands'
-    warning = next((line for line in out.splitlines()
-                    if 'the clone stays empty' in line), '')
-    assert warning, 'the split is warned about'
-    assert "'table:dup'" in warning and 'section:mix::1.table:dup::1' in warning, \
-        'the warning names the added template and where the fill lands'
+    assert fingerprints(tables) == ['FromTemplateSection'], \
+        'one table: the clone at the marker; the unused blueprint is pruned'
+    assert 'ZZadded' in cells(tables[0]), 'the content lands in the clone'
+    assert 'the clone stays empty' not in out, \
+        'the split warning went with the split'
+    assert "template 'table:dup' is ambiguous" in out, \
+        'the name collision itself is still worth a warning'

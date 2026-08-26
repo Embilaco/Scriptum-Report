@@ -17,7 +17,6 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.shared import RGBColor
 from .section import Sections
-from ..rdf.namespaces import docx_sections
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag
 
@@ -50,6 +49,10 @@ class ManagedDocx:
         # parsing stdout
         self.errors = errors
         self.warnings = warnings
+
+        # blueprints that left the tree when their first clone was placed --
+        # the pruning pass deletes them at the end (typesetting resets it)
+        self.spentBlueprints = []
 
         if warnings:
             print('There are warnings in the template, outcome might be not as expected:')
@@ -85,7 +88,21 @@ class ManagedDocx:
                 return
             parent = root.addressbook.get('.'.join(what[:-1]),None)
             if parent:
-                found = parent.findExact(what)
+                # A flagged block is a blueprint, never content. The fill
+                # skips it and keeps scanning -- an add's clone is appended
+                # *behind* the blueprint in structure order, so this is what
+                # lets the ::1 fill reach the instance the add placed at its
+                # marker instead of writing into the doomed blueprint.
+                found = parent.findExact(what, warn=False, skipBlueprints=True)
+                if not found:
+                    # Nothing real holds the address. Either it is a
+                    # blueprint's first use -- then the ladder rule applies
+                    # to it too: clone it where it stands, fill the clone --
+                    # or there is truly nothing, which warns as before.
+                    found = parent.findExact(what)
+                    if found and self._isBlueprintBlock(found[0]):
+                        found = [self._cloneBlueprintForFill(found[0], parent,
+                                                             what, root)]
                 #print('F',found)
             else:
                 print(f'WARNING: cannot find parent structure {(".".join(what[:-1]))}')
@@ -121,6 +138,40 @@ class ManagedDocx:
                     # so a clone's tag still reads `text:description`.
                     self.fillGeneric(t.puretag,t,e,value,
                                      task.actions if task.modified else None)
+
+    @staticmethod
+    def _isBlueprintBlock(entry):
+        """A block entry whose tag says ``template`` -- a blueprint.
+
+        Only block entries count: a simple tag carrying ``isTemplate``
+        (inside ``section:template``) has no structure to clone.
+        """
+        t, e = entry
+        return (t in ('text', 'struct', 'table', 'image')
+                and getattr(e, 'isTemplate', False))
+
+    def _cloneBlueprintForFill(self, entry, parent, address, root):
+        """First use of an in-content blueprint: clone it, fill the clone.
+
+        The ladder rule (typesetting stage 1) extended to ``table:``/
+        ``image:``/``text:`` blocks: the clone lands exactly where the
+        blueprint stands (before its opening paragraph), the blueprint
+        leaves the parent's structure so no later lookup resolves to it,
+        and it is remembered as spent for the pruning pass. A blueprint
+        that was never through ``getTemplates()`` -- nested inside a
+        clone -- gets its deepcopy here.
+        """
+        t, element = entry
+        if not hasattr(element, 'deepcopy'):
+            element.createTemplate()
+        firstElement = element.structure[0][1]
+        parent.structure = [(pt, pe) for pt, pe in parent.structure
+                            if pe is not element]
+        self.spentBlueprints.append(element)
+        clone = element.copy(firstElement, parent=parent,
+                             newpath=address[:-1], newname=address[-1],
+                             section=root)
+        return (t, clone)
 
     def fillGeneric(self, target: str, tag: Tag, elem, value, actions=None):
         """always do that loop for paragraph type elements and text value types"""
@@ -191,7 +242,7 @@ class ManagedDocx:
         # Blueprints that were cloned in place of being filled. They leave the
         # tree when their first instance is cloned, so the pruning pass at the
         # end cannot find them by walking it; they are remembered here instead.
-        spentBlueprints = []
+        self.spentBlueprints = []
 
         if not addcopy:
             print('   SKIP: add and copy new paragraphs and more ...')
@@ -257,7 +308,7 @@ class ManagedDocx:
                                 element.createTemplate()
                             parent.structure = [(pt, pe) for pt, pe in parent.structure
                                                 if pe is not element]
-                            spentBlueprints.append(element)
+                            self.spentBlueprints.append(element)
                             element.copy(firstElement, parent=parent,
                                          newpath=t.myAddress[:-1],
                                          newname=t.myAddress[-1], section=root)
@@ -287,21 +338,6 @@ class ManagedDocx:
                         anchor = where[0][1]
                         tpl = self.sections.findTemplate(t.target)
                         #print('   add tpl and anchor 0', t.myAddress, where, anchor, tpl)
-
-                        # When this add is the name's ONLY use, its address is
-                        # instance ::1 -- and the fill stage's findExact will
-                        # resolve that to the flagged in-content namesake, not
-                        # to the clone placed here: the content lands in the
-                        # blueprint where it stands and the clone stays empty.
-                        # Diagnosed, not changed (decided on question
-                        # 6d0fb2bff28c, option 1: warn on the collision).
-                        landing = parent.findExact(t.myAddress, warn=False)
-                        if landing and getattr(landing[0][1], 'isTemplate', False):
-                            print(f"WARNING: the add of {t.target!r} at {t.where!r} fills "
-                                  f"{'.'.join(t.myAddress)}, which is the flagged in-content "
-                                  f"block, not the clone placed at the marker -- the clone "
-                                  f"stays empty. Fill instance 1 in place first, or rename "
-                                  f"one of the same-named templates.")
 
                         if tpl:
                             #print('   add tpl and anchor 1', parent)
@@ -381,7 +417,7 @@ class ManagedDocx:
         else:
             print('   remove template section and blueprints...')
             self.sections.delete('template')
-            self.pruneBlueprints(spentBlueprints)
+            self.pruneBlueprints(self.spentBlueprints)
 
         if not cleardust:                
             print('   SKIP: clearing all the dust...')
@@ -409,11 +445,15 @@ class ManagedDocx:
     def pruneBlueprints(self, spent):
         """Remove every blueprint from the document, used or not.
 
-        A blueprint is a section-ladder block whose tag says ``template``. It
-        is never content: its instances are clones, and once they are placed
-        the blueprint has nothing left to do -- and an unused one would stay
-        in the finished document otherwise, tags cleaned and text intact,
-        which is what used to happen.
+        A blueprint is any block whose tag says ``template`` -- a
+        section-ladder block or an in-content ``table:``/``image:``/
+        ``text:`` block (an open text block outside ``section:template``
+        explores as a ``struct``). It is never content: its instances are
+        clones, and once they are placed the blueprint has nothing left to
+        do -- and an unused one would stay in the finished document
+        otherwise, tags cleaned and sample text intact, which is what used
+        to happen (for in-content blocks until the ladder rule was extended
+        to them).
 
         Two kinds have to be found two ways. A blueprint that was cloned left
         its parent's structure when that happened, so it is taken from
@@ -426,13 +466,11 @@ class ManagedDocx:
         the two is harmless, and so is meeting a nested blueprint after its
         parent already went.
         """
-        ladder = docx_sections['order']
         found = list(spent)
         for sec in self.sections:
             if sec.name == 'template':
                 continue  # went wholesale, just above
-            found += [e for e in sec.iterOnStructures()
-                      if e.isTemplate and e.type in ladder]
+            found += [e for e in sec.iterOnStructures() if e.isTemplate]
         for e in found:
             e.delete(verbose=False)
 

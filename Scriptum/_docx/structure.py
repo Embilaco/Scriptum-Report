@@ -262,13 +262,18 @@ class StructuredElement:
         #yield from newiter
         return newiter
 
-    def findExact(self, path, warn=True):
+    def findExact(self, path, warn=True, skipBlueprints=False):
         """expect a list with entries, that start with path
         we will found either one or nothing
 
         warn=False keeps a miss quiet -- for callers that probe where a
-        path WOULD land (the add-collision diagnosis) rather than expect
-        it to exist"""
+        path WOULD land rather than expect it to exist
+
+        skipBlueprints=True passes over block entries whose tag says
+        ``template``: a blueprint is never content, and the fill that asks
+        this way must reach the real instance -- an add's clone is appended
+        *behind* the blueprint in structure order, so the scan continues
+        instead of stopping at the flagged block"""
 
         l = len(path)
         result = []
@@ -282,6 +287,8 @@ class StructuredElement:
             if t in ['text','struct', 'table', 'image'] and e.path == path:
                 # the thing I am looking for is a table or a image in that structure
                 #print('exact t or i',t,e.path,path)
+                if skipBlueprints and e.isTemplate:
+                    continue
                 result += [(t,e)]
                 break
             elif type(t) == Tag and (e.path+[t.canonical])[:l] == path:

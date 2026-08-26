@@ -137,7 +137,11 @@ A **container** (a section or a slide) has a sequence as its value. Its first
 instance fills the block the template already contains; further instances of
 the same address in the same parent are clones of it. A block whose template
 tag carries the `template` argument is a *blueprint* and is cloned for every
-instance, the first included. PowerPoint copies always.
+instance, the first included — the first clone stands exactly where the
+blueprint stands. That holds for every kind of block, the section ladder and
+in-content `table:`/`image:`/`text:` blocks alike, and a blueprint itself is
+never content: used or not, it does not ship in the finished document.
+PowerPoint copies always.
 
 A **fill** has a scalar or a mapping as its value — see *Values* below.
 
@@ -159,8 +163,10 @@ address names — `image:generic`, `table:generic` — and places it at the mark
 The block may live in `<section:template>` or carry the `template` argument
 anywhere in the document; if the same name exists in both places, the template
 section wins and the run warns about the ambiguity. A fill *outside* a marker
-never creates anything: it targets something the template already contains.
-Markers may repeat and may interleave with fills.
+targets something the template already contains — and when that target is a
+flagged blueprint, its first use stands a clone in the blueprint's place,
+since a blueprint itself never ships. Markers may repeat and may interleave
+with fills.
 
 ### Includes
 
