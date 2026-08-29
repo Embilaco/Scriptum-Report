@@ -5,6 +5,7 @@
 .venv*
 .vscode
 tests/01_internal_tests
+tests/03*
 tests/8*
 tests/9*
 tests/xx*
