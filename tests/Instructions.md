@@ -10,10 +10,7 @@ on this machine.
   `Python314`).
 - Every worktree (`dev\Scriptum-Report-main` = main, `dev\Scriptum-Report-dev`,
   `dev\Scriptum-Report-dev-yaml`) carries its **own** venvs, named `.venv3XX`
-  after the minor version. (When the main checkout moves — it lived in
-  `site-packages\Scriptum-Report` until 2026-08 — the linked worktrees break
-  with "not a git repository"; run `git worktree repair <worktree paths>`
-  from the main checkout to relink them.) They are gitignored (`.venv*`) and never follow git.
+  after the minor version. They are gitignored (`.venv*`) and never follow git.
 - A venv **stops working entirely** once its base install is uninstalled:
   the venv's `python.exe` is a launcher that resolves `home = <somewhere>\Python3XX`
   from `pyvenv.cfg`. So capture `pip freeze` from the old venv *while the old

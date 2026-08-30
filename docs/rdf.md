@@ -137,11 +137,7 @@ A **container** (a section or a slide) has a sequence as its value. Its first
 instance fills the block the template already contains; further instances of
 the same address in the same parent are clones of it. A block whose template
 tag carries the `template` argument is a *blueprint* and is cloned for every
-instance, the first included — the first clone stands exactly where the
-blueprint stands. That holds for every kind of block, the section ladder and
-in-content `table:`/`image:`/`text:` blocks alike, and a blueprint itself is
-never content: used or not, it does not ship in the finished document.
-PowerPoint copies always.
+instance, the first included. PowerPoint copies always.
 
 A **fill** has a scalar or a mapping as its value — see *Values* below.
 
@@ -159,14 +155,15 @@ things to add at the `<marker:name/>` tag of the template:
 ```
 
 Each entry inside a marker creates a new element from the template block its
-address names — `image:generic`, `table:generic` — and places it at the marker.
+address names — `image:generic`, `table:generic` — and places it *before* the
+markers paragraph.
 The block may live in `<section:template>` or carry the `template` argument
 anywhere in the document; if the same name exists in both places, the template
 section wins and the run warns about the ambiguity. A fill *outside* a marker
-targets something the template already contains — and when that target is a
-flagged blueprint, its first use stands a clone in the blueprint's place,
-since a blueprint itself never ships. Markers may repeat and may interleave
-with fills.
+never creates anything: it targets something the template already contains.
+Markers may repeat and may interleave with fills.
+Anything that is added by a marker will take its formatting from the template,
+not from the marker. This is a current limitation, ideas welcome.
 
 ### Includes
 
@@ -229,10 +226,7 @@ reads as structure.
 colour target (`color`, or any `color:…` address) reads its value as a colour:
 a name (`red`, `steelblue`), six hex digits with or without `#` (`ff0000` —
 unquoted `#ff0000` is a YAML comment), or `rgb(255, 0, 0)`. An unrecognised
-colour is an error rather than silently black. A colour does its visible work
-as a **modifier** on another fill, where it paints the text that fill writes
-(see *Modifiers*); a bare colour target parses and is checked, but no back
-end paints anything with it yet.
+colour is an error rather than silently black.
 
 ### Mappings: where the bytes come from, and how
 
@@ -256,10 +250,7 @@ File-backed values — text files, parameter files, CSVs — are read as **UTF-8
 on every platform. (Until 2026-08-24 text and parameter files were read in the
 platform encoding, so the same document rendered umlauts differently per
 machine; a legacy ANSI-encoded file with non-ASCII content now fails loudly
-instead of appearing to work.) A text file's line breaks arrive in the
-document **as written** — one break in the file is one break in the report.
-(Until 2026-08-25 every break doubled into a blank line, unnoticed while the
-text fixtures were single-line.)
+instead of appearing to work.)
 
 ### Text
 
@@ -375,24 +366,6 @@ value (`description: {from: row1}`), but no modifiers of its own.
 **Lengths** — `width`, `height`, `top`, `left`, `bottom`, `right` — need a
 unit: `cm`, `mm`, `in` (or `inch`), `pt`. `width: 4` is an error, not four of
 something implied. A unit suffix on any other value is just text.
-
-**Colour** — a `color` modifier paints the font of the text its fill writes,
-in Word and PowerPoint alike:
-
-```yaml
-- report:status: {text: DRAFT, color: 'B00020'}   # corporate signal red
-- head:
-    text: Serving
-    color: steelblue                              # or rgb(70, 130, 180)
-```
-
-The paint lands exactly on the run that received the text, so template text
-around the tag keeps its own colour. It works wherever a fill writes text —
-direct fills, `_global_` fills, text-file and parameter-file fills, and a
-PowerPoint template clone added at a marker. What has no text takes no
-colour: images, videos and table fills ignore it (a table's look comes from
-the template's own cells). The notation is that of a colour target, and an
-unrecognised colour is an error at read time, not a silently black word.
 
 ## Quoting
 

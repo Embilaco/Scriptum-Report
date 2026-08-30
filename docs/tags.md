@@ -1,21 +1,21 @@
 # About tags and tag formats
 A tag is a string like this
 
-`<this:tag argument1 argument2>` 
+`<this:tag argument1 argument2>`
 
-which is an opening tag that requires a closing tag: 
+which is an opening tag that requires a closing tag:
 
 `</this:tag>`
 
-This 
+This
 
-`<simple:tag/>` 
+`<simple:tag/>`
 
 is a simple tag since it closes itself
 
 ## Quotes
 
-Quotes "" or '' are not used inside tags which is against [XML specs](https://www.w3.org/TR/xml/). However, Word is mangling this text and the quotes here are Unicode characters different to Python quotes. Thus, in contrast to XML specs it is 
+Quotes "" or '' are not used inside tags which is against [XML specs](https://www.w3.org/TR/xml/). However, Word is mangling this text and the quotes here are Unicode characters different to Python quotes. Thus, in contrast to XML specs it is
 `<image:generic width=9cm>` instead of `<image:generic width="9cm">`.
 Nevertheless, this template follows XML-syntax as far as possible.
 
@@ -41,7 +41,7 @@ Arguments after a ` ` blank cannot include colons `:` or blanks themselves; the 
 
 ## Other characters
 
- * Comma `,` or semicolon `;` are useful only in `<comment: bla, bla, bla/>` which is a ignored tag
+ * Comma `,` or semicolon `;` are useful only in `<comment: bla, bla, bla/>` which is an ignored tag
  * The equal character `=` gives an argument a value: `width=`/`height=` on images, `name=` in the config-table tags.
 
 ## Special arguments:
@@ -54,7 +54,7 @@ The `template` argument flags a block as a *blueprint*: every instance the repor
 
 `<a template>
 Foo
-</a>` 
+</a>`
 
 
  - `breakbefore` (not used in Powerpoint)
@@ -69,9 +69,11 @@ Foo
 
 ### Fixed tag naming
 These tags are predefined
- - Sections – `section:foo` - used in Word, together with `subsection:..`, `subsubsection:...`, `sub3section:...`, `sub4section:...`,`sub5section`. 
+ - Sections – `section:foo` - used in Word, together with `subsection:..`, `subsubsection:...`, `sub3section:...`, `sub4section:...`,`sub5section`.
  - Slide - `slide:foo` - used in Powerpoint, but only as the name of the slide template
  - Images – `image:foo`
  - Videos - `video:foo` (Powerpoint only)
  - Tables – `table:foo`
  - Markers – `marker:foo`
+ - Comments - `comment`
+ - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice
