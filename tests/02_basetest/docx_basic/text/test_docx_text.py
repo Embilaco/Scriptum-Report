@@ -116,14 +116,20 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
     assert sum(text.startswith('A title is everything') for text in texts) == 1
     announced = [text for text in texts if text.startswith('file ') and text.endswith('not found')]
     assert len(announced) == 2
-    # both clones land between the template's own paragraphs and the
-    # section's own marker fill after all of them; the paragraphs that
-    # surrounded the pruned secondsubb blueprint stayed where they were
+    # the two instances of secondsuba stand together where the blueprint
+    # stood, and every ordinary paragraph the template holds after it stays
+    # behind both -- 'Between the subsections' used to land in the gap
+    # between instance 1 and instance 2, and the paragraphs that surrounded
+    # the pruned secondsubb blueprint now meet with nothing in between. The
+    # section's own marker fill comes last of all. The ladder case
+    # beside this one pins that rule on its own.
     order = [texts.index(text) for text in
              ('Before the subsections',
               '- SUB SECONDA - Header 1',
-              'Between the subsections',
               '- SUB SECONDA - Header 2',
+              'Between the subsections',
+              'Subsection secondsubb is not really used and thus it will '
+              'vanish in the final document:',
               'This is just behind that missing subsection secondsubb',
               'After the subsections',
               'Where will this end?')]

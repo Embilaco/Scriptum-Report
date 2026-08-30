@@ -9,9 +9,12 @@ which always copies.
 Placement follows from that. The first instance of a blueprint goes exactly
 where the blueprint stands -- before its opening paragraph, which is then
 removed with the rest of it -- so the finished document keeps the template's
-order whatever order the data names things in. Further instances go before
-the first *unclaimed* sibling, and claiming a child claims everything ahead of
-it (``claimSubAnchor``): an earlier blueprint the data never used must not
+order whatever order the data names things in. Further instances go behind
+the instance they repeat (``followInstance``); the ``ladder`` case beside
+this one pins that half, on a template carrying prose in every gap, which is
+where it can be seen at all. Where nothing was recorded the fallback
+is the first *unclaimed* sibling, and claiming a child claims everything ahead
+of it (``claimSubAnchor``): an earlier blueprint the data never used must not
 stay at the front, or the next clone goes in upstream of the block it follows,
 which is the defect reproduced here on two of the shipped templates.
 

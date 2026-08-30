@@ -94,6 +94,9 @@ class StructuredElement:
         self.anchor = anchor
         # for sections and subsections etc, we require more anchors
         self.subAnchors = []
+        # where a *further* instance of a child block goes, by puretag --
+        # see followInstance() below
+        self.followOn = {}
         #print('build', parent, self.type, self.type in docx_sections['order'])
         if parent and self.type in docx_sections['order']: # not None
             self.parent.subAnchors += [content[0][1]]
@@ -115,16 +118,52 @@ class StructuredElement:
             self.isTemplate = True
         #print(tag.args,path,self.isTemplate)
 
+    def followInstance(self, puretag, anchor):
+        """Remember where a **further** instance of *puretag* goes.
+
+        A repeated block belongs immediately behind the instance before it.
+        ``subAnchors[0]`` -- the next unclaimed sibling -- is not that place:
+        it walks past every ordinary paragraph the template holds between the
+        two blocks, and that prose is fixed text belonging *after* all the
+        instances. ``template.docx`` shows both halves of the damage: with
+        ``subsection:secondsuba`` used twice, *Between the subsections* landed
+        between instance 1 and instance 2, and a repeat of the **last**
+        blueprint of a section landed past the section's own closing prose
+        altogether.
+
+        The anchor kept here is the blueprint's own opening paragraph.
+        Instance 1 is a clone inserted directly before it and the blueprint is
+        pruned at the end, so that paragraph *is* the gap just behind instance
+        1 -- and every further instance inserted there in turn stacks up in
+        task order behind the ones already placed.
+
+        Only a blueprint is recorded. An unflagged block is its own instance 1
+        and the gap behind it is no element of this tree; repeating one does
+        not reach here anyway, ``findTemplate`` looking only at flagged blocks.
+        """
+        self.followOn[puretag] = anchor
+
+    def followOnAnchor(self, puretag):
+        """Where a further instance of *puretag* goes, or ``None``.
+
+        ``None`` while no instance of that block has been placed in this
+        parent yet, which leaves the caller on the plain ladder rule.
+        """
+        return self.followOn.get(puretag)
+
     def claimSubAnchor(self, firstElement):
         """Mark a child structure as taken, and everything ahead of it too.
 
         ``subAnchors`` holds the opening paragraph of each ladder-type child in
-        document order, and a clone is inserted before the first one still in
-        the list. Removing **only** the claimed child left any *earlier*
-        blueprint the document never used sitting at the front -- so the next
-        clone went in before it, upstream of the very block it was meant to
-        follow. The unused blueprint is pruned later, by which time the clone is
-        already in the wrong place.
+        document order. It is the **fallback** insertion rule now -- a clone
+        goes before the first entry still in the list -- reached only where
+        :meth:`followInstance` recorded nothing, since a repeat belongs behind
+        the instance it repeats and not on the far side of the template's own
+        prose. Keeping the list right still matters: removing **only** the
+        claimed child left any *earlier* blueprint the document never used
+        sitting at the front, so the next clone went in before it, upstream of
+        the very block it was meant to follow. The unused blueprint is pruned
+        later, by which time the clone is already in the wrong place.
 
         Reproduced on two of the shipped templates; see *A clone can land above
         the instance it follows* on the DOCX board.
@@ -449,6 +488,9 @@ class StructuredElement:
         _subs = [s for s in parent.subAnchors]
         mycopy = StructuredElement(newElements[0].tags[0], newpath, parent, newUnfoldedElements, e)
         parent.subAnchors = _subs
+        # a clone starts with no instances of its own placed yet: the copies
+        # of the blueprints it carries are new blocks in a new parent
+        mycopy.followOn = {}
         mycopy.explore()
         # A parent's explore() marks each child's opening paragraph for
         # deletion when it meets the open tag; a clone is appended without

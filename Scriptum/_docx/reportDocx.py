@@ -18,7 +18,7 @@ from docx.oxml.ns import qn
 from docx.shared import RGBColor
 from .section import Sections
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
-from ..tag import Tag
+from ..tag import Tag, puretagOf
 
 import os
 
@@ -312,6 +312,13 @@ class ManagedDocx:
                             element.copy(firstElement, parent=parent,
                                          newpath=t.myAddress[:-1],
                                          newname=t.myAddress[-1], section=root)
+                            # This clone sits directly before the blueprint's
+                            # opening paragraph, so that paragraph is the gap
+                            # just behind it -- where instance 2 belongs, and
+                            # not wherever the next unused sibling stands.
+                            # See StructuredElement.followInstance.
+                            parent.followInstance(puretagOf(t.myAddress[-1]),
+                                                  firstElement)
 
                         # Claims this child *and everything ahead of it*, so a
                         # later clone cannot be inserted upstream of the block
@@ -358,14 +365,20 @@ class ManagedDocx:
                         
                         tpl = self.sections.findTemplate(t.path)
 
-                        if parent.subAnchors:
-                            #print('subAnchors')
-                            #for a in parent.subAnchors:
-                            #    print('   ',a.thing.text)
-                            anchor = parent.subAnchors[0]
-                        else:
-                            #print('anc',parent.anchor)
-                            anchor = parent.anchor
+                        # Right behind the instance this one repeats, if that
+                        # instance has been placed -- the template's own prose
+                        # between two blocks belongs after all of them, and
+                        # the next unclaimed sibling is on the far side of it.
+                        anchor = parent.followOnAnchor(puretagOf(t.myAddress[-1]))
+                        if anchor is None:
+                            if parent.subAnchors:
+                                #print('subAnchors')
+                                #for a in parent.subAnchors:
+                                #    print('   ',a.thing.text)
+                                anchor = parent.subAnchors[0]
+                            else:
+                                #print('anc',parent.anchor)
+                                anchor = parent.anchor
 
                         if tpl:
                             newElements = tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1], newname=t.myAddress[-1], section=root)

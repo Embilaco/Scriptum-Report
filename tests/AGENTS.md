@@ -16,7 +16,9 @@ the worktree carries before committing.
   - `tag` — the `<tag arg=.../>` parser
   - `docx_basic` — one directory per Word case (document + template +
     `expected/` reference + `CheckReport.ipynb`): `simple`, `text`, `images`,
-    `tables`
+    `tables`; plus `ladder` — no reference and no notebook, a clean
+    section>subsection>subsubsection>sub3section template with prose in every
+    gap, which is what makes the placement of a repeated block observable
   - `pptx-basic` — the PowerPoint side: `simple` is the case, and
     `internal_structures` pins the shipped template's layout/tag inventory
     and the placement math, beside `inspect-*.ipynb` exploration notebooks

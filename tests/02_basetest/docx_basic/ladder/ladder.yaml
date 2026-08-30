@@ -1,0 +1,50 @@
+# The canonical ladder document: a repeat at every depth of template.docx.
+#
+# alpha twice, 'one' twice inside the first alpha, 'deep' twice inside the
+# first 'one' -- so each level is exercised as a repeat while the level above
+# it is not, which is the only way a misplaced clone at one depth cannot hide
+# behind a misplaced clone at another. beta is used once, after the repeated
+# alpha: a sibling block keeps its own place in the template's order however
+# often the block ahead of it repeats.
+#
+# Every marker is fed too, so a marker fill cannot be mistaken for a clone.
+
+_scriptum_:
+  version: 4
+  documenttype: docx
+  datadir: ./data
+
+_content_:
+  - section:main:
+      - marker:content:
+          - text:plain: added at the main marker
+
+      - subsection:alpha:
+          - head: Alpha one
+          - text:description: the first alpha
+          - marker:content:
+              - text:plain: added at the alpha one marker
+          - subsubsection:one:
+              - item: One a
+              - text:description: the first one
+              - marker:content:
+                  - text:plain: added at the one a marker
+              - sub3section:deep:
+                  - subitem: Deep a
+                  - text:description: the first deep
+                  - marker:content:
+                      - text:plain: added at the deep a marker
+              - sub3section:deep:
+                  - subitem: Deep b
+                  - text:description: the second deep
+          - subsubsection:one:
+              - item: One b
+              - text:description: the second one
+
+      - subsection:alpha:
+          - head: Alpha two
+          - text:description: the second alpha
+
+      - subsection:beta:
+          - head: Beta one
+          - text:description: the only beta
