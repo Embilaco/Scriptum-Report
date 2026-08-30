@@ -15,11 +15,16 @@ it (``claimSubAnchor``): an earlier blueprint the data never used must not
 stay at the front, or the next clone goes in upstream of the block it follows,
 which is the defect reproduced here on two of the shipped templates.
 
-``template.docx`` is the right template for most of this: ``section:
-second`` holds ``<subsection:seconda template>`` -- with a nested
-``<subsubsection:secondsub1 template>`` whose body says *Secondsub1* -- and
-then ``<subsection:secondb template>``. The one case it cannot express, a
-blueprint beside an ordinary sibling, gets a template built here.
+``template.docx`` is the right template for most of this:
+``section:second`` holds ``<subsection:secondsuba template>`` -- with a
+nested ``<subsubsection:secondsubsub1 template>``, itself nesting a
+``<sub3section:secondsub3i template>`` -- and then, further down,
+``<subsection:secondsubb template>``. Every one of those closes with a line
+naming itself, which is how an unused blueprint is caught still shipping.
+Their headings carry prose of their own beside the ``<head/>``, so a mark
+this module puts in arrives *inside* a paragraph rather than as one; see
+:func:`marks`. The one case the template cannot express, a blueprint beside
+an ordinary sibling, gets a template built here.
 """
 
 from pathlib import Path
@@ -71,16 +76,22 @@ def generate(tmp_path, second, template=TEMPLATE, section='section:second'):
 
 
 def marks(paragraphs):
-    return [p for p in paragraphs if p in MARKS]
+    """The marks the data put in, in the order the document carries them.
+
+    Each blueprint heading of ``template.docx`` writes prose of its own
+    beside the ``<head/>``, so a mark arrives as part of a paragraph
+    (``- SUB SECONDA - ZZsibling``) rather than as the whole of it. No two
+    marks ever meet in one paragraph."""
+    return [mark for text in paragraphs for mark in MARKS if mark in text]
 
 
 TWO_SECONDB = ('      - text:description: ZZintro\n'
-               '      - subsection:secondb:\n'
+               '      - subsection:secondsubb:\n'
                '          - head: ZZfirst\n'
-               '      - subsection:secondb:\n'
+               '      - subsection:secondsubb:\n'
                '          - head: ZZsecond\n')
 
-SIBLING = ('      - subsection:seconda:\n'
+SIBLING = ('      - subsection:secondsuba:\n'
            '          - head: ZZsibling\n')
 
 
@@ -101,14 +112,15 @@ def test_a_clone_still_follows_its_instance_when_the_blueprint_is_used(tmp_path)
 
 
 def test_first_instances_keep_the_template_order_whatever_the_data_order(tmp_path):
-    """``secondb`` named before ``seconda`` still comes out after it.
+    """``secondsubb`` named before ``secondsuba`` still comes out after it.
 
     The first instance of a blueprint lands where the blueprint stands, so
     the data's order cannot reorder the template. A cursor that popped "the
-    next free slot" regardless of which block was named would put secondb's
-    clone into seconda's place here -- the design that was tried first.
+    next free slot" regardless of which block was named would put
+    secondsubb's clone into secondsuba's place here -- the design that was
+    tried first.
     """
-    body = ('      - subsection:secondb:\n'
+    body = ('      - subsection:secondsubb:\n'
             '          - head: ZZfirst\n'
             + SIBLING)
     assert marks(generate(tmp_path, body)) == ['ZZsibling', 'ZZfirst']
@@ -139,29 +151,31 @@ def test_claiming_a_child_claims_everything_ahead_of_it():
 # -------------------------------------------------------------- pruning
 
 def test_an_unused_blueprint_leaves_nothing_behind(tmp_path):
-    """Only ``secondb`` is used, so ``seconda`` -- and the nested blueprint
-    inside it -- must not show up: its tags cleaned and its text intact was
-    what the finished document used to carry."""
+    """Only ``secondsubb`` is used, so ``secondsuba`` -- and the two
+    blueprints nested inside it -- must not show up: its tags cleaned and its
+    text intact was what the finished document used to carry. Each of the
+    three closes with a line naming itself, so a survivor cannot hide."""
     said = generate(tmp_path, TWO_SECONDB)
 
-    assert 'Secondsub1' not in said
-    assert 'SubSub I' not in said
+    assert 'Here ends sub seconda' not in said
+    assert 'Here ends subsub secondsubsub1' not in said
+    assert 'Here ends sub3 secondsubsubi' not in said
     assert 'Between the subsections' in said, 'ordinary content stays'
 
 
 def test_a_blueprint_carried_inside_a_clone_is_pruned_when_unused(tmp_path):
-    """A clone of ``seconda`` carries a copy of the ``secondsub1`` blueprint.
-    The first instance uses it, the second does not -- so its text appears
-    once, not twice. Twice is what a clone used to leak."""
-    body = ('      - subsection:seconda:\n'
+    """A clone of ``secondsuba`` carries a copy of the ``secondsubsub1``
+    blueprint. The first instance uses it, the second does not -- so its text
+    appears once, not twice. Twice is what a clone used to leak."""
+    body = ('      - subsection:secondsuba:\n'
             '          - head: ZZfirst\n'
-            '          - subsubsection:secondsub1:\n'
+            '          - subsubsection:secondsubsub1:\n'
             '              - item: used here\n'
-            '      - subsection:seconda:\n'
+            '      - subsection:secondsuba:\n'
             '          - head: ZZsecond\n')
     said = generate(tmp_path, body)
 
-    assert said.count('Secondsub1') == 1
+    assert said.count('Here ends subsub secondsubsub1') == 1
     assert marks(said) == ['ZZfirst', 'ZZsecond']
 
 
