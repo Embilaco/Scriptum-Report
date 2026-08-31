@@ -1,6 +1,6 @@
 # The canonical ladder document: a repeat at every depth of template.docx.
 #
-# alpha twice, 'one' twice inside the first alpha, 'deep' twice inside the
+# alpha twice, 'one' twice inside the first alpha, 'level3-1' twice inside the
 # first 'one' -- so each level is exercised as a repeat while the level above
 # it is not, which is the only way a misplaced clone at one depth cannot hide
 # behind a misplaced clone at another. beta is used once, after the repeated
@@ -10,9 +10,9 @@
 # Every marker is fed too, so a marker fill cannot be mistaken for a clone.
 
 _scriptum_:
-  version: 4
-  documenttype: docx
-  datadir: ./data
+    version: 4
+    documenttype: docx
+    datadir: .
 
 _content_:
   - section:main:
@@ -29,14 +29,30 @@ _content_:
               - text:description: the first one
               - marker:content:
                   - text:plain: added at the one a marker
-              - sub3section:deep:
-                  - subitem: Deep a
-                  - text:description: the first deep
+              - sub3section:level3-1:
+                  - subitem: level3-1 a
+                  - text:description: the first level3-1
                   - marker:content:
-                      - text:plain: added at the deep a marker
-              - sub3section:deep:
-                  - subitem: Deep b
-                  - text:description: the second deep
+                      - text:plain: added at the level3-1 a marker
+              - sub3section:level3-1:
+                  - subitem: level3-1 b
+                  - text:description: the second level3-1
+                  - sub4section:level4-1:
+                      - subitem: level4-1 first
+                      - text:description: the first level4-1
+                      - marker:content:
+                          - text:plain: added at the level4-1 a marker
+                      - sub5section:level5:
+                          - subitem: level5 b
+                          - text:description: the first level5
+                          - marker:content:
+                              - text:plain: added at the level5 a marker
+                  - sub4section:level4-2:
+                      - subitem: level4-2 first
+                      - text:description: the first level4-2
+                      - marker:content:
+                          - text:plain: added at the level4-2 a marker
+
           - subsubsection:one:
               - item: One b
               - text:description: the second one
@@ -48,3 +64,16 @@ _content_:
       - subsection:beta:
           - head: Beta one
           - text:description: the only beta
+          - subsubsection:two:
+              - item: Two a
+              - text:description: There is a beta one subsub two a
+              - sub3section:level3-2:
+                  - subitem: level3-2 in beta
+                  - text:description: the level3-2 in beta
+                  - marker:content:
+                      - text:plain: added at the level3-2 beta marker
+              - sub3section:level3-1:
+                  - subitem: level3-1 in beta
+                  - text:description: "the level3-1 in beta works as well, surprise!"
+                  - marker:content:
+                      - text:plain: added at the level3-1 beta marker

@@ -2,9 +2,11 @@
 
 A block whose tag says ``template`` is a **blueprint**: every instance of it
 is a clone, the first included, and the blueprint itself is pruned at the
-end. A block without the argument is content: its first instance is the block
-itself and later instances clone it. Word thereby agrees with PowerPoint,
-which always copies.
+end. A block without the argument is content: it is filled where it stands
+and **cannot be repeated** -- there is no blueprint to clone, and a second
+instance of one is refused by name (narrowed 2026-08-30; the ladder case
+pins the refusal). Word thereby agrees with PowerPoint, which always copies
+what it is given.
 
 Placement follows from that. The first instance of a blueprint goes exactly
 where the blueprint stands -- before its opening paragraph, which is then

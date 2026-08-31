@@ -137,9 +137,12 @@ class StructuredElement:
         1 -- and every further instance inserted there in turn stacks up in
         task order behind the ones already placed.
 
-        Only a blueprint is recorded. An unflagged block is its own instance 1
-        and the gap behind it is no element of this tree; repeating one does
-        not reach here anyway, ``findTemplate`` looking only at flagged blocks.
+        Only a blueprint is recorded, and only a blueprint can be repeated at
+        all: an unflagged block is filled where it stands and a second
+        instance of one is refused (``ManagedDocx._namesakeInPlace``). So the
+        gap behind an unflagged instance 1 -- which is no element of this
+        tree, being the sibling after its *closing* paragraph -- never has to
+        be found.
         """
         self.followOn[puretag] = anchor
 

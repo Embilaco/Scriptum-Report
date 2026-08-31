@@ -309,14 +309,23 @@ def normalise(lines) -> list:
     return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in lines]
 
 
-def reference(path) -> list:
+def reference(path, normalised=True) -> list:
     """The stored reference at *path* (a JSON list of texts), normalised.
 
     It was captured on another day, so it carries that day's digits and
     weekday name -- normalising only one side of a comparison is how you end
     up measuring the calendar.
+
+    ``normalised=False`` for a case with **no dates in it at all**, where
+    collapsing digits costs discrimination and buys nothing: the ladder case
+    names its blocks ``level3-1``, ``level4-2`` and so on, and under
+    :func:`normalise` thirteen of its lines fall together into seven -- a
+    clone landing in the wrong level's slot would compare equal. Such a case
+    passes the flag and skips :func:`normalise` on both sides. Every other
+    case has a ``date:`` in it and must keep the collapsing.
     """
-    return normalise(json.loads(Path(path).read_text(encoding='utf-8')))
+    stored = json.loads(Path(path).read_text(encoding='utf-8'))
+    return normalise(stored) if normalised else stored
 
 
 def difference(expected, got) -> str:

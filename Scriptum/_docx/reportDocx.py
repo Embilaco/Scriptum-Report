@@ -54,6 +54,10 @@ class ManagedDocx:
         # the pruning pass deletes them at the end (typesetting resets it)
         self.spentBlueprints = []
 
+        # instances refused because the block they repeat is not a blueprint;
+        # their fills are skipped in silence rather than warned about again
+        self.refusedInstances = set()
+
         if warnings:
             print('There are warnings in the template, outcome might be not as expected:')
             print('  '+'\n  '.join(warnings))
@@ -87,6 +91,10 @@ class ManagedDocx:
                 print(f'WARNING: cannot find section {what[0]!r}')
                 return
             parent = root.addressbook.get('.'.join(what[:-1]),None)
+            if not parent and '.'.join(what[:-1]) in self.refusedInstances:
+                # the instance was refused with its own message; its fills
+                # have nowhere to land, which is not news
+                return
             if parent:
                 # A flagged block is a blueprint, never content. The fill
                 # skips it and keeps scanning -- an add's clone is appended
@@ -138,6 +146,25 @@ class ManagedDocx:
                     # so a clone's tag still reads `text:description`.
                     self.fillGeneric(t.puretag,t,e,value,
                                      task.actions if task.modified else None)
+
+    @staticmethod
+    def _namesakeInPlace(parent, address):
+        """Whether *parent* still holds a block under this address's name.
+
+        Tells "the block is there, just not flagged" apart from "that name
+        is nowhere in the template", which are the same miss to
+        ``findTemplate`` and different mistakes to the author.
+
+        ``parent.structure`` is the right place to look: a blueprint *leaves*
+        it when its first instance is cloned, so a block still standing under
+        that name is content -- either an unflagged block filled in place, or
+        the clone of a blueprint, and in the second case ``findTemplate``
+        would have found the blueprint and we would never be asked.
+        """
+        wanted = puretagOf(address[-1])
+        return any(t in ('struct', 'table', 'image', 'text')
+                   and e.path and puretagOf(e.path[-1]) == wanted
+                   for t, e in parent.structure)
 
     @staticmethod
     def _isBlueprintBlock(entry):
@@ -243,6 +270,7 @@ class ManagedDocx:
         # tree when their first instance is cloned, so the pruning pass at the
         # end cannot find them by walking it; they are remembered here instead.
         self.spentBlueprints = []
+        self.refusedInstances = set()
 
         if not addcopy:
             print('   SKIP: add and copy new paragraphs and more ...')
@@ -363,7 +391,30 @@ class ManagedDocx:
                             print(f'WARNING: No place to copy found: {(".".join(t.myAddress[:-1]))}')
                             continue
                         
-                        tpl = self.sections.findTemplate(t.path)
+                        tpl = self.sections.findTemplate(t.path, warn=False)
+
+                        if not tpl:
+                            # Repeating a block requires the `template`
+                            # argument: without it there is no blueprint to
+                            # clone from. Say which block and what to add --
+                            # the bare 'no such template' sent the author
+                            # looking for a missing name rather than a
+                            # missing argument, and the fills inside the
+                            # instance that was never made then warned again,
+                            # once each, about a parent structure nobody had
+                            # asked to be missing.
+                            name = puretagOf(t.myAddress[-1])
+                            if self._namesakeInPlace(parent, t.myAddress):
+                                print(f'WARNING: cannot repeat {name!r}: the '
+                                      f'block is in the template but its tag '
+                                      f"does not carry the 'template' "
+                                      f'argument, so there is nothing to '
+                                      f'clone - write <{name} template> to '
+                                      f'repeat it')
+                            else:
+                                print(f'WARNING: No such template in document: {t.path}')
+                            self.refusedInstances.add('.'.join(t.myAddress))
+                            continue
 
                         # Right behind the instance this one repeats, if that
                         # instance has been placed -- the template's own prose
@@ -380,8 +431,8 @@ class ManagedDocx:
                                 #print('anc',parent.anchor)
                                 anchor = parent.anchor
 
-                        if tpl:
-                            newElements = tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1], newname=t.myAddress[-1], section=root)
+                        tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1],
+                                 newname=t.myAddress[-1], section=root)
 
         if not directfill:                
             print('   SKIP: fill the content...')

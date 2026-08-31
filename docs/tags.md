@@ -48,7 +48,7 @@ Arguments after a ` ` blank cannot include colons `:` or blanks themselves; the 
 
  - `template` (not used in Powerpoint)
 
-The `template` argument flags a block as a *blueprint*: every instance the report document writes is a clone, the first included, and further instances follow the last one used. A section-ladder blueprint is pruned from the finished document; a `table:`/`image:` block flagged in the content ships unchanged if unused. A blueprint may live in `<section:template>` or, flagged this way, anywhere — see [rdf.md](./rdf.md) for the lookup rules when a name exists in both places. The argument belongs on the opening tag only.
+The `template` argument flags a block as a *blueprint*: every instance the report document writes is a clone, the first included, and each further instance is placed directly behind the one before it — so whatever the template holds between two blocks stays behind all of them. **A block can only be repeated if it carries the argument**: without it a block is filled where it stands, and a second instance of it is refused with a message naming the block and the argument to add. A blueprint is pruned from the finished document whether it was used or not, and wherever it stands — a `table:`/`image:` block flagged in the content included. A blueprint may live in `<section:template>` or, flagged this way, anywhere — see [rdf.md](./rdf.md) for the lookup rules when a name exists in both places. The argument belongs on the opening tag only.
 
 ### Example:
 
