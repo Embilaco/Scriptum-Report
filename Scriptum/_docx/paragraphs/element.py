@@ -115,10 +115,62 @@ def delete_paragraph_if_empty(paragraph):
     delete_paragraph(paragraph)
 
 
+def renderedText(tag, value):
+    """The text *value* belongs to write, beyond its plain string form.
+
+    ``None`` means ``str(value)`` already said it, which is the common case.
+    A **file-backed** value is the exception that makes this worth naming: it
+    stringifies to nothing until it is loaded, and then it is the file's
+    *content* that belongs on the page -- or the message saying the file is
+    not there. Get that wrong and the fill goes silently blank, which is what
+    a placeholder carrying ``{file: ...}`` did before this was shared.
+
+    Both callers are here on purpose: ``ManagedDocx.fillGeneric`` for a fill
+    addressed on its own, and ``DocTextBlockElement.fill`` for a placeholder
+    inside a text block. They replace the tag differently -- one by name
+    across the element, one by the Tag object it already holds -- but what
+    the value *says* must not depend on which of them asked.
+    """
+    if value.tostring:
+        return None
+
+    if value.type == 'file' and tag.tagtype in ('open', 'simple'):
+        if not value.object.exists:
+            return f'file {value.object.filename!r} not found'
+        if value.subtype == 'text':
+            return value.object.content
+        if value.subtype == 'video':
+            return (f'{value.object.filename!r}: videos cannot be added to a '
+                    f'word document')
+        if value.subtype == 'unclear':
+            return f'{value.object.filename!r}: unclear what to do'
+        # an image or a table places itself; nothing to write here
+        return None
+
+    if value.type == 'parfile':
+        if not value.object.exists:
+            return f'file {value.object.filename!r} not found'
+        # load() fills value.content; reading it as the return value put the
+        # word 'None' on the page once
+        value.load()
+        return str(value.content)
+
+    return None
+
+
 class DocTextBlockElement(StructuredElement):
-    """Paragraph-only structure used for predefined text blocks.
-    
-    There is no internal tagging allowed for now!
+    """A block of prose the template carries, with slots the document fills.
+
+    The paragraphs are the template's -- that is the point of a text block --
+    so the fill's own value has nothing to write. What a document supplies is
+    the **placeholders** standing inside the block, and they arrive as the
+    fill's modifiers, matched to the tags by the name the template spells:
+    the mechanism an image block already uses for its ``description``.
+
+    A placeholder may be namespaced (``<placeholder:one/>``) or bare
+    (``<subtitle/>``); both are matched the same way. Namespaced is the safer
+    habit, a bare name sharing its space with the source keys and the length
+    modifiers -- see ``docs/tags.md``.
     """
 
     HEADER = "TEXTBLOCK"
@@ -136,15 +188,24 @@ class DocTextBlockElement(StructuredElement):
         self.subtype = "text"
 
     def fill(self, task) -> None:
-        """Fill the element with a nothing
-        
-        a text block already contains everything"""
+        """Write the document's placeholders into the block.
 
-        #value = task.value
-        #actions = task.actions
-
+        The block's own tag goes first, then every modifier that names a tag
+        standing inside it. A placeholder the document did not mention is
+        left to :meth:`clean`, which blanks it -- a half-filled block ships
+        without its markup showing rather than with an empty slot announced.
+        """
         self.structure[0][1].replaceTag(self.tag, '')
         self.tag.burn()
+
+        for name, value in (task.actions or {}).items():
+            for tag, element in self.structure:
+                if not tag or tag.burned or name != tag.puretag:
+                    continue
+                value.load()
+                text = renderedText(tag, value)
+                element.replaceTag(tag, str(value) if text is None else text)
+                tag.burn()
 
     def copy(self, anchor, parent, newpath=None, newname="", section=None):
         """Copy all elements just before the anchor."""
@@ -166,9 +227,17 @@ class DocTextBlockElement(StructuredElement):
             from ..template import numberTag
             numberTag(newElements[0], newElements[0].tags[0], newname)
 
+        # The inner tags come along. They used to be dropped here -- every
+        # element unfolded as (None, element) -- which made a placeholder
+        # unaddressable and left the closing tag with nothing to pair it, so
+        # it shipped as literal text at the end of the block.
         newUnfoldedElements = []
         for element in newElements:
-            newUnfoldedElements += [(None, element)] # ignore any inner tags
+            if element.tags:
+                for subtag in element.tags:
+                    newUnfoldedElements += [(subtag, element)]
+            else:
+                newUnfoldedElements += [(None, element)]
 
         etag = newElements[0].tags[0]
         
@@ -184,13 +253,19 @@ class DocTextBlockElement(StructuredElement):
         return mycopy
 
     def clean(self) -> None:
-        """Clean the unused tags and paragraphs."""
+        """Blank whatever the document left unsaid.
 
-        pass
-        # for t, element in self.structure:
-        #     if not t or t.burned:
-        #         continue
-        #     element.replaceTag(t, "")
-        #     t.burn()
-        #     element.deleteIfEmpty()
+        A placeholder no modifier named, and the block's closing tag, which
+        pairs with nothing once the block is in place. Both are replaced with
+        nothing and their paragraph dropped if that empties it -- so an
+        unmentioned slot leaves no gap and no markup. Decided 2026-08-31: a
+        text block is prose, and prose with a visible ``<placeholder:two/>``
+        in it is worse than prose without the slot.
+        """
+        for t, element in self.structure:
+            if not t or t.burned:
+                continue
+            element.replaceTag(t, "")
+            t.burn()
+            element.deleteIfEmpty()
 

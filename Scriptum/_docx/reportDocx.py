@@ -16,6 +16,7 @@
 from docx import Document
 from docx.oxml.ns import qn
 from docx.shared import RGBColor
+from .paragraphs.element import renderedText
 from .section import Sections
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag, puretagOf
@@ -240,35 +241,14 @@ class ManagedDocx:
         #obj = determineElement(elem)
         value.load()
         #print('fillGeneric 1a:',elem,target,tag.puretag,value)
-        found = elem.replaceTagInAll(target, str(value))
+        # What the value says beyond str(value) -- shared with the
+        # placeholders of a text block, so a file renders the same wherever it
+        # is written. It goes *into* the replacement rather than over the run
+        # afterwards: `found.text = ...` overwrites the whole run, which ate
+        # the words either side of a tag that shared one with them.
+        text = renderedText(tag, value)
+        found = elem.replaceTagInAll(target, str(value) if text is None else text)
         #print('fillGeneric 1b:',found, elem, value.tostring)
-        if found and not value.tostring:
-            if value.type == 'file' and tag.tagtype in ['open','simple']:
-                #print('fillGeneric 2: sub',value.object.subtype)
-                if not value.object.exists:
-                    found.text = f'file {value.object.filename!r} not found'
-                elif value.subtype == 'text':
-                    found.text = value.object.content
-                elif value.subtype == 'video':
-                    found.text = f'{value.object.filename!r}: videos cannot be added to a word document'
-                elif value.subtype == 'unclear':
-                    found.text = f'{value.object.filename!r}: unclear what to do'
-                elif value.subtype == 'image':
-                    # images already done before
-                    pass
-                elif value.subtype == 'table':
-                    # never happens since we require an open/close tag around
-                    pass 
-
-            elif value.type == 'parfile':
-                if not value.object.exists:
-                    found.text = f'file {value.object.filename!r} not found'
-                else:
-                    # load() fills value.content; it used to be read as the
-                    # return value, which was None, so the word 'None' went
-                    # into the paragraph where the parameter belonged.
-                    value.load()
-                    found.text = str(value.content)
 
         # a color modifier paints the font of the text this fill wrote --
         # only where a run came back, so template text is never touched

@@ -78,5 +78,5 @@ These tags are predefined
  - Tables – `table:foo`
  - Markers – `marker:foo`
  - Comments - `comment`
- - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice
+ - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice. An **open/close** `text:` block in `<section:template>` keeps several paragraphs together, and any tag standing inside it is a *placeholder* the report document fills by name — see *Text blocks and their placeholders* in [rdf.md](./rdf.md). Name a placeholder `<placeholder:one/>` rather than `<one/>`: a bare name shares its space with the source keys (`file`, `text`, `date`, `parfile`, `numbering`, `from`, `rows`) and the lengths (`width`, `height`, `top`, `left`, `bottom`, `right`), and a slot called `<text/>` will be read as one of those instead. A placeholder the document never names is removed with the rest of the markup.
  - Ignore - `<ignore:foo all below/>` - everything after it in that section is left alone, tags and all. Written for a documentation section that shows tags as text and would otherwise report them as errors; it takes **both** arguments or it does nothing.

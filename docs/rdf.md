@@ -301,6 +301,45 @@ instead of appearing to work.)
 not; a block scalar (`|` keeps line breaks, `>` folds them) is best for
 genuinely multi-line text.
 
+#### Text blocks and their placeholders
+
+A `text:` block in `<section:template>` is several paragraphs the template
+keeps together — a standard clause, a disclaimer, a form of words — and a
+document adds it at a marker. The block **already carries its text**, so
+there is nothing for the document to supply except the gaps left in it. Those
+gaps are ordinary tags standing inside the block, and the document names them
+one by one:
+
+```
+<text:complex>                            - marker:content:
+We may add more complex texts with            - text:complex:
+a <placeholder:one/> or a                         placeholder:one: a first one
+<placeholder:two/>                                placeholder:two: {file: note.txt}
+or further text with more targets…
+</text:complex>
+```
+
+Each entry is a [modifier](#modifiers), matched to a tag by the name the
+template spells. It takes any form a value takes, so a placeholder may come
+from a file, a parameter file or a date just as a plain fill may.
+
+This is the one address that needs **no source key**: `file:`, `text:` and
+the rest name where bytes come from, and a text block has its bytes already.
+Every other namespace still requires one — for a picture or a table a missing
+source is a real mistake, and the run still says so.
+
+A placeholder the document does not mention is **blanked**: the tag is
+removed and the prose closes over the gap. Nothing is reported, because a
+block is prose and a half-filled one is still prose; a visible
+`<placeholder:two/>` in a finished report is the worse outcome.
+
+Naming is free — `<placeholder:one/>` and a bare `<subtitle/>` are matched
+the same way — but a bare name shares its space with the source keys and the
+lengths (`file`, `text`, `date`, `parfile`, `numbering`, `from`, `rows`,
+`width`, `height`, `top`, `left`, `bottom`, `right`). A template that calls a
+slot `<text/>` or `<width/>` will be read as saying something else. Prefer
+the namespaced form; see [tags.md](./tags.md).
+
 ### Tables
 
 ```yaml
@@ -401,6 +440,11 @@ value (`description: {from: row1}`), but no modifiers of its own.
 **Lengths** — `width`, `height`, `top`, `left`, `bottom`, `right` — need a
 unit: `cm`, `mm`, `in` (or `inch`), `pt`. `width: 4` is an error, not four of
 something implied. A unit suffix on any other value is just text.
+
+**What a modifier carries.** A modifier whose name is a namespace of its own
+— `image:poster`, `table:x`, `color` — carries a value of that kind. Every
+other modifier carries **words**: `description: {file: caption.txt}` writes
+what the file says, and so does a placeholder in a text block.
 
 ## Quoting
 

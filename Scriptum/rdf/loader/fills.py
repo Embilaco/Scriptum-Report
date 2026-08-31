@@ -107,6 +107,14 @@ _FILE_CLASSES = {
     'video': AnimationValue,
 }
 
+#: Namespaces that choose a value class of their own. A modifier named
+#: anything else -- `description` on an image, `placeholder:one` in a text
+#: block -- carries **words**, and is read as text. It used to be read with
+#: its own name as the selector, which named no class, so `{file: notes.txt}`
+#: on such a modifier came out as "unclear what to do" instead of the file's
+#: content.
+_SELECTORS = frozenset(_FILE_CLASSES) | {'color', 'table'}
+
 
 def selector_for(address):
     """The namespace that chooses the value class.
@@ -243,8 +251,24 @@ def _from_mapping(node, selector, source, settings, diagnostics, path,
                    f"{{word}}. If {written!r} is the text you meant, quote it: "
                    f"'{written}:'")
             return None, {}
+        if selector == 'text' and modifiers:
+            # A text block carries its own text -- the paragraphs are in the
+            # template -- so there is nothing for a source key to name. What
+            # the document supplies is the placeholders standing inside it,
+            # and those are modifiers. The exception is namespace-shaped on
+            # purpose: for an image or a table the missing source really is
+            # the mistake this message exists to catch, and it keeps saying so.
+            actions = _read_modifiers(entries, set(), source, settings,
+                                      diagnostics, path, report)
+            if not actions:
+                return None, {}
+            return Value('str', StringValue(''), tostring=True), actions
+
         report('a value needs one source key: '
-               f'{", ".join(SOURCE_KEYS)}. Found {", ".join(sorted(entries))}.')
+               f'{", ".join(SOURCE_KEYS)}. Found {", ".join(sorted(entries))}.'
+               + (' A text block takes its placeholders here instead, and no '
+                  'source: the block already carries its text.'
+                  if selector == 'text' else ''))
         return None, {}
     if len(found) > 1:
         written = ', '.join(sorted(found))
@@ -443,9 +467,13 @@ def _read_modifiers(entries, consumed, source, settings, diagnostics, path,
                             path)
         else:
             # A modifier's own selector is its namespace, so 'image:poster'
-            # carries an image. Nested modifiers are refused: a modifier of a
-            # modifier would be attached where nothing reads it.
-            value, _ = read(value_node, name.split(':')[0], source, settings,
+            # carries an image -- but only where that namespace names a class;
+            # anything else is words. Nested modifiers are refused: a modifier
+            # of a modifier would be attached where nothing reads it.
+            namespace = name.split(':')[0]
+            value, _ = read(value_node,
+                            namespace if namespace in _SELECTORS else 'text',
+                            source, settings,
                             diagnostics, path + (written,), modifiers=False)
 
         if value is not None:
