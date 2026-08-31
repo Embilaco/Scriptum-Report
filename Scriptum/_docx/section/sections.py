@@ -101,6 +101,27 @@ class Sections:
             print(f'WARNING: No such template in document: {name}')
     
     def delete(self, sectionname):
+        """Remove a section by name. A name no section carries is warned about.
+
+        ``section:template`` is the caller that matters: ``typesetting``
+        removes it at the end of every run, and this used to be `byName`
+        followed straight by `.delete()`, so a template without one died on
+        `AttributeError: 'NoneType' object has no attribute 'delete'` -- at
+        the very end of a run that had otherwise succeeded, with nothing
+        naming the cause. That made the section look required when nothing
+        about it is: a template whose document adds nothing at a marker has
+        no use for it, and a blueprint may be flagged anywhere in the
+        content instead.
+
+        A warning rather than silence, decided 2026-08-31: forgetting the
+        section in a template whose document *does* add at markers is a real
+        mistake and the run would otherwise only report each add separately.
+        """
         s = self.byName(sectionname)
+        if s is None:
+            print(f'WARNING: no section {sectionname!r} in the template - '
+                  f'nothing can be added from it; blueprints flagged '
+                  f"'template' elsewhere in the document are unaffected")
+            return
         s.delete()
 

@@ -120,6 +120,52 @@ def cells(table):
     return [cell.text for row in table.rows for cell in row.cells]
 
 
+def no_template_section():
+    """``section:mix`` with a flagged blueprint and **no** ``section:template``.
+
+    Every other template in the tree carries one, which is how the section
+    came to look required when nothing about it is.
+    """
+    document = docx.Document()
+    document.add_paragraph('<section:mix>MIX')
+    document.add_paragraph('<marker:content/>')
+    blueprint(document, 'FromContent', flagged=True)
+    document.add_section()
+    # A section ends with its break paragraph, and that paragraph must carry
+    # the closing tag -- nothing may sit between the two.
+    document.paragraphs[-1].text = '</section:mix>'
+    return document
+
+
+def test_a_template_without_a_template_section_builds_and_says_so(tmp_path, capsys):
+    """``<section:template>`` is **not** required (decided 2026-08-31).
+
+    ``typesetting`` removes that section by name at the end of every run, and
+    the removal used to be ``byName`` followed straight by ``.delete()`` -- so
+    a template without one died on ``AttributeError: 'NoneType' object has no
+    attribute 'delete'``, at the very end of a run that had otherwise
+    succeeded and with nothing naming the cause. A template whose document
+    adds nothing at a marker has no use for the section, and a blueprint may
+    be flagged anywhere in the content instead.
+
+    A warning rather than silence: forgetting the section in a template whose
+    document *does* add at markers is a real mistake, and the run would
+    otherwise report only each add failing on its own.
+    """
+    tables = generate(tmp_path, no_template_section())
+    out = capsys.readouterr().out
+
+    assert fingerprints(tables) == ['FromContent', 'FromContent'],         'the in-content blueprint still serves both the marker add and its own spot'
+    assert 'ZZadded' in cells(tables[0])
+    assert 'ZZinplace' in cells(tables[1])
+
+    missing = [line for line in out.splitlines() if 'no section' in line]
+    assert len(missing) == 1, out
+    assert "'template'" in missing[0], 'it names the section'
+    assert 'unaffected' in missing[0],         'and says the flagged blueprints elsewhere still work -- which they did above'
+    assert 'AttributeError' not in out and 'Traceback' not in out
+
+
 def test_the_template_section_wins_the_collision(tmp_path, capsys):
     """The add clones the ``section:template`` blueprint, not the in-content
     one -- and says so: a multi-hit is warned about even when the ranking
