@@ -277,6 +277,50 @@ class ManagedDocx:
             if colour is not None and colour.type == 'color':
                 found.font.color.rgb = RGBColor.from_string(colour.object.for_docx)
 
+    def structure(self, rdf):
+        """Expand the ladder and fill nothing: a document to *read*, not to ship.
+
+        Every instance the report document asks for is created and placed, and
+        then everything else is left alone, so the saved file shows the shape
+        the run is about to fill:
+
+        * each clone carries its instance number as the document addresses it
+          -- ``<subsection:content id=1>``, ``<subsection:content id=2>`` --
+          which is the thing hardest to picture from the document alone;
+        * a blueprint that was **not** used still stands, still saying
+          ``template``, so an unused one is visible as unused and *where* it
+          was unused -- inside which clone of its parent;
+        * every marker add sits in front of the ``<marker:content/>`` it
+          belongs to, already in its place;
+        * no value is written, so every fill tag is still readable as the
+          address it is.
+
+        It is the seven switches of :meth:`typesetting` in the one combination
+        that answers "what did it think I meant?" -- all of them off but the
+        add-and-copy stage. Nothing is cleaned, nothing is pruned, the
+        template section stays, and the document properties are not stamped:
+        the file is a diagnostic and is not a report.
+
+        Save it as usual::
+
+            managed = Scriptum.ManagedDocx('template.docx')
+            managed.structure(rdf)
+            managed.save('structure.docx')
+
+        **Word only.** ``ManagedPptx`` has no counterpart, and not by
+        oversight: a slide is created inside the fill pass (``add_slide`` from
+        ``applyTask``), so a PowerPoint run with the fill switched off
+        produces an empty deck rather than a structure to look at.
+        """
+        self.typesetting(rdf,
+                         addcopy=True,          # the only stage that runs
+                         directfill=False,      # leave the fill tags readable
+                         globalfill=False,      # and the header/footer ones
+                         cleanup=False,         # keep the tags as written
+                         removetemplate=False,  # show the blueprints too
+                         cleardust=False,       # keep the opening paragraphs
+                         setproperties=False)   # this is not a report
+
     def typesetting(self, rdf, 
                     addcopy=True, 
                     directfill=True,

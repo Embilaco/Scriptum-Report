@@ -112,3 +112,43 @@ myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)
 
 The arguments `finish=True` and `createpdf=True` take effect on Windows only, with an installed Word or PowerPoint respectively: the finished file is re-saved by the Office application itself and, with `createpdf=True`, exported as a PDF beside it. Elsewhere they are ignored with a message.
 
+## 5. Looking at the structure — `structure()`
+
+When a document does not come out as expected, the question is usually *what
+did it think I meant?* — which blocks it decided to create, how many of each,
+and where it put them. `ManagedDocx.structure()` answers it: it runs only the
+step that creates and places the instances, and then leaves everything else
+alone.
+
+```python
+import Scriptum
+rdf = Scriptum.ReportDataFile('report_word.yaml')
+mydoc = Scriptum.ManagedDocx('template.docx')
+mydoc.structure(rdf)
+mydoc.save('structure.docx')
+```
+
+Open `structure.docx` in Word and you see the tags, not a report:
+
+```
+<subsection:content id=1>...
+<subsection:content id=2>...
+<subsection:content template>...
+```
+
+- each **clone carries the instance number** the document addresses it by,
+  `id=1`, `id=2`, and so on — a tag without one is instance 1;
+- a **blueprint that was not used is still there**, still carrying
+  `template`, so you can see which ones went unused and inside which parent;
+- every **marker entry is already placed**, in front of the
+  `<marker:foo/>` it belongs to;
+- **nothing is filled**, so every fill tag is still readable as the address
+  it is;
+- and the run still reports an address it could not place, which is what
+  most often sent you looking in the first place.
+
+The file is a diagnostic, not a report: no tag is cleaned, no blueprint is
+pruned, the `<section:template>` stays and the document properties are not
+set. Word only — a PowerPoint slide is created while the content is filled,
+so there is no structure to look at before it.
+
