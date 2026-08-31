@@ -20,7 +20,7 @@ itself is two commands, everything around it is what makes the upload boring.
 ## 1. Prepare the release
 
 - `pyproject.toml`: bump `version`.
-- `Scriptum/__init__.py`: bump `__version__` too — the back ends stamp
+- `Scriptum/version.py`: bump `__version__` too — the back ends stamp
   `Scriptum {version}` into every document's author property, and the two
   numbers must agree.
 - `CHANGELOG`: date the `unreleased` lines with the version
@@ -83,10 +83,13 @@ python -m venv %TEMP%\wheelcheck
 %TEMP%\wheelcheck\Scripts\python.exe -c "import Scriptum; print(Scriptum.version)"
 ```
 
-On Windows this prints two `Skip ... No module named 'win32com'` lines first:
-without the `[windows]` extra the back ends degrade and only
-`ReportDataFile` loads. Expected in the bare check; the version line is the
-verdict.
+The bare check prints nothing but the version line, on every platform:
+`win32com` is imported at finish time (not at module import), so the back
+ends load without the `[windows]` extra and only a `finish=True` /
+`createpdf=True` run reports the missing pywin32. (Until 2.0.0 the import
+sat at module top and this check printed two
+`Skip ... No module named 'win32com'` lines on a bare Windows install --
+if those return, the lazy import regressed.)
 
 ## 4. Upload
 

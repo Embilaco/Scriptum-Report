@@ -8,7 +8,7 @@ on this machine.
 
 - Python installs live in `<somewhere>\Python3XX` (currently `Python310` and
   `Python314`).
-- Every worktree (`site-packages\Scriptum-Report` = main, `dev\Scriptum-Report-dev`,
+- Every worktree (`dev\Scriptum-Report-main` = main, `dev\Scriptum-Report-dev`,
   `dev\Scriptum-Report-dev-yaml`) carries its **own** venvs, named `.venv3XX`
   after the minor version. They are gitignored (`.venv*`) and never follow git.
 - A venv **stops working entirely** once its base install is uninstalled:

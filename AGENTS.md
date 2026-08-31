@@ -15,4 +15,8 @@ This is a python application using python-pptx and python-docx to create documen
 ## Working rules
 - One logical change per commit, reasoning in the message; stage explicit paths.
 - A user-visible change gets a terse line in the CHANGELOG `unreleased` block.
+- Nothing tracked carries an absolute path of this machine, and tracked
+  notebooks store no outputs — run `python scripts/strip_notebook_outputs.py`
+  after a notebook session; `tests/02_basetest/architecture/test_repo_hygiene.py`
+  enforces both.
 - The architecture is mapped in a Spatial project (MCP connector `spatial-scriptum`, registered per worktree); when the connector is available, prefer its briefing and stale-check over re-deriving structure, and record decisions there.

@@ -21,8 +21,6 @@ from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
 
 import os
-if os.name == 'nt':
-    import win32com.client
 
 #from .pptElement import PptElement
 from .base import genericFill
@@ -32,7 +30,7 @@ from .templates import makeTemplate
 from ..tag.tag import getTag, puretagOf
 from .shapes import getShapes
 from .slide import Slide
-from .. import version
+from ..version import version
 
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 
@@ -419,7 +417,19 @@ class ManagedPptx:
         self.document.save(filename)
         
         if finish:
-            if os.name == 'nt':
+            if os.name != 'nt':
+                print(f'Running on {os.name} will prevent any finishing work...')
+            else:
+                # win32com is imported at finish time, not at module import:
+                # a Windows install without pywin32 keeps a working back end,
+                # and only the one step that needs Office reports the gap.
+                try:
+                    import win32com.client
+                except ImportError:
+                    print('finishing needs pywin32 -- the Scriptum-Report[windows] '
+                          'extra; the presentation is saved, but unfinished')
+                    return
+
                 in_file = os.path.abspath(filename)
                 out_file = os.path.abspath(os.path.splitext(os.path.basename(filename))[0]+'.pdf')
                 ppSaveAsPDF = 32
@@ -431,15 +441,12 @@ class ManagedPptx:
                     except:
                         powerp = win32com.client.Dispatch('PowerPoint.Application')
                         doquit = True
-                    #print('Visbility:',powerp.Visible,powerp.Version)
-                    try:
-                        #When an application is launched by the user, the Visible and UserControl properties 
-                        #of the Application object are both set to True. When the UserControl property is set to True, 
-                        #it isn't possible to set the Visible property of the object to False.
-                        powerp.Visible = False # not allowed/working for PPT!???
-                    except:
-                        pass
-                    ppt = powerp.Presentations.Open(in_file)
+                    # PowerPoint refuses Visible = False on the application
+                    # (and with UserControl = True it cannot be hidden at
+                    # all), so the deck is opened without a window instead:
+                    # nothing appears on the desktop, and a PowerPoint the
+                    # user already has open keeps its own windows untouched.
+                    ppt = powerp.Presentations.Open(in_file, WithWindow=False)
                     # PowerPoint's Close() takes no SaveChanges argument (Word's
                     # Document.Close does), and Save() alone no-ops on a deck
                     # opened unmodified: mark it dirty so PowerPoint really
@@ -453,6 +460,3 @@ class ManagedPptx:
                         powerp.Quit()
                 except Exception as e:
                     print(f'failed to update and save as PDF\nReason:\n{e}')
-
-            else:
-                print(f'Running on {os.name} will prevent any finishing work...')

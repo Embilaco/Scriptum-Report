@@ -22,16 +22,22 @@ class PptTextElement(PptElement):
                 self.paragraphs.append(PptParagraphElement(paragraph, paragraph_tags))
 
     def replaceTag(self, tag: Tag, replace: str):
+        """The run that received the text comes back (truthy, so every
+        boolean consumer keeps working): it is what lets a ``color``
+        modifier paint exactly the text its fill wrote and nothing else."""
         if self.isplaceholder:
             self.thing.text = replace
-            return True
+            paragraphs = self.thing.text_frame.paragraphs
+            if paragraphs and paragraphs[0].runs:
+                return paragraphs[0].runs[0]
+            return True   # an empty replace leaves no run to hand back
 
         for paragraph in self.paragraphs:
-            if paragraph.replaceTag(tag, replace):
+            if run := paragraph.replaceTag(tag, replace):
                 placeholder_tag = self.hastag(tag.puretag)
                 if placeholder_tag:
                     placeholder_tag.burn()
-                return True
+                return run
         return False
 
 

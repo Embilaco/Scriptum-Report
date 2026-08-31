@@ -4,6 +4,7 @@ from copy import deepcopy
 import re
 
 from .element import PptTextElement
+from ..base import paintRun
 from ..template_utils import (
     compute_template_bounds,
     resolve_template_box,
@@ -108,8 +109,12 @@ class TextTemplate:
                 content = str(actions.get(element.tags[0].child,'undefined'))
 
             #print('4', shape.text, content)
-            replaceTextInRuns(
+            written = replaceTextInRuns(
                 text_frame.paragraphs[0].runs, shape.text, oldre, content
                 )
             #print('5', shape.text)
             attrs.setFontAttrs(text_frame)
+            if not element.tags[0].child:
+                # a color modifier paints the main text; child elements
+                # (descriptions and friends) keep the template's own style
+                paintRun(written, actions)

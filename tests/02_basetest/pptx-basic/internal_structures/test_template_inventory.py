@@ -16,8 +16,9 @@ slides, and their machinery is still experimental.
 
 from pathlib import Path
 
-import pptx
 import pytest
+
+pptx = pytest.importorskip('pptx')
 
 THIS_DIR = Path(__file__).resolve().parent
 TESTS = THIS_DIR.parents[2]

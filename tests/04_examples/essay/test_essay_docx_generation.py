@@ -21,8 +21,9 @@ from pathlib import Path
 import importlib.util
 import sys
 
-import docx
 import pytest
+
+docx = pytest.importorskip('docx')
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -105,9 +106,11 @@ def test_chapters_pictures_tables_and_headers(tmp_path):
         'Conclusion']
 
     # seven image:generic clones at the blueprint's <image:generic width=12cm>,
-    # then image:conclude at its own size
+    # then image:conclude at its own size; the first three heights follow the
+    # Wikimedia originals' proportions since ef6f126 swapped the scaled copies
+    # for them
     assert [size for p in document.paragraphs for size in drawings(p)] == [
-        (12.0, 13.43), (12.0, 8.04), (12.0, 8.99), (12.0, 7.52),
+        (12.0, 10.84), (12.0, 9.0), (12.0, 8.96), (12.0, 7.52),
         (12.0, 3.69), (12.0, 7.1), (12.0, 6.63), (15.2, 10.16)]
 
     captions = [p.text for p in document.paragraphs if p.style.name == 'Caption']

@@ -10,9 +10,7 @@ descriptions -- one sized by ``height``, one pinned by ``left``/``top``
 only checks the file is there proves none of that, so this module reads the
 deck back:
 
-* what it *says*, against ``expected/powerpoint_simple.json`` (captured at
-  `44267a8` from the ``.rdf`` this fixture was translated from; re-captured
-  when the missing ``bootseal2.png`` fills became ``pudding.jpg``);
+* what it *says*, against ``expected/powerpoint_simple.json`` ;
 * what it *shows*: the layouts in order, the pictures with their sizes,
   the table, and the text boxes the parameter file and the text file
   produced.
@@ -21,9 +19,10 @@ deck back:
 from pathlib import Path
 import sys
 
-import pptx
-from pptx.enum.shapes import MSO_SHAPE_TYPE
 import pytest
+
+pptx = pytest.importorskip('pptx')
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -128,10 +127,16 @@ def test_the_deck_carries_the_documents_title(tmp_path):
 def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
     """``finish=True`` hands the saved deck to PowerPoint, which rewrites the
     file (Windows only; a no-op elsewhere) -- and the re-save must not change
-    what the deck says. Where PowerPoint cannot finish -- absent, busy, or
-    refusing the call -- the runner prints the reason and the deck stays the
-    plain save: that reports here as xfailed with the reason, never as a
-    failure."""
+    what the deck says. ``createpdf=True`` rides along so the PDF export is
+    pinned too; before this it was exercised only by the manual scripts. The
+    deck is opened ``WithWindow=False``, so a suite run puts no PowerPoint
+    window on the desktop -- if one starts flashing up again, that regressed.
+    Where PowerPoint cannot finish -- absent, busy, or refusing the call --
+    the runner prints the reason and the deck stays the plain save: that
+    reports here as xfailed with the reason, never as a failure. Three
+    prints say so -- the COM failure, the off-Windows note, the missing
+    pywin32 note -- and all three must be caught: the first CI run on
+    ubuntu failed exactly here, because only the COM message was."""
     config = CaseConfig(
         name="report",
         case_dir=THIS_DIR,
@@ -141,18 +146,24 @@ def test_a_powerpoint_resave_keeps_what_the_deck_says(tmp_path, capsys):
         include_patterns=["*.yaml", "template.pptx"],
         data_source_dir=DATA_SOURCE,
         finish=True,
-        createpdf=False,
+        createpdf=True,
     )
     with com_quiet():
         deck = run_pptx_case(config, tmp_path)
     out = capsys.readouterr().out
 
-    if 'failed to update' in out:
-        tail = ' '.join(out[out.index('failed to update'):].split())
+    unfinished = next((signal for signal in ('failed to update',
+                                             'will prevent any finishing work',
+                                             'finishing needs pywin32')
+                       if signal in out), None)
+    if unfinished:
+        tail = ' '.join(out[out.index(unfinished):].split())
         pytest.xfail('PowerPoint could not finish the deck -- ' + tail[:200])
 
     report = checkreport_comparison(deck, REFERENCE)
     assert report == '', report
+    pdf = deck.parent / 'final_report.pdf'
+    assert pdf.exists() and pdf.stat().st_size > 0, 'createpdf left no PDF beside the deck'
 
 
 def test_the_checkreport_notebook_would_say_identical(tmp_path):

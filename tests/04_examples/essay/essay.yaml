@@ -35,7 +35,7 @@ _content_:
           - text: {file: essay_rise1.txt}
           - marker:content:
               - text:generic: {file: essay_rise2.txt}
-              - image:generic: {file: ibmselectric.png, description: IBM Selectric II}
+              - image:generic: {file: ibmselectric.jpg, description: IBM Selectric II}
               - text:generic: {file: essay_rise3.txt}
 
       - subsection:content:

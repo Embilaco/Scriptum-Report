@@ -6,6 +6,8 @@
 
 from typing import Any, Dict
 
+from pptx.dml.color import RGBColor
+
 from .attrs import ShapeAttrs
 from ..element import Element
 from ..tag.tag import OPENING, CLOSING, Tag
@@ -68,6 +70,22 @@ def extractFontAndDecorators(paragraph: Any) -> Dict[str, Any]:
     fad['alignment'] = paragraph.alignment
     return fad
 
+def paintRun(run: Any, actions) -> None:
+    """A ``color`` modifier paints the font of the text its fill wrote.
+
+    ``run`` is whatever the replace handed back: the receiving run where the
+    element can name one, ``True``/``False``/``None`` where it cannot (table
+    cells, group shapes). Painting happens exactly where a run came back, so
+    template-styled text that took no fill is never touched -- and a colour
+    on a fill whose element cannot say where the text went is simply not
+    painted rather than guessed at.
+    """
+    colour = actions.get('color') if actions else None
+    if colour is None or colour.type != 'color' or not hasattr(run, 'font'):
+        return
+    run.font.color.rgb = RGBColor(*colour.object.for_pptx)
+
+
 def genericFill(
     elements: Union[Element, Sequence[Element]],
     task: ReportTask,
@@ -85,9 +103,10 @@ def genericFill(
         iterable: list[Element] = [elements]
     else:
         iterable = list(elements)
-    # the main action is given by task 
+    # the main action is given by task
     target = task.target
     value = task.value
+    actions = task.actions if task.modified else {}
     #print(value, str(value), 'x%sx'%value, target)
 
     # find the correct element for images
@@ -110,6 +129,7 @@ def genericFill(
         text = value.content
         for element in iterable:
             found = element.replaceTagInAll(target,text)
+            paintRun(found, actions)
             if found and onlyOne:
                 break
 
@@ -117,6 +137,7 @@ def genericFill(
         value.load()
         for element in iterable:
             found = element.replaceTagInAll(target,value.content)
+            paintRun(found, actions)
             if found and onlyOne:
                 break
 
@@ -124,6 +145,7 @@ def genericFill(
         val = str(value.object)
         for element in iterable:
             found = element.replaceTagInAll(target,val)
+            paintRun(found, actions)
             if found and onlyOne:
                 break
 
@@ -132,6 +154,7 @@ def genericFill(
         #print('TEXT?', val)
         for element in iterable:
             found = element.replaceTagInAll(target,val)
+            paintRun(found, actions)
             if found and onlyOne:
                 break
     

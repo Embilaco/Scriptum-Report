@@ -16,7 +16,10 @@ the worktree carries before committing.
   - `tag` — the `<tag arg=.../>` parser
   - `docx_basic` — one directory per Word case (document + template +
     `expected/` reference + `CheckReport.ipynb`): `simple`, `text`, `images`,
-    `tables`
+    `tables`; plus `ladder` — a clean template down every rung of the ladder
+    (`section` to `sub5section`) with prose in every gap, which is what makes
+    the placement of a repeated block observable, and one block named where
+    the template does not hold it, whose warnings are pinned in full
   - `pptx-basic` — the PowerPoint side: `simple` is the case, and
     `internal_structures` pins the shipped template's layout/tag inventory
     and the placement math, beside `inspect-*.ipynb` exploration notebooks
@@ -41,3 +44,6 @@ the worktree carries before committing.
 The notebooks beside the tests are manual companions, not collected by
 pytest: each `CheckReport.ipynb` spreads its case test out cell by cell so
 you can look at every stage.
+
+Third-party material in the fixtures is credited in `NOTICE.md` beside this
+file — keep it current when fixtures change hands or sources.

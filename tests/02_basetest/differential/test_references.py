@@ -45,6 +45,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip('docx')    # every registered case builds a Word document
+
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 if str(TESTS_ROOT / '02_basetest') not in sys.path:
     sys.path.append(str(TESTS_ROOT / '02_basetest'))
@@ -60,6 +64,7 @@ CASES = [
     ('02_basetest/docx_basic/images', 'word_images', 'test_docx_images.py'),
     ('02_basetest/docx_basic/tables', 'word_tables', 'test_docx_tables.py'),
     ('02_basetest/docx_basic/text', 'word_text', 'test_docx_text.py'),
+    ('02_basetest/docx_basic/ladder', 'ladder', 'test_docx_ladder_placement.py'),
     ('04_examples/wordreport', 'word_input', 'test_docx_generation.py'),
     ('04_examples/essay', 'essay', 'test_essay_docx_generation.py'),
     ('02_basetest/pptx-basic/simple', 'powerpoint_simple', 'test_pptx_simple.py'),

@@ -134,10 +134,45 @@ A sequence of entries. How deep an entry sits decides what it must be called:
   of a layout is a new slide.
 
 A **container** (a section or a slide) has a sequence as its value. Its first
-instance fills the block the template already contains; further instances of
-the same address in the same parent are clones of it. A block whose template
-tag carries the `template` argument is a *blueprint* and is cloned for every
-instance, the first included. PowerPoint copies always.
+instance fills the block the template already contains.
+
+**Naming the same address twice in the same parent requires the template tag
+to carry the `template` argument.** Such a block is a *blueprint*: it is never
+content, every instance of it is a clone -- the first included, standing
+exactly where the blueprint stands -- and the blueprint itself is removed at
+the end, used or not. A block without the argument can be filled but not
+repeated; a second instance of one is refused with a message naming the block
+and the argument to add. Each further instance is placed directly behind the
+one before it, so anything the template holds between two blocks stays behind
+all of them. PowerPoint copies always.
+
+**An address is positional: the block has to be in the template at that
+place.** The document nests the way the template nests, and every entry is
+looked up inside the parent that was named — so a `sub3section:step` written
+under `subsection:beta` finds nothing when the template holds
+`<sub3section:step>` under `subsection:alpha` instead. Nothing is searched for
+document-wide here. The entry, and everything under it, is dropped, and the
+run says so — one line naming the block, the parent that does not hold it and
+the parent that does:
+
+```
+WARNING: Nothing to apply at <the address you wrote> - 'subsection:beta' holds no
+'sub3section:step'; it stands under <where it really is>, and an address is positional
+```
+
+followed by one `cannot find parent structure` for each task that depended on
+the entry: every fill inside it, and any marker `add`. So every element you
+mean to address needs a blueprint of its own, standing under the parent the
+document will name it under, and carrying a name that is unique in the
+document — the marker lookup below has nothing but the name to go on.
+
+**A marker is the one way to place content that is nowhere in the template
+already.** Unlike a container address, a marker entry is looked up by *name*
+across the whole document, so it reaches a blueprint wherever one stands; and
+a blueprint that belongs to no section of its own lives in
+`<section:template>`, the section at the end of a template that holds nothing
+but blueprints. That is what it is for — see *Markers and adding content*
+below.
 
 A **fill** has a scalar or a mapping as its value — see *Values* below.
 
@@ -155,12 +190,15 @@ things to add at the `<marker:name/>` tag of the template:
 ```
 
 Each entry inside a marker creates a new element from the template block its
-address names — `image:generic`, `table:generic` — and places it at the marker.
+address names — `image:generic`, `table:generic` — and places it *before* the
+markers paragraph.
 The block may live in `<section:template>` or carry the `template` argument
 anywhere in the document; if the same name exists in both places, the template
 section wins and the run warns about the ambiguity. A fill *outside* a marker
 never creates anything: it targets something the template already contains.
 Markers may repeat and may interleave with fills.
+Anything that is added by a marker will take its formatting from the template,
+not from the marker. This is a current limitation, ideas welcome.
 
 ### Includes
 

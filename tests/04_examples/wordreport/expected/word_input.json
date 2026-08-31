@@ -1,7 +1,7 @@
 [
  "Report ID #",
  "Description",
- "Testing pudding tasting in space helps researchers understand how microgravity affects the sensory experience of food. Taste, texture perception, and aroma can all shift when the body's fluids redistribute and normal chewing and swallowing mechanics change. By studying how astronauts experience something as familiar as pudding, mission planners can better predict how crew members will perceive flavors, maintain appetite, and stay nutritionally balanced during long missions.\n\nAt the same time, pudding offers a useful model food for evaluating practical challenges of eating in microgravity. Its semi-solid texture makes it ideal for studying particle behavior, container design, food handling, and mess potential-critical considerations when even a small floating droplet can interfere with equipment. The results of these tests help refine future space menus, improve food packaging, and enhance overall crew comfort and safety on extended spaceflights.",
+ "Testing pudding tasting in space helps researchers understand how microgravity affects the sensory experience of food. Taste, texture perception, and aroma can all shift when the body's fluids redistribute and normal chewing and swallowing mechanics change. By studying how astronauts experience something as familiar as pudding, mission planners can better predict how crew members will perceive flavors, maintain appetite, and stay nutritionally balanced during long missions.\nAt the same time, pudding offers a useful model food for evaluating practical challenges of eating in microgravity. Its semi-solid texture makes it ideal for studying particle behavior, container design, food handling, and mess potential-critical considerations when even a small floating droplet can interfere with equipment. The results of these tests help refine future space menus, improve food packaging, and enhance overall crew comfort and safety on extended spaceflights.",
  "Revisions (of document)",
  "Test conditions",
  "These are the general instructions",
@@ -18,7 +18,7 @@
  "Cool it",
  "Get a fridge, implement it into the rocket, and put the pudding into the fridge",
  "Figure #: old fridge",
- "A refrigerator, commonly shortened to fridge, is a commercial and home appliance consisting of a thermally insulated compartment and a heat pump (mechanical, electronic or chemical) that transfers heat from its inside to its external environment so that its inside is cooled to a temperature below the ambient temperature of the room.\n\nTaken from Wikipedia",
+ "A refrigerator, commonly shortened to fridge, is a commercial and home appliance consisting of a thermally insulated compartment and a heat pump (mechanical, electronic or chemical) that transfers heat from its inside to its external environment so that its inside is cooled to a temperature below the ambient temperature of the room.\nTaken from Wikipedia",
  "Figure #: too cold",
  "When a pudding gets frozen, the water inside its creamy mixture turns into ice crystals, which expand and disrupt its smooth structure. Ingredients like starch, eggs, or gelatin can separate slightly as the mixture solidifies, so the once-silky texture may become grainy or watery after thawing. Flavors generally remain, but the pudding can lose some richness because fats harden and then don't fully recombine when defrosted. In essence, freezing preserves the pudding but often at the cost of its original, delicate consistency.",
  "Figure #: too hot",

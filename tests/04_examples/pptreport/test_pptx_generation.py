@@ -21,10 +21,11 @@ from pathlib import Path
 import importlib.util
 import sys
 
-import pptx
+import pytest
+
+pptx = pytest.importorskip('pptx')
 from pptx.enum.shapes import MSO_SHAPE_TYPE, PP_MEDIA_TYPE
 from pptx.util import Cm
-import pytest
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -144,6 +145,24 @@ def test_pictures_tables_and_videos_are_placed(tmp_path):
 
     assert len(back.shapes) == 0, 'BackCover takes nothing from the document'
     assert deck.core_properties.author.startswith('Scriptum ')
+
+
+def test_the_color_modifier_paints_the_added_text_box(tmp_path):
+    """``powerpoint_input.yaml`` has said ``color: green`` on the
+    ``p:default`` add of the video slide all along -- and until the colour
+    consumer landed, nothing read it. The clone route (a template text box
+    added at a marker) must paint the text it writes."""
+    from pptx.dml.color import RGBColor
+
+    deck = pptx.Presentation(build(tmp_path))
+    video = list(deck.slides)[5]
+
+    boxes = [shape for shape in of_kind(video, MSO_SHAPE_TYPE.TEXT_BOX)
+             if 'lengthy text' in shape.text_frame.text]
+    assert boxes, 'the p:default text box is gone from the video slide'
+    (run,) = [run for paragraph in boxes[0].text_frame.paragraphs
+              for run in paragraph.runs if run.text.strip()]
+    assert run.font.color.rgb == RGBColor(0x00, 0xFF, 0x00)   # green
 
 
 def test_the_checkreport_notebook_would_say_identical(tmp_path):

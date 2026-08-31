@@ -24,8 +24,9 @@ import re
 from pathlib import Path
 import sys
 
-import docx
 import pytest
+
+docx = pytest.importorskip('docx')
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -109,13 +110,14 @@ def test_the_tables_their_content_and_the_in_content_blueprint(tmp_path, capsys)
         'Technology', 'Typical Period', 'Key Strengths', 'Key Limitations']
 
     # the clone carries the same CSV -- and, unlike the generic clone from
-    # section:template, its blueprint has sample text in its cells, which
-    # shows through where a CSV cell is empty: a table fill writes only the
-    # cells the CSV has content for
+    # section:template, its blueprint has sample text in its cells. Since the
+    # empty-cell decision (2026-08-25) every cell of the CSV's grid is
+    # written -- a blank where the CSV is empty or the row short -- so the
+    # sample text ('overwritten' lived here) cannot show through any more
     assert [c.text for c in tables[5].rows[1].cells] == [
         'Technology', 'Typical Period', 'Key Strengths', 'Key Limitations']
     assert [c.text for c in tables[5].rows[0].cells] == [
-        'Comparison of writing and typography technologies.', '', 'overwritten', '']
+        'Comparison of writing and typography technologies.', ' ', ' ', ' ']
 
     # the captions: the descriptions given, the one taken from row1, and the
     # clone's -- it was added without a description

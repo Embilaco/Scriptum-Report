@@ -112,6 +112,50 @@ def test_a_real_boolean_is_refused_rather_than_coerced():
     assert 'Quote it' in report
 
 
+# ---------------------------------------------------- block scalars, UTF-8
+
+#: Real-world text beyond ASCII: every kind a report actually carries.
+#: (No ASCII apostrophes -- the tests wrap these in single quotes.)
+UTF8_SERIES = [
+    '„Gerade“ und ‚einfache‘ Anführungszeichen',
+    '«Guillemets» und ‹einfache›',
+    'Gedankenstrich — Halbgeviert – Ellipse …',
+    'Accents: àâçéèêëîïôùûüÿ und ÄÖÜ äöü ß',
+    'Symbols: © ® µ € £ § ½ ¼ ✓ ° ±',
+    'Emoji: 😀 🚀 🔧 📊',
+]
+
+
+@pytest.mark.parametrize('written', UTF8_SERIES)
+def test_utf8_text_arrives_verbatim(written):
+    fill = one(f"- head: '{written}'")
+
+    assert fill.value.type == 'str'
+    assert str(fill.value) == written
+
+
+def test_a_block_scalar_keeps_its_line_breaks():
+    """``|`` -- documented as the way to write genuinely multi-line text
+    since the format existed, and never exercised anywhere. The breaks stay,
+    and the scalar ends with the single newline that YAML's clip mode keeps."""
+    fill = one('- text:note: |\n'
+               '    Erste Zeile — „gerade“ ✓\n'
+               '    Zweite Zeile ‚einfach‘ … 😀\n')
+
+    assert fill.value.type == 'str'
+    assert str(fill.value) == ('Erste Zeile — „gerade“ ✓\n'
+                               'Zweite Zeile ‚einfach‘ … 😀\n')
+
+
+def test_a_folded_scalar_folds_the_breaks_to_spaces():
+    """``>`` -- the other documented block form: one line arrives."""
+    fill = one('- text:note: >\n'
+               '    wrapped in the document,\n'
+               '    one line in the report\n')
+
+    assert str(fill.value) == 'wrapped in the document, one line in the report\n'
+
+
 def test_a_colour_is_chosen_by_the_target_and_not_by_the_value():
     """``color`` selects ColorValue whatever shape the value has -- which is
     the text format's rule, kept, because it is semantic."""
@@ -515,6 +559,27 @@ def test_scale_is_not_a_length():
     fill = one('- image:generic: {file: a.png, scale: 0.5}')
 
     assert fill.actions['scale'].type == 'float'
+
+
+def test_a_colour_modifier_is_a_colour():
+    """``color`` selects ColorValue as a modifier too -- the back ends paint
+    the filled text with it. Written as corporate hex here: quoted, because
+    an all-digit hex would otherwise arrive as a number."""
+    fill = one("- report:status: {text: DRAFT, color: 'B00020'}")
+
+    colour = fill.actions['color']
+    assert colour.type == 'color'
+    assert isinstance(colour.object, ColorValue)
+    assert colour.object.for_docx == 'B00020'
+    assert colour.object.for_pptx == (176, 0, 32)
+
+
+def test_an_unrecognised_colour_modifier_is_reported():
+    """Reported at parse time like a colour target -- not silently black,
+    and not silently dropped like the text format's modifiers."""
+    report = failing('- report:status: {text: DRAFT, color: not-a-colour}')
+
+    assert 'is not a colour' in report
 
 
 def test_a_modifier_may_carry_its_own_source():

@@ -1,20 +1,26 @@
 """The text docx case, built and read back.
 
 ``word_text.yaml`` is the ladder at work on ``template.docx``: a title
-section, a second section with a marker, two instances of the blueprint
-``subsection:seconda`` (the first nesting a ``subsubsection`` and a
-``sub3section``), a ``subsection:secondb`` whose marker takes text fills from
-files -- three of them through an ``_include_`` fragment -- and four
-``_global_`` values the headers and footers use. The case builds from its
-own ``data/`` -- the workspace its ``CheckReport.ipynb`` prepares -- and two
-referenced files exist nowhere on purpose, announced in place. A test
-that only checks the file is there proves none of that, so this module reads
-the document back:
+section whose marker takes a text fill, a second section with a marker of
+its own, and two instances of the blueprint ``subsection:secondsuba`` -- the
+first nesting a ``subsubsection:secondsubsub1`` and, inside that, a
+``sub3section:secondsub3i``, each of those three feeding a marker of its
+own -- plus four ``_global_`` values the headers and footers use. Both
+subsection markers take their text fills from files, and one of those files
+exists nowhere on purpose, asked for by both and announced in place. The
+template's third blueprint, ``subsection:secondsubb``, is named nowhere in
+the document: it is pruned, and the ordinary paragraphs around it stay. The
+case builds from its own ``data/`` -- the workspace its ``CheckReport.ipynb``
+prepares. A test that only checks the file is there proves none of that, so
+this module reads the document back:
 
-* what it *says*, against ``expected/word_text.json`` (re-captured in
-  `f143b8b` after the depth-3 tag was renamed ``sub3section``, and again
-  from the own-``data/`` workspace when the test stopped linking the shared
-  ``data_source`` pool);
+* what it *says*, against ``expected/word_text.json``, re-captured whenever
+  the template or the document is rewritten: in `f143b8b` after the depth-3
+  tag was renamed ``sub3section``, again from the own-``data/`` workspace
+  when the test stopped linking the shared ``data_source`` pool, and last
+  for the rewrite in `e8a897c`, which renamed every blueprint, gave each
+  ladder level a marker of its own and left ``subsection:secondb`` out of
+  the document;
 * what it *shows*: the outline -- which heading style each ladder level got,
   something the text comparison cannot see -- and the globals in the header
   and footer of both sections. Where a clone lands is the business of
@@ -25,8 +31,9 @@ from pathlib import Path
 import shutil
 import sys
 
-import docx
 import pytest
+
+docx = pytest.importorskip('docx')
 
 THIS_DIR = Path(__file__).resolve().parent
 CASE_ROOT = Path(__file__).resolve().parent.parent
@@ -78,41 +85,54 @@ def test_the_document_says_what_the_reference_says(tmp_path):
     assert got == expected, difference(expected, got)
 
 
-def test_the_outline_the_includes_and_the_headers(tmp_path):
+def test_the_outline_the_fills_and_the_headers(tmp_path):
     """What the text comparison cannot see."""
     document = docx.Document(build(tmp_path))
 
     # each ladder level has its heading style; the depth-3 block, renamed
-    # sub3section in f143b8b, is the Heading 4
+    # sub3section in f143b8b, is the Heading 4. Every blueprint heading in
+    # this template carries prose of its own beside the tag, so a clone's
+    # heading reads the template's words and then the document's.
     outline = [(p.style.name, p.text) for p in document.paragraphs
                if p.style.name.startswith('Heading')]
     assert outline == [
-        ('Heading 1', 'TITLE'),
+        ('Heading 1', 'SECTION TITLE'),
         ('Heading 3', 'When and who?'),
         ('Heading 3', 'What?'),
-        ('Heading 1', 'SECOND'),
-        ('Heading 2', 'Header 1'),
-        ('Heading 3', 'This is s subsection ITEM head'),
-        ('Heading 4', 'This is s subsubsection SUBITEM head'),
-        ('Heading 2', 'Header 2'),
-        ('Heading 2', 'Header 3'),
+        ('Heading 1', 'SECOND SECTION'),
+        ('Heading 2', ' - SUB SECONDA - Header 1'),
+        ('Heading 3', 'SUBSUB secondsubsub1This is s subsection ITEM head'),
+        ('Heading 4', 'SUB3 secondsub3iThis is s sub3section SUBITEM head'),
+        ('Heading 2', ' - SUB SECONDA - Header 2'),
     ]
 
-    # from the case's own data/: dolor.txt lands three times -- once in
-    # subsection B directly, once through the _include_ fragment, once in
-    # subsection A -- bootseal.txt twice and title.txt once; only
-    # donotexist.txt (three times) and nonsense.txt exist nowhere and are
-    # announced where they were asked for
-    texts = [p.text for p in document.paragraphs]
-    assert sum(text.startswith('Lorem ipsum') for text in texts) == 3
-    assert sum(text.startswith('Boot seals') for text in texts) == 2
+    # from the case's own data/: dolor.txt lands twice -- once in each
+    # instance of secondsuba -- bootseal.txt once and title.txt once; only
+    # donotexist.txt exists nowhere, and both instances asking for it are
+    # answered where they asked
+    texts = [p.text.strip() for p in document.paragraphs]
+    assert sum(text.startswith('Lorem ipsum') for text in texts) == 2
+    assert sum(text.startswith('The moon fell') for text in texts) == 1
     assert sum(text.startswith('A title is everything') for text in texts) == 1
     announced = [text for text in texts if text.startswith('file ') and text.endswith('not found')]
-    assert len(announced) == 4
-    # the section's own marker fill lands after the subsections, the entry
-    # after the _include_ after the fragment's three
+    assert len(announced) == 2
+    # the two instances of secondsuba stand together where the blueprint
+    # stood, and every ordinary paragraph the template holds after it stays
+    # behind both -- 'Between the subsections' used to land in the gap
+    # between instance 1 and instance 2, and the paragraphs that surrounded
+    # the pruned secondsubb blueprint now meet with nothing in between. The
+    # section's own marker fill comes last of all. The ladder case
+    # beside this one pins that rule on its own.
     order = [texts.index(text) for text in
-             ('Header 3', 'Some last words...', 'After the subsections', 'Where will this end?')]
+             ('Before the subsections',
+              '- SUB SECONDA - Header 1',
+              '- SUB SECONDA - Header 2',
+              'Between the subsections',
+              'Subsection secondsubb is not really used and thus it will '
+              'vanish in the final document:',
+              'This is just behind that missing subsection secondsubb',
+              'After the subsections',
+              'Where will this end?')]
     assert order == sorted(order), order
 
     # no pictures in this case; the globals reach header and footer of both sections

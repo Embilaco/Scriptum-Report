@@ -33,8 +33,13 @@ class TextValue:
         if self.exists:
             # UTF-8 like every other file-backed value; the platform default
             # made the same document behave differently per machine.
+            # read() keeps the file's line breaks as written -- the previous
+            # '\n'.join(f.readlines()) doubled every one of them (readlines
+            # keeps each line's newline), so a multi-line file rendered with
+            # a blank line after every line. Unnoticed while every text
+            # fixture was a single line.
             with open(self.filename, 'r', encoding='utf-8') as f:
-                content = '\n'.join(f.readlines())
+                content = f.read()
         else:
             content = str(self)
         return content

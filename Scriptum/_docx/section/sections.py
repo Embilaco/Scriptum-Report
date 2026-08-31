@@ -55,8 +55,14 @@ class Sections:
 
         self.templates = result
     
-    def findTemplate(self, name):
+    def findTemplate(self, name, warn=True):
         """Find one template by path (a list) or by bare name (a string).
+
+        ``warn=False`` keeps a miss quiet, for a caller that has a better
+        message to give than "no such template": since repeating a block
+        requires the ``template`` argument, the commonest miss here is a
+        block that *is* in the document without it, and saying the name is
+        unknown sends the author looking for the wrong thing.
 
         A bare name -- what an ``add`` at a marker carries -- matches any
         block flagged ``template``, wherever it stands: the templates list
@@ -84,13 +90,15 @@ class Sections:
                       f'{[".".join(e.path) for e in hits]} - taking the first')
             if hits:
                 return hits[0]
-            print(f'WARNING: No such template in document: {name!r}')
+            if warn:
+                print(f'WARNING: No such template in document: {name!r}')
             return None
         wanted = [puretagOf(part) for part in name]
         for t,e in self.templates:
             if wanted == [puretagOf(part) for part in e.path]:
                 return e
-        print(f'WARNING: No such template in document: {name}')
+        if warn:
+            print(f'WARNING: No such template in document: {name}')
     
     def delete(self, sectionname):
         s = self.byName(sectionname)

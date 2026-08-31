@@ -34,6 +34,12 @@ LAYERS = {
     'rdf': frozenset(),
     'tag': frozenset(),
     'element': frozenset({'tag'}),
+    # The back ends are peers on top of the leaves: each may use rdf, tag,
+    # element and the version leaf, never its sibling (a second back end
+    # must stay addable without either Office library) and never the root
+    # package, whose __init__ is what imports *them*.
+    '_docx': frozenset({'rdf', 'tag', 'element', 'version'}),
+    '_pptx': frozenset({'rdf', 'tag', 'element', 'version'}),
 }
 
 SCRIPTUM_PACKAGES = {'rdf', 'tag', 'element', '_docx', '_pptx'}
@@ -184,6 +190,8 @@ def test_package_stays_within_its_layer(package):
         # legitimate intra-package and cross-leaf imports
         ('from .base import Element', ['Scriptum', 'element'], 'element', set()),
         ('from ..tag.tag import Tag', ['Scriptum', 'element'], 'element', {'tag'}),
+        # back ends are peers: one reaching its sibling must be visible
+        ('from .._pptx.base import genericFill', ['Scriptum', '_docx'], '_docx', {'_pptx'}),
         # third-party imports are none of this test's business
         ('from docx.oxml.ns import qn', ['Scriptum', '_docx'], '_docx', set()),
         # nesting must not hide anything

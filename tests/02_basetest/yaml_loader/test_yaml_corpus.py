@@ -37,6 +37,7 @@ DATA_SOURCE = TESTS_ROOT / 'data_source'
 #: Root documents: a ``_scriptum_`` mapping, loadable on their own.
 ROOT_DOCUMENTS = [
     '02_basetest/docx_basic/images/word_images.yaml',
+    '02_basetest/docx_basic/ladder/ladder.yaml',
     '02_basetest/docx_basic/simple/word_simple.yaml',
     '02_basetest/docx_basic/tables/word_tables.yaml',
     '02_basetest/docx_basic/text/word_text.yaml',

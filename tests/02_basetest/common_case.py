@@ -39,10 +39,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
-import docx
-from docx.oxml.ns import qn
-import pptx
-
+# No module-level docx/pptx import here, deliberately: this module serves
+# every back-end case, and a docx case must not need python-pptx (nor the
+# other way round). The read-back functions import their library where they
+# use it; a test module declares its own need with pytest.importorskip.
 from _setup_basetest import *
 import Scriptum  # type: ignore
 
@@ -229,6 +229,7 @@ def said(path) -> list:
 
 
 def _paragraphs(path):
+    import docx
     document = docx.Document(path)
     lines = [p.text.strip() for p in document.paragraphs]
     for table in document.tables:
@@ -238,6 +239,7 @@ def _paragraphs(path):
 
 
 def _slides(path):
+    import pptx
     lines = []
     for slide in pptx.Presentation(path).slides:
         for shape in slide.shapes:
@@ -307,14 +309,23 @@ def normalise(lines) -> list:
     return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in lines]
 
 
-def reference(path) -> list:
+def reference(path, normalised=True) -> list:
     """The stored reference at *path* (a JSON list of texts), normalised.
 
     It was captured on another day, so it carries that day's digits and
     weekday name -- normalising only one side of a comparison is how you end
     up measuring the calendar.
+
+    ``normalised=False`` for a case with **no dates in it at all**, where
+    collapsing digits costs discrimination and buys nothing: the ladder case
+    names its blocks ``level3-1``, ``level4-2`` and so on, and under
+    :func:`normalise` thirteen of its lines fall together into seven -- a
+    clone landing in the wrong level's slot would compare equal. Such a case
+    passes the flag and skips :func:`normalise` on both sides. Every other
+    case has a ``date:`` in it and must keep the collapsing.
     """
-    return normalise(json.loads(Path(path).read_text(encoding='utf-8')))
+    stored = json.loads(Path(path).read_text(encoding='utf-8'))
+    return normalise(stored) if normalised else stored
 
 
 def difference(expected, got) -> str:
@@ -361,6 +372,7 @@ EMU_PER_CM = 360000
 
 def drawings(paragraph) -> list:
     """(width, height) in cm of every inline picture in a Word *paragraph*."""
+    from docx.oxml.ns import qn
     return [(round(int(extent.get('cx')) / EMU_PER_CM, 2),
              round(int(extent.get('cy')) / EMU_PER_CM, 2))
             for extent in paragraph._p.iter(qn('wp:extent'))]

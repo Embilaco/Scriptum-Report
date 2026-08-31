@@ -44,7 +44,7 @@ _content_:
           - head: Cool it
           - text:description: Get a fridge, implement it into the rocket, and put the pudding into the fridge
           - marker:content:
-              - image:generic: {file: fridge.png, description: old fridge, height: 5cm}
+              - image:generic: {file: fridge.jpg, description: old fridge, height: 5cm}
               - text:generic: {file: fridge.txt}
               - _include_: 'instruction*.yaml'
 
