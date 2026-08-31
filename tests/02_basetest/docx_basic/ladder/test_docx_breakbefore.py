@@ -1,45 +1,48 @@
-"""``breakbefore``: which instances get a page break, pinned as it stands.
+"""``breakbefore``: which instances get a page break.
 
-The argument puts a page break in front of a block. **Today it fires for
-every instance, the first one included** — a blueprint's first instance is a
-clone like all the others, and the break is added in
-``StructuredElement.copy()``, which runs for that clone too.
+The argument puts a page break in front of a block — **in front of every
+instance except the first**. Instance 1 starts wherever the blueprint stood
+and needs no break to get there; the ones that follow it do.
+
+The rule changed on 2026-08-31. It used to fire on ``::1`` too, and the essay
+showed why that was wrong: its template carries **two manual page breaks** in
+front of its blueprint, from before the rule was ever uniform, so its first
+content section came out behind *three* of them. Nobody had asked for the
+third. "Each of these starts on a new page" is about the ones that follow —
+the first one starts where it is.
+
+What the change moved, measured
+-------------------------------
+Three shipped templates flag blocks ``breakbefore``: ``docx_basic/simple``,
+``04_examples/wordreport`` (``tool``, ``preparation``, ``testplan``) and
+``04_examples/essay`` (``content``).
+
+* the essay's content sections went from ``3, 1, 1, 1, ...`` to
+  ``2, 1, 1, 1, ...`` — the unasked-for third break in front of the first
+  section gone, every later section untouched. Pinned below.
+* wordreport lost three breaks outright, because it uses each of its three
+  flagged blocks exactly **once**: under a rule that exempts ``::1``, a block
+  used once never breaks at all. That is what those templates did before the
+  rule was briefly made uniform.
+* **no stored reference moved.** A page break is written into an empty
+  paragraph and the differential comparison reads text, so a case's
+  ``expected/*.json`` cannot see one either way.
 
 Why this module exists
 ----------------------
 Until it was written the suite had **no** behavioural coverage of
-``breakbefore`` at all: `tests/02_basetest/tag/test_tag.py` pins that the
-argument parses and that numbering a clone keeps it, and nothing anywhere
-asserted that a page break reaches a document. So the rule below was carried
-by one line in a decision page and by three shipped templates that nobody
-measured.
-
-The half that is under review is the first instance. *Templates, anchors,
-copy/apply/add* (DOCX board) records that firing on ``::1`` was chosen on
-purpose — "the author's *each of these starts on a new page* includes the
-first" — and the directive *Next: the section:template requirement, and a
-test for breakbefore* asks for that to be revisited. **This module pins the
-present behaviour, not a preference.** If the rule is changed,
-``test_the_first_instance_gets_one_too`` and the essay measurement below are
-what will fail, and their diff is the change's blast radius.
-
-What a reversal would move
---------------------------
-Three shipped templates flag blocks ``breakbefore``:
-``docx_basic/simple``, ``04_examples/wordreport`` (``tool``, ``preparation``,
-``testplan``) and ``04_examples/essay`` (``content``). The essay is the
-telling one and is measured here: its template carries **two manual page
-breaks** in front of its blueprint, from before the rule was uniform, so its
-first content section is preceded by three breaks and every later one by a
-single break. Exempting ``::1`` would make those two manual breaks
-load-bearing again rather than redundant.
+``breakbefore``: ``tests/02_basetest/tag/test_tag.py`` pins that the argument
+parses and that numbering a clone keeps it, and nothing asserted a page break
+ever reached a document. The rule was carried by one line on a board and by
+three shipped templates nobody had measured — which is how it stayed wrong,
+and why the references above could not have caught the fix either.
 
 The one path that never breaks
 ------------------------------
 A *simple* tag cloned at a marker — ``<text:plain/>`` and its kind — goes
 through ``DocParagraphElement.copy()``, which has no page-break step at all;
-only the block classes inherit ``StructuredElement.copy()``. That asymmetry
-is out of scope here: it is the same whichever way ``::1`` is decided.
+only the block classes inherit ``StructuredElement.copy()``. Unchanged by the
+above, and out of scope here.
 """
 
 from pathlib import Path
@@ -143,30 +146,33 @@ def entries(name, *heads, level='subsection', indent=6):
 
 # ----------------------------------------------------------- the rule today
 
-def test_the_first_instance_gets_one_too(tmp_path):
-    """**The half under review.** One instance, one page break, and it stands
-    between the prose before the block and the block's own first paragraph --
-    not merely somewhere in the document.
+def test_a_block_used_once_gets_no_break(tmp_path):
+    """Instance 1 starts where the blueprint stood, so nothing is added.
 
-    Change the rule and this is the first test that says so.
+    This is the whole of the change: a template that flags a block and then
+    uses it once comes out with no page break at all -- which is what
+    wordreport's three flagged blocks do, and what they did before the rule
+    was briefly made uniform.
     """
     assert broken(generate(tmp_path, entries('alpha', 'A1'))) == [
         (0, 'MAIN'),
         (0, 'before alpha'),
-        (1, 'ALPHA A1'),          # <- the break in question
+        (0, 'ALPHA A1'),          # <- no break: it starts where it stands
         (0, 'alpha: before one'),
         (0, 'alpha: after one'),
         (0, 'after alpha'),
     ]
 
 
-def test_every_further_instance_gets_one(tmp_path):
-    """Three instances, three breaks -- one in front of each."""
+def test_every_instance_after_the_first_gets_one(tmp_path):
+    """Three instances, two breaks -- in front of the second and the third,
+    each standing between the instance before it and its own first
+    paragraph."""
     said = broken(generate(tmp_path, entries('alpha', 'A1', 'A2', 'A3')))
 
     assert [(n, text) for n, text in said if text.startswith('ALPHA')] == \
-        [(1, 'ALPHA A1'), (1, 'ALPHA A2'), (1, 'ALPHA A3')]
-    assert sum(n for n, _ in said) == 3, 'no break anywhere else'
+        [(0, 'ALPHA A1'), (1, 'ALPHA A2'), (1, 'ALPHA A3')]
+    assert sum(n for n, _ in said) == 2, 'no break anywhere else'
 
 
 def test_without_the_argument_nothing_is_added(tmp_path):
@@ -178,22 +184,28 @@ def test_without_the_argument_nothing_is_added(tmp_path):
     assert sum(n for n, _ in said) == 0, said
 
 
-def test_a_break_lands_at_every_depth(tmp_path):
-    """Each level's blueprint is flagged separately and breaks for itself, so
-    a nested repeat gets one break per instance per level."""
+def test_the_rule_counts_instances_per_level(tmp_path):
+    """Each level counts its own instances. Repeating ``one`` inside the first
+    ``alpha`` breaks before ``N2`` and not before ``N1``, and the same holds
+    a level up -- both exercised in one document, so a rule that only looked
+    at the outermost depth could not pass this."""
     body = (entries('alpha', 'A1')
-            + entries('one', 'N1', 'N2', level='subsubsection', indent=10))
+            + entries('one', 'N1', 'N2', level='subsubsection', indent=10)
+            + entries('alpha', 'A2'))
     said = broken(generate(tmp_path, body))
 
     assert said == [
         (0, 'MAIN'),
         (0, 'before alpha'),
-        (1, 'ALPHA A1'),
+        (0, 'ALPHA A1'),         # ::1 at depth 1
         (0, 'alpha: before one'),
-        (1, 'ONE N1'),
+        (0, 'ONE N1'),           # ::1 at depth 2
         (0, 'one body'),
-        (1, 'ONE N2'),
+        (1, 'ONE N2'),           # ::2 at depth 2
         (0, 'one body'),
+        (0, 'alpha: after one'),
+        (1, 'ALPHA A2'),         # ::2 at depth 1
+        (0, 'alpha: before one'),
         (0, 'alpha: after one'),
         (0, 'after alpha'),
     ]
@@ -203,11 +215,12 @@ def test_the_outer_level_can_break_while_the_inner_does_not(tmp_path):
     """The argument is per block, not inherited: flagging ``alpha`` alone
     leaves ``one`` unbroken however often it repeats."""
     body = (entries('alpha', 'A1')
-            + entries('one', 'N1', 'N2', level='subsubsection', indent=10))
+            + entries('one', 'N1', 'N2', level='subsubsection', indent=10)
+            + entries('alpha', 'A2'))
     said = broken(generate(tmp_path, body, built=template(nested_flag='')))
 
     assert [(n, text) for n, text in said if text.startswith(('ALPHA', 'ONE'))] == \
-        [(1, 'ALPHA A1'), (0, 'ONE N1'), (0, 'ONE N2')]
+        [(0, 'ALPHA A1'), (0, 'ONE N1'), (0, 'ONE N2'), (1, 'ALPHA A2')]
 
 
 def test_an_unused_blueprint_leaves_no_stray_break(tmp_path):
@@ -223,19 +236,19 @@ def test_an_unused_blueprint_leaves_no_stray_break(tmp_path):
 
 # ------------------------------------------- what a reversal would move
 
-def test_the_shipped_essay_stacks_three_breaks_before_its_first_section(tmp_path):
-    """The blast radius of exempting ``::1``, measured rather than guessed.
+def test_the_shipped_essay_keeps_its_manual_pair_and_nothing_more(tmp_path):
+    """The change, measured on the template that showed it was needed.
 
-    ``04_examples/essay`` flags ``subsection:content`` and its template also
+    ``04_examples/essay`` flags ``subsection:content``, and its template also
     carries **two manual page breaks** in front of that blueprint, put there
-    before the rule was uniform to get the effect the rule now gives. So the
-    first content section is preceded by three breaks and every later one by
-    exactly one.
+    before the rule was ever uniform. While ``::1`` broke as well, its first
+    content section came out behind three breaks; it now comes out behind the
+    author's two, and every later section behind the one the rule gives it.
 
-    Exempting the first instance would turn this from ``3, 1, 1, ...`` into
-    ``2, 0, 0, ...`` -- the manual pair becoming load-bearing again and every
-    later section losing its break. That is the decision in one line, and it
-    is why this measurement lives with the rule rather than with the essay.
+    The measurement lives with the rule rather than with the essay case
+    because it is the rule it is about -- and because no ``expected/*.json``
+    can see it: a page break is an empty paragraph, and the differential
+    comparison reads text.
     """
     essay = EXAMPLES / 'essay'
     if not (essay / 'essay.docx').is_file():
@@ -259,7 +272,7 @@ def test_the_shipped_essay_stacks_three_breaks_before_its_first_section(tmp_path
     counted = {text: n for n, text in broken(document)}
     per_section = [counted[head] for head in heads]
 
-    assert per_section[0] == 3, \
-        f"two manual breaks in the template plus the rule's own: {per_section}"
+    assert per_section[0] == 2, \
+        f"the template's own two manual breaks, and nothing added: {per_section}"
     assert set(per_section[1:]) == {1}, \
         f'every later instance gets exactly one: {per_section}'

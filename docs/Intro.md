@@ -50,7 +50,7 @@ Every other `<section:xxx>` stays where it is and as it is.
 
 Nesting elements like `<subsection:...>` can be reused inside the parent element as long as there is a `template` argument in the nesting element. It will be just handled as a template and reused when requested. Every element the report document addresses needs such a blueprint of its own, standing under the parent the document names it under and carrying a name that is unique in the document: an address is positional, so a `<sub3section:step>` that sits under `<subsection:alpha>` cannot be addressed under `<subsection:beta>` — that entry is dropped with a warning. Content that exists in no section at all can only be placed through a `<marker:foo/>`, from a blueprint in the `<section:template>` at the end of the template.
 
-A `breakbefore` argument puts a page break in front of the element, before **every** instance of it — the first one included, a blueprint's first instance being a clone like the rest.
+A `breakbefore` argument puts a page break in front of the element, before every instance of it **except the first** — that one starts where the blueprint stands and needs no break to get there. A block flagged this way and used once therefore gets no page break; put one in the template itself, in front of the blueprint, if the first is to start on a fresh page as well.
 
 A `<marker:foo/>` tag is used to place the content into different nested levels. 
 

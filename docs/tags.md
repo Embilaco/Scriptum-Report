@@ -61,7 +61,7 @@ Foo
 
  - `breakbefore` (not used in Powerpoint)
 
-Puts a page break in front of the block. It fires for **every** instance, the first one included: a blueprint's first instance is a clone like all the others, so an author's "each of these starts on a new page" means all of them and not merely the repeats.
+Puts a page break in front of the block — in front of **every instance except the first**. Instance 1 starts wherever the blueprint stands and needs no break to get there; the ones that follow it do. So a block flagged this way but used only once comes out with no page break at all, and if the first one is to start on a fresh page too, the template says so itself with a break of its own in front of the blueprint.
 
 ### Example:
 
