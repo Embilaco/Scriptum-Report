@@ -42,9 +42,11 @@ Arguments after a ` ` blank cannot include colons `:` or blanks themselves; the 
 ## Other characters
 
  * Comma `,` or semicolon `;` are useful only in `<comment: bla, bla, bla/>` which is an ignored tag
- * The equal character `=` gives an argument a value: `width=`/`height=` on images, `name=` in the config-table tags.
+ * The equal character `=` gives an argument a value. Two kinds are read: `width=` and `height=` on an image — a number with a unit, `mm`, `cm`, `in`/`inch` or `pt`, as in `width=9cm`, and anything else is ignored — and `id=` below. Sizes and offsets can also come from the report document as *modifiers* (`width`, `height`, `top`, `left`, `bottom`, `right` — see [rdf.md](./rdf.md)); those are written in the document, never in the tag.
 
 ## Special arguments:
+
+ - `id=N` — the **instance number**. A tag without it is instance 1, which is what lets a pristine template be read without editing it; when a block is cloned, only the *opening* tag of the clone is numbered (`<subsection:foo id=2>`), never the closing one, exactly as XML puts attributes on the opening tag. Numbering rather than renaming is what keeps a `_global_` fill — which matches on the plain `namespace:name` — reaching every clone.
 
  - `template` (not used in Powerpoint)
 
@@ -59,7 +61,7 @@ Foo
 
  - `breakbefore` (not used in Powerpoint)
 
-when the element is copied a template it creates a pagebreak before that element
+Puts a page break in front of the block. It fires for **every** instance, the first one included: a blueprint's first instance is a clone like all the others, so an author's "each of these starts on a new page" means all of them and not merely the repeats.
 
 ### Example:
 
@@ -69,7 +71,7 @@ Foo
 
 ### Fixed tag naming
 These tags are predefined
- - Sections – `section:foo` - used in Word, together with `subsection:..`, `subsubsection:...`, `sub3section:...`, `sub4section:...`,`sub5section`.
+ - Sections – `section:foo` - used in Word, together with `subsection:...`, `subsubsection:...`, `sub3section:...`, `sub4section:...`, `sub5section:...`. The ladder is mandatory and has no gaps: to nest at depth two the depth-one parent has to be written.
  - Slide - `slide:foo` - used in Powerpoint, but only as the name of the slide template
  - Images – `image:foo`
  - Videos - `video:foo` (Powerpoint only)
@@ -77,3 +79,4 @@ These tags are predefined
  - Markers – `marker:foo`
  - Comments - `comment`
  - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice
+ - Ignore - `<ignore:foo all below/>` - everything after it in that section is left alone, tags and all. Written for a documentation section that shows tags as text and would otherwise report them as errors; it takes **both** arguments or it does nothing.

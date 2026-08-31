@@ -42,7 +42,7 @@ Microsoft Office files are themselves based on a XML-Spec (https://en.wikipedia.
 
 ### 2.1 Word templates
 
-Word can structure documents in so-called "sections" (Layout -> Breaks -> Section Breaks) which are used in the templates and "connected" to the XML `<section:name>`+`</section:name>`. A Word template requires a `<section:title>` and a `<section:template>`. In addition any kind of further `<section:xxx>` can be created and used. Any tag between a closing section and the next opening is ignored. All text in that space between may appear or not in the final document.
+Word can structure documents in so-called "sections" (Layout -> Breaks -> Section Breaks) which are used in the templates and "connected" to the XML `<section:name>`+`</section:name>`. A Word template requires a `<section:template>`: typesetting removes that section by name at the end, and a template without one fails with an `AttributeError` rather than a message. Nothing else is required — the content sections may be named anything and there may be any number of them, `<section:title>` being a convention of the shipped templates rather than a rule. Any tag between a closing section and the next opening is ignored. All text in that space between may appear or not in the final document.
 
 The `<section:template>` contains several templates for tables, figures and paragraphs that can be reused at most locations in the document. The `<section:title>` contains - o wonder - the title and things in that context like a table of contents if required. 
 
@@ -50,7 +50,7 @@ Every other `<section:xxx>` stays where it is and as it is.
 
 Nesting elements like `<subsection:...>` can be reused inside the parent element as long as there is a `template` argument in the nesting element. It will be just handled as a template and reused when requested. Every element the report document addresses needs such a blueprint of its own, standing under the parent the document names it under and carrying a name that is unique in the document: an address is positional, so a `<sub3section:step>` that sits under `<subsection:alpha>` cannot be addressed under `<subsection:beta>` — that entry is dropped with a warning. Content that exists in no section at all can only be placed through a `<marker:foo/>`, from a blueprint in the `<section:template>` at the end of the template.
 
-A `breakbefore` argument will trigger a pagebreak before this element whenever a second or a third of these elements is created.
+A `breakbefore` argument puts a page break in front of the element, before **every** instance of it — the first one included, a blueprint's first instance being a clone like the rest.
 
 A `<marker:foo/>` tag is used to place the content into different nested levels. 
 
