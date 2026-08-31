@@ -45,10 +45,26 @@ POSIX_HOME = re.compile(r'(?:^|[\s\'"=(])/(?:home|Users)/\w')
 
 
 def tracked(pattern='*'):
+    """Every tracked path matching *pattern* -- or a skip saying why not.
+
+    ``git ls-files`` failing does not always mean *there is no checkout
+    here*, and the difference is worth reading. Running this suite inside WSL
+    against a **worktree** is the case that costs an afternoon: a worktree's
+    ``.git`` is a file whose ``gitdir:`` names the main checkout with a
+    Windows path, which WSL's git resolves against the current directory and
+    cannot follow -- so both rules below quietly stop being enforced on that
+    run, under a message that says the opposite of what happened.
+
+    Carrying git's own words into the skip reason is what tells the two apart
+    at a glance. What keeps the skip safe either way is that the rules run on
+    every Windows run and on every CI leg, where the checkout is ordinary.
+    """
     listed = subprocess.run(['git', 'ls-files', pattern], cwd=REPO_ROOT,
                             capture_output=True, text=True)
     if listed.returncode != 0:
-        pytest.skip('not a git checkout, nothing to enforce here')
+        said = ' '.join(listed.stderr.split())
+        pytest.skip(f'git ls-files failed, nothing to enforce here: '
+                    f'{said or f"exit {listed.returncode}, nothing on stderr"}')
     return [REPO_ROOT / line for line in listed.stdout.splitlines() if line]
 
 
