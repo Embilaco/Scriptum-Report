@@ -147,6 +147,41 @@ class ManagedDocx:
                     self.fillGeneric(t.puretag,t,e,value,
                                      task.actions if task.modified else None)
 
+    def _nothingToApply(self, address):
+        """Why an address found nothing, in one line.
+
+        A container address is **positional**: ``findExact`` walks the parent
+        that was named and nothing else, so the commonest way to miss is to
+        name a block under the wrong parent. Where the blueprint really stands
+        is knowable, and saying it turns a report that something is missing
+        into one that says what to fix -- which matters here more than
+        anywhere, because the entry's own fills each report their missing
+        parent afterwards and none of *those* lines can explain the cause.
+
+        Read straight from ``sections.templates`` rather than through
+        ``findTemplate``: that lookup warns about an ambiguity, which is the
+        last thing a message explaining a *different* mistake should add to
+        the output, and a nested blueprint appears in the list once per level
+        it is reached through, so the places are deduplicated here.
+        """
+        wanted = puretagOf(address[-1])
+        named = '.'.join(address[:-1])
+        parent = puretagOf(address[-2]) if len(address) > 1 else ''
+
+        elsewhere = []
+        for _tag, element in self.sections.templates:
+            if not element.path or puretagOf(element.path[-1]) != wanted:
+                continue
+            stands = '.'.join(element.path[:-1])
+            if stands and stands != named and stands not in elsewhere:
+                elsewhere.append(stands)
+
+        line = f'WARNING: Nothing to apply at {".".join(address)}'
+        if not elsewhere:
+            return f'{line} - the template holds no {wanted!r} to apply there'
+        return (f'{line} - {parent!r} holds no {wanted!r}; it stands under '
+                f'{" and ".join(elsewhere)}, and an address is positional')
+
     @staticmethod
     def _namesakeInPlace(parent, address):
         """Whether *parent* still holds a block under this address's name.
@@ -303,14 +338,17 @@ class ManagedDocx:
                         # this happens always befor we do 'copy' a new section below!
                         parent = root.addressbook.get('.'.join(t.myAddress[:-1]),None)
                         if not parent:
-                            print(f'WARNING: No such parent structure: '
+                            print(f'WARNING: cannot find parent structure '
                                   f'{(".".join(t.myAddress[:-1]))}')
                             continue
 
-                        struct = parent.findExact(t.myAddress)
+                        # warn=False: findExact's own miss says the same thing
+                        # in its own address notation, and the line below says
+                        # it better. This is the only caller that knows what
+                        # the miss means.
+                        struct = parent.findExact(t.myAddress, warn=False)
                         if not struct:
-                            print(f'WARNING: Nothing to apply at '
-                                  f'{(".".join(t.myAddress))}')
+                            print(self._nothingToApply(t.myAddress))
                             continue
 
                         element = struct[0][1]
@@ -360,7 +398,7 @@ class ManagedDocx:
                         parent = root.addressbook.get('.'.join(t.myAddress[:-1]),None)
                         if not parent:
                             print(
-                                f'WARNING: No such parent structure: {(".".join(t.myAddress[:-1]))}'
+                                f'WARNING: cannot find parent structure {(".".join(t.myAddress[:-1]))}'
                             )
                             continue
                         where = parent.findExact(t.myAddress[:-1]+[t.where])

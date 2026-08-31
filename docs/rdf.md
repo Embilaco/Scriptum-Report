@@ -151,9 +151,17 @@ place.** The document nests the way the template nests, and every entry is
 looked up inside the parent that was named — so a `sub3section:step` written
 under `subsection:beta` finds nothing when the template holds
 `<sub3section:step>` under `subsection:alpha` instead. Nothing is searched for
-document-wide here. The entry, and every fill under it, is dropped, and the
-run says so: `No exact match: [...]`, `Nothing to apply at ...`, and one
-`cannot find parent structure` for each fill inside it. So every element you
+document-wide here. The entry, and everything under it, is dropped, and the
+run says so — one line naming the block, the parent that does not hold it and
+the parent that does:
+
+```
+WARNING: Nothing to apply at <the address you wrote> - 'subsection:beta' holds no
+'sub3section:step'; it stands under <where it really is>, and an address is positional
+```
+
+followed by one `cannot find parent structure` for each task that depended on
+the entry: every fill inside it, and any marker `add`. So every element you
 mean to address needs a blueprint of its own, standing under the parent the
 document will name it under, and carrying a name that is unique in the
 document — the marker lookup below has nothing but the name to go on.

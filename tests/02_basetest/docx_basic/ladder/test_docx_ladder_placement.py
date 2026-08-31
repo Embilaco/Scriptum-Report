@@ -366,18 +366,22 @@ def test_a_nested_repeat_does_not_disturb_the_level_above(tmp_path):
 
 #: ``ladder.yaml`` names ``sub3section:level3-1`` under ``subsection:beta``,
 #: where the template holds no such block -- it stands under
-#: ``subsection:alpha``. Every line the run says about that, in order. Three
-#: fills sit inside the entry (``subitem``, ``text:description`` and the
-#: marker), and each of them reports its missing parent separately.
+#: ``subsection:alpha``. Every line the run says about that, in order.
 MISPLACED = 'section:main::1.subsection:beta::1.subsubsection:two::1.sub3section:level3-1::1'
+STANDS_UNDER = 'section:main::1.subsection:alpha::1.subsubsection:one::1'
+
+#: Four tasks depended on the entry -- the marker ``add``, and the fills for
+#: ``subitem``, ``text:description`` and the marker's own ``text:plain`` --
+#: and each reports its missing parent for itself. They are not folded into
+#: the line above on purpose: on a large subtree the count is how you see how
+#: much content was dropped.
+DEPENDENT_TASKS = 4
+
 EXPECTED_WARNINGS = [
-    "WARNING: No exact match: ['section:main::1', 'subsection:beta::1', "
-    "'subsubsection:two::1', 'sub3section:level3-1::1']",
-    f'WARNING: Nothing to apply at {MISPLACED}',
-    f'WARNING: No such parent structure: {MISPLACED}',
-    f'WARNING: cannot find parent structure {MISPLACED}',
-    f'WARNING: cannot find parent structure {MISPLACED}',
-    f'WARNING: cannot find parent structure {MISPLACED}',
+    f"WARNING: Nothing to apply at {MISPLACED} - 'subsubsection:two' holds no "
+    f"'sub3section:level3-1'; it stands under {STANDS_UNDER}, and an address "
+    f"is positional",
+    *[f'WARNING: cannot find parent structure {MISPLACED}'] * DEPENDENT_TASKS,
 ]
 
 
@@ -393,10 +397,13 @@ def test_a_block_named_where_the_template_does_not_hold_it_is_dropped(tmp_path, 
 
     This is on purpose in the fixture and the warnings are the expected
     output, pinned in full so that a change to the diagnosis is a decision
-    rather than a surprise. Six lines for one mistake is more than it needs
-    -- the three ``cannot find parent structure`` are one per fill inside the
-    entry that was never made -- and shortening them would be a fair thing to
-    do; this test is what would tell you that you had.
+    rather than a surprise. Only the **first** line is about the mistake, and
+    it carries the whole diagnosis: the block, the parent that does not hold
+    it, and the parent that does -- which is knowable, and without which a
+    reader has only the symptom. The rest are one per task that depended on
+    the entry and they stay: folding them away would hide how much content
+    was dropped, and on a large subtree that count is the thing worth
+    knowing.
 
     The one way to place content a section does not already contain is a
     **marker**: entries inside ``marker:name`` are looked up by name across
