@@ -130,8 +130,31 @@ def test_generating_the_same_document_twice_says_the_same_thing(tmp_path):
 
 
 def test_normalise_hides_dates_and_only_dates():
-    assert normalise(['Fri 12. Aug 2026 14:24:59', 'Table 1: Tools used', 'Monday']) == [
-        '# #. Aug # #:#:#', 'Table #: Tools used', 'Monday']
+    """Digits, weekday names and month names go; nothing else does.
+
+    The month joined the other two on 2026-09-01, when three deck references
+    captured in August met a September morning and broke on `Aug` -> `Sep`.
+    A date format that spells any part of itself in letters dates the
+    reference, so every such part has to collapse.
+    """
+    assert normalise(['Fri 12. Aug 2026 14:24:59',
+                      'Wed 3. September 2026',
+                      'Table 1: Tools used',
+                      'Monday']) == ['# #. # # #:#:#',
+                                     '# #. # #',
+                                     'Table #: Tools used',
+                                     'Monday']
+
+
+def test_normalise_leaves_a_word_that_merely_starts_like_a_date_alone():
+    """Word boundaries carry it: 'Monday' is not 'Mon', 'Marched' is not
+    'Mar'. The one name that cannot be told apart is the month **May**, which
+    is also an English word -- capitalised, it collapses. That is the price of
+    collapsing month names at all, and it is cheap: a report that opens a
+    sentence with 'May' loses one word from a comparison, where a reference
+    that dates itself loses the whole suite one morning a month."""
+    assert normalise(['Monday', 'Marched', 'Augment', 'Decoration']) ==         ['Monday', 'Marched', 'Augment', 'Decoration']
+    assert normalise(['May the run be green']) == ['# the run be green']
 
 
 def test_portable_takes_the_workspace_out_of_a_quoted_path(tmp_path):

@@ -5,14 +5,16 @@ section whose marker takes a text fill, a second section with a marker of
 its own, and two instances of the blueprint ``subsection:secondsuba`` -- the
 first nesting a ``subsubsection:secondsubsub1`` and, inside that, a
 ``sub3section:secondsub3i``, each of those three feeding a marker of its
-own -- plus four ``_global_`` values the headers and footers use. Both
-subsection markers take their text fills from files, and one of those files
-exists nowhere on purpose, asked for by both and announced in place. The
-template's third blueprint, ``subsection:secondsubb``, is named nowhere in
-the document: it is pruned, and the ordinary paragraphs around it stay. The
-case builds from its own ``data/`` -- the workspace its ``CheckReport.ipynb``
-prepares. A test that only checks the file is there proves none of that, so
-this module reads the document back:
+own -- plus four ``_global_`` values the headers and footers use. Every
+subsection marker takes text fills from files, and one of those files exists
+nowhere on purpose, asked for three times and announced in place each time.
+``subsection:secondsubb`` closes the section, and its marker is where the
+``_include_`` fragment splices its three fills in; one of them is the same
+missing file again. The first ``secondsuba`` marker also adds
+``text:complex``, a **text block** whose placeholders the document fills by
+name. The case builds from its own ``data/`` -- the workspace its
+``CheckReport.ipynb`` prepares. A test that only checks the file is there
+proves none of that, so this module reads the document back:
 
 * what it *says*, against ``expected/word_text.json``, re-captured whenever
   the template or the document is rewritten: in `f143b8b` after the depth-3
@@ -104,18 +106,26 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
         ('Heading 3', 'SUBSUB secondsubsub1This is s subsection ITEM head'),
         ('Heading 4', 'SUB3 secondsub3iThis is s sub3section SUBITEM head'),
         ('Heading 2', ' - SUB SECONDA - Header 2'),
+        ('Heading 2', ' - SUB SECONDB - Header 3'),
     ]
 
-    # from the case's own data/: dolor.txt lands twice -- once in each
-    # instance of secondsuba -- bootseal.txt once and title.txt once; only
-    # donotexist.txt exists nowhere, and both instances asking for it are
-    # answered where they asked
+    # from the case's own data/: dolor.txt lands four times -- once in each
+    # instance of secondsuba, once in secondsubb's own marker and once more
+    # through the _include_ fragment -- bootseal.txt twice, once directly and
+    # once from the fragment, and title.txt twice, once as the title's
+    # description and once as a placeholder of the text block. Only
+    # donotexist.txt exists nowhere, and each of the three asking for it is
+    # answered where it asked.
     texts = [p.text.strip() for p in document.paragraphs]
-    assert sum(text.startswith('Lorem ipsum') for text in texts) == 2
-    assert sum(text.startswith('The moon fell') for text in texts) == 1
-    assert sum(text.startswith('A title is everything') for text in texts) == 1
+    assert sum(text.startswith('Lorem ipsum') for text in texts) == 4
+    assert sum(text.startswith('The moon fell') for text in texts) == 2
+    # counted by occurrence rather than by paragraph: the second one is a
+    # placeholder *inside* a sentence of the text block, and that is the case
+    # worth having -- it proves a value renders where its tag stood instead
+    # of replacing the whole run it shared with the words either side of it
+    assert sum('A title is everything' in text for text in texts) == 2
     announced = [text for text in texts if text.startswith('file ') and text.endswith('not found')]
-    assert len(announced) == 2
+    assert len(announced) == 3
     # the two instances of secondsuba stand together where the blueprint
     # stood, and every ordinary paragraph the template holds after it stays
     # behind both -- 'Between the subsections' used to land in the gap
@@ -128,8 +138,7 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
               '- SUB SECONDA - Header 1',
               '- SUB SECONDA - Header 2',
               'Between the subsections',
-              'Subsection secondsubb is not really used and thus it will '
-              'vanish in the final document:',
+              '- SUB SECONDB - Header 3',
               'This is just behind that missing subsection secondsubb',
               'After the subsections',
               'Where will this end?')]

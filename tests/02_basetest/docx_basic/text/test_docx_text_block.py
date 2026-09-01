@@ -172,6 +172,53 @@ def test_the_closing_tag_does_not_ship(tmp_path, capsys):
     assert 'WARNING' not in capsys.readouterr().out
 
 
+def test_a_value_written_at_the_block_says_it_goes_nowhere(tmp_path, capsys):
+    """`- text:block: some words` has nowhere to put the words.
+
+    The paragraphs are the template's; only the placeholders inside them are
+    the document's to fill. The loader cannot catch this -- it never sees the
+    template, so it cannot know the address is a block rather than a plain
+    `<text:green/>`, where the very same line is right -- so the back end
+    says it, and names the placeholders the block actually has.
+
+    Silence was the alternative and the wrong one: dropping what an author
+    wrote is the failure mode this format exists to end, and the mistake is
+    nearly always that a placeholder was meant.
+    """
+    said = generate(tmp_path, '          - text:block: some words\n',
+                    '<placeholder:one/>')
+    out = capsys.readouterr().out
+
+    complaint = [line for line in out.splitlines() if 'written nowhere' in line]
+    assert len(complaint) == 1, out
+    assert "'text:block'" in complaint[0], 'it names the block'
+    assert "'some words'" in complaint[0], 'and quotes what was dropped'
+    assert 'placeholder:one' in complaint[0], 'and lists where it could have gone'
+
+    # the block still arrives, and its slot is blanked as any unfilled one is
+    assert said == ['MAIN', 'opening line', 'a  here', 'closing line']
+
+
+def test_a_source_key_at_the_block_says_the_same(tmp_path, capsys):
+    """Not only a scalar: `{file: ...}` written at the block is the same
+    mistake, and the message quotes an excerpt of what would have landed."""
+    said = generate(tmp_path, '          - text:block: {file: notes.txt}\n',
+                    '<placeholder:one/>')
+    out = capsys.readouterr().out
+
+    assert any('written nowhere' in line and 'from a file' in line
+               for line in out.splitlines()), out
+
+
+def test_the_right_shape_says_nothing(tmp_path, capsys):
+    """The control: placeholders only, and the run is quiet."""
+    generate(tmp_path,
+             '          - text:block:\n              placeholder:one: X\n',
+             '<placeholder:one/>')
+
+    assert 'WARNING' not in capsys.readouterr().out
+
+
 # ------------------------------------------------------------- the grammar
 
 def test_a_text_block_needs_no_source_key(tmp_path):

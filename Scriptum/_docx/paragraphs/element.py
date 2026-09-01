@@ -187,6 +187,32 @@ class DocTextBlockElement(StructuredElement):
         self.type = "textblock"
         self.subtype = "text"
 
+    def slots(self) -> list:
+        """The placeholders standing in this block, by the name to write."""
+        seen = []
+        for tag, _element in self.structure:
+            if not tag or tag.puretag == self.tag.puretag:
+                continue
+            if tag.puretag not in seen:
+                seen.append(tag.puretag)
+        return seen
+
+    def wouldWrite(self, value) -> str:
+        """What the fill's *own* value would put on a page, stripped.
+
+        Empty for the value a placeholders-only fill carries, which is the
+        normal case; non-empty exactly when the author wrote something at the
+        block itself that has nowhere to go.
+        """
+        if value is None:
+            return ''
+        try:
+            value.load()
+            text = renderedText(self.tag, value)
+            return (str(value) if text is None else text).strip()
+        except Exception:                      # a value that cannot render
+            return ''                          # says nothing worth reporting
+
     def fill(self, task) -> None:
         """Write the document's placeholders into the block.
 
@@ -195,6 +221,24 @@ class DocTextBlockElement(StructuredElement):
         left to :meth:`clean`, which blanks it -- a half-filled block ships
         without its markup showing rather than with an empty slot announced.
         """
+        # A value written *at* the block -- `- text:complex: some words` --
+        # has nowhere to go: the paragraphs are the template's, and only the
+        # placeholders inside them are the document's to fill. Say so. The
+        # loader cannot: it never sees the template, so it cannot know that
+        # this address is a block rather than a plain `<text:green/>`, where
+        # the very same line is right. Dropping it in silence is the failure
+        # mode this format exists to end, and the mistake is nearly always
+        # that a placeholder was meant.
+        written = self.wouldWrite(task.value)
+        if written:
+            excerpt = written if len(written) <= 40 else written[:37] + '...'
+            slots = self.slots()
+            advice = (f'name one of its placeholders instead: '
+                      f'{", ".join(slots)}' if slots else
+                      'and it holds no placeholder to write into')
+            print(f'WARNING: {self.tag.puretag!r} is a text block and carries '
+                  f'its own text, so {excerpt!r} is written nowhere - {advice}')
+
         self.structure[0][1].replaceTag(self.tag, '')
         self.tag.burn()
 

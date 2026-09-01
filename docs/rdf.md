@@ -328,6 +328,19 @@ the rest name where bytes come from, and a text block has its bytes already.
 Every other namespace still requires one — for a picture or a table a missing
 source is a real mistake, and the run still says so.
 
+Writing a value **at the block** rather than at a placeholder — `- text:complex:
+some words` — puts it nowhere, and the run says that too:
+
+```
+WARNING: 'text:complex' is a text block and carries its own text, so 'some words'
+is written nowhere - name one of its placeholders instead: placeholder:one, placeholder:two
+```
+
+The document alone cannot be checked for this: `- text:green: some words` is
+the same line and perfectly right when `<text:green/>` is a plain tag rather
+than a block. Only the template says which it is, so only the run can tell
+you.
+
 A placeholder the document does not mention is **blanked**: the tag is
 removed and the prose closes over the gap. Nothing is reported, because a
 block is prose and a half-filled one is still prose; a visible
