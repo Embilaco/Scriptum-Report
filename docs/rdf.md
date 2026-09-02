@@ -378,6 +378,43 @@ lengths (`file`, `text`, `date`, `parfile`, `numbering`, `from`, `rows`,
 slot `<text/>` or `<width/>` will be read as saying something else. Prefer
 the namespaced form; see [tags.md](./tags.md).
 
+**A block with no placeholders at all still needs a value written at it — a
+current limitation.** Such a block is prose the template owns entirely, and
+the document has nothing to say about it beyond *put it here*. There is no
+spelling for that. An entry needs a value, and the two ways of writing *no
+value* are both refused:
+
+```yaml
+- marker:content:
+    - text:standardclause:          # read as a container: "a marker adds
+                                    #  elements rather than levels"
+    - text:standardclause: {}       # "this needs a value"
+```
+
+What works is to write a value and let it go nowhere:
+
+```yaml
+- marker:content:
+    - text:standardclause: added    # lands correctly; the run notes that
+                                    # 'added' is written nowhere
+```
+
+The block is placed and filled exactly as it should be. The run says so at
+**INFO**, not `WARNING` — writing at the block is the only way to add it, so
+the words going nowhere is expected rather than a mistake:
+
+```
+INFO: 'text:standardclause' is a text block with no placeholders, so it carries
+its own text entire and 'added' is written nowhere
+```
+
+Where the block *does* have placeholders, the same line stays a `WARNING` and
+names them, because there a value written at the block is nearly always a slip.
+Until there is a spelling for *nothing to supply*, either accept the INFO or
+give such a block one placeholder even if the prose does not need it.
+
+`text:prefilled` in `tests/02_basetest/docx_basic/text` is this case end to end.
+
 ### Tables
 
 ```yaml

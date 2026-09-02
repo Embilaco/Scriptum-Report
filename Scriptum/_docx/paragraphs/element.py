@@ -227,17 +227,28 @@ class DocTextBlockElement(StructuredElement):
         # loader cannot: it never sees the template, so it cannot know that
         # this address is a block rather than a plain `<text:green/>`, where
         # the very same line is right. Dropping it in silence is the failure
-        # mode this format exists to end, and the mistake is nearly always
-        # that a placeholder was meant.
+        # mode this format exists to end.
+        #
+        # How loudly depends on whether the author had an alternative. With
+        # placeholders standing in the block, a value written at the block
+        # instead is nearly always a slip and the message names the slots to
+        # use: WARNING. With none, writing at the block is the *only* way to
+        # add it at a marker -- an entry needs a value and there is no
+        # spelling for "nothing to supply" (docs/rdf.md, current limitation)
+        # -- so the words going nowhere is expected, not a mistake: INFO.
         written = self.wouldWrite(task.value)
         if written:
             excerpt = written if len(written) <= 40 else written[:37] + '...'
             slots = self.slots()
-            advice = (f'name one of its placeholders instead: '
-                      f'{", ".join(slots)}' if slots else
-                      'and it holds no placeholder to write into')
-            print(f'WARNING: {self.tag.puretag!r} is a text block and carries '
-                  f'its own text, so {excerpt!r} is written nowhere - {advice}')
+            if slots:
+                print(f'WARNING: {self.tag.puretag!r} is a text block and '
+                      f'carries its own text, so {excerpt!r} is written '
+                      f'nowhere - name one of its placeholders instead: '
+                      f'{", ".join(slots)}')
+            else:
+                print(f'INFO: {self.tag.puretag!r} is a text block with no '
+                      f'placeholders, so it carries its own text entire and '
+                      f'{excerpt!r} is written nowhere')
 
         self.structure[0][1].replaceTag(self.tag, '')
         self.tag.burn()

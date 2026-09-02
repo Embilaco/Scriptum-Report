@@ -191,12 +191,41 @@ def test_a_value_written_at_the_block_says_it_goes_nowhere(tmp_path, capsys):
 
     complaint = [line for line in out.splitlines() if 'written nowhere' in line]
     assert len(complaint) == 1, out
+    assert complaint[0].startswith('WARNING:'), 'a slip, and there was a slot'
     assert "'text:block'" in complaint[0], 'it names the block'
     assert "'some words'" in complaint[0], 'and quotes what was dropped'
     assert 'placeholder:one' in complaint[0], 'and lists where it could have gone'
 
     # the block still arrives, and its slot is blanked as any unfilled one is
     assert said == ['MAIN', 'opening line', 'a  here', 'closing line']
+
+
+def test_a_block_with_no_placeholders_reports_it_as_INFO(tmp_path, capsys):
+    """The same words going nowhere, but nothing the author could have done.
+
+    A block with no placeholders is prose the template owns entire, and
+    writing a value at it is the **only** way to add it at a marker: an
+    entry needs a value, and neither `- text:block:` nor `- text:block: {}`
+    is accepted (docs/rdf.md, current limitation). So the value going
+    nowhere is expected rather than a mistake, and the run says so at INFO
+    -- where the block *has* slots and one of them was meant, it is still a
+    WARNING naming them.
+
+    ``text:prefilled`` in the shipped ``word_text.yaml`` is this case end to
+    end.
+    """
+    said = generate(tmp_path, '          - text:block: some words\n')
+    out = capsys.readouterr().out
+
+    note = [line for line in out.splitlines() if 'written nowhere' in line]
+    assert len(note) == 1, out
+    assert note[0].startswith('INFO:'), note[0]
+    assert "'text:block'" in note[0], 'it still names the block'
+    assert "'some words'" in note[0], 'and still quotes what was dropped'
+    assert 'WARNING' not in note[0]
+
+    # and the block arrives whole, which is the point of writing it that way
+    assert said == ['MAIN', 'opening line', 'closing line']
 
 
 def test_a_source_key_at_the_block_says_the_same(tmp_path, capsys):
