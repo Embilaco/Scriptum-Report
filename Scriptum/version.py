@@ -8,5 +8,5 @@ plus this module. ``pyproject.toml`` carries the same number; the release
 procedure (Distribution.md) bumps both together.
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 version = __version__
