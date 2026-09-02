@@ -197,7 +197,17 @@ def process_file(source: Path, output_dir: Path | None, force: bool) -> None:
     poster_path = target_dir / f"{base_name}_poster.jpg"
     metadata_path = target_dir / f"{base_name}.metadata.json"
 
-    if mp4_path.exists() and not force:
+    if source.suffix.lower() == ".mp4":
+        # An MP4 is already what this script produces. It is accepted as input
+        # for the poster frame and the metadata, which a video may not have
+        # yet -- never to be re-encoded into itself, which costs quality for
+        # nothing. In place that would also hand ffmpeg the same path to read
+        # and to write: without --force it refused and the run carried on,
+        # with --force it overwrote the input while still reading it.
+        mp4_path = source
+        print(f"INFO: {source.name} is already an MP4 - poster frame and "
+              f"metadata only, no conversion")
+    elif mp4_path.exists() and not force:
         print(f"Skipping conversion (exists): {mp4_path}")
     else:
         convert_video(source, mp4_path, force)

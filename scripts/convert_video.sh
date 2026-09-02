@@ -182,7 +182,16 @@ process_file() {
   local poster_path="$target_dir/${base_name}_poster.jpg"
   local metadata_path="$target_dir/${base_name}.metadata.json"
 
-  if [[ -e "$mp4_path" && $FORCE -eq 0 ]]; then
+  # An MP4 is already what this script produces. It is accepted as input for
+  # the poster frame and the metadata, which a video may not have yet -- never
+  # to be re-encoded into itself, which costs quality for nothing. In place
+  # that would also hand ffmpeg the same path to read and to write: without
+  # --force it refused and the run carried on, with --force it overwrote the
+  # input while still reading it.
+  if [[ "$(printf '%s' "$src" | tr '[:upper:]' '[:lower:]')" == *.mp4 ]]; then
+    mp4_path="$src"
+    printf 'INFO: %s is already an MP4 - poster frame and metadata only, no conversion\n' "$(basename "$src")"
+  elif [[ -e "$mp4_path" && $FORCE -eq 0 ]]; then
     printf 'Skipping conversion (exists): %s\n' "$mp4_path"
   else
     local overwrite_flag="-n"
