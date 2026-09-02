@@ -49,6 +49,7 @@ _content_:
               - text:complex:
                     placeholder:one: a first placeholder
                     placeholder:two: { file: title.txt }
+              - text:prefilled: the words I do write here will never reach the document
 
       - subsection:secondsubb:
           - head: Header 3

@@ -18,6 +18,7 @@ from docx.oxml.ns import qn
 from docx.shared import RGBColor
 from .paragraphs.element import renderedText
 from .section import Sections
+from .template import nodesAddedBefore, takeIndentFrom
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag, puretagOf
 
@@ -438,8 +439,25 @@ class ManagedDocx:
 
                         if tpl:
                             #print('   add tpl and anchor 1', parent)
+                            # `<marker:content takeindent/>`: the marker
+                            # donates its indentation to whatever is added
+                            # there. What was inserted is read back from the
+                            # document rather than from the return value --
+                            # each copy() answers with an element of its own
+                            # shape, and this has to reach every paragraph and
+                            # table of the clone alike.
+                            marker = where[0][0]
+                            takeindent = (isinstance(marker, Tag)
+                                          and 'takeindent' in (marker.args or {}))
+                            standing = anchor.thing._p.getprevious() if takeindent else None
+
                             newElement = tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1], newname=t.myAddress[-1], section=root)
-                            
+
+                            if takeindent:
+                                takeIndentFrom(anchor.thing,
+                                               nodesAddedBefore(anchor.thing._p,
+                                                                standing))
+
 
                     elif t.what == 'copy':
                         # 'copy' is used in any case we need to duplicate e.g. a section while the existing one is already in place

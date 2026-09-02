@@ -197,8 +197,33 @@ anywhere in the document; if the same name exists in both places, the template
 section wins and the run warns about the ambiguity. A fill *outside* a marker
 never creates anything: it targets something the template already contains.
 Markers may repeat and may interleave with fills.
-Anything that is added by a marker will take its formatting from the template,
-not from the marker. This is a current limitation, ideas welcome.
+Anything added at a marker takes its formatting from the block in the
+template, not from the marker — the template owns how a thing looks, and the
+block is where that was decided.
+
+**Indentation is the exception a template can ask for.** A blueprint carries
+the indent of wherever it was written, and `<section:template>` is nowhere in
+particular, so a block added at a marker deep inside a subsection arrives at
+the left margin between paragraphs that sit well inside it. A marker that
+writes `takeindent` donates its own indentation to whatever is added there:
+
+```
+<marker:content takeindent/>
+```
+
+Everything added moves by the same amount — the marker's indent less the
+block's own first line — so a block that indents internally keeps its shape,
+and a table moves with its caption. Nothing else is taken: the style, the
+fonts, the colours and the spacing stay the block's own. The flag sits on the
+marker because the marker is the donor: one blueprint is added at many markers
+of many depths, and only the marker knows which of them it is. Word only — a
+PowerPoint paragraph indents by outline `level`, which is not a measurement.
+
+Taking the marker's *style* as well is a separate question and is deliberately
+not implemented: a marker paragraph's style would be imposed on every
+paragraph of a multi-paragraph block, flattening the one thing a block is for,
+and its character formatting belongs to a run nobody ever styled on purpose,
+the marker being invisible in the finished document.
 
 ### Includes
 

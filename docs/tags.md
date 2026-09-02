@@ -69,6 +69,21 @@ Puts a page break in front of the block — in front of **every instance except 
 Foo
 </a>`
 
+
+ - `takeindent` — on a **marker** tag (not used in Powerpoint)
+
+Content added at the marker takes the marker's **indentation**. A blueprint carries the indent of wherever it was written, and `<section:template>` is nowhere in particular, so without this a block added at a marker deep inside a subsection arrives at the left margin between paragraphs that sit well inside it.
+
+The flag goes on the marker rather than on the block because the marker is what donates: one blueprint is added at many markers of many depths, and only the marker knows which of them it is. It is read per marker, so a flagged and an unflagged marker in the same template do not affect each other.
+
+The shift is **relative**. Everything added moves by the same amount — the marker's indent less the block's own first line — so a block that indents internally keeps its shape rather than being flattened onto a single measurement, and a table inside it moves with its caption. An indent is never driven below zero. The marker's own indent is read as Word shows it, whether it is written on the paragraph or comes from its style.
+
+Only the indentation is taken; everything else — the style, the fonts, the colours, the spacing — is still the block's own. See *Markers and adding content* in [rdf.md](./rdf.md).
+
+### Example:
+
+`<marker:content takeindent/>`
+
 ### Fixed tag naming
 These tags are predefined
  - Sections – `section:foo` - used in Word, together with `subsection:...`, `subsubsection:...`, `sub3section:...`, `sub4section:...`, `sub5section:...`. The ladder is mandatory and has no gaps: to nest at depth two the depth-one parent has to be written.

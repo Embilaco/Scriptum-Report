@@ -154,6 +154,57 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
         assert [p.text for p in section.footer.paragraphs if p.text.strip()] == ['Foot sec title ID 4711']
 
 
+def test_takeindent_places_what_each_marker_adds(tmp_path):
+    """Where the added content sits, which the reference cannot see.
+
+    An indent is not text, so no ``expected/*.json`` can hold this in either
+    direction -- the same blind spot as the page breaks and the clone
+    placement before it. The template flags three of its six markers, and
+    the pair worth having is ``secondsuba`` against ``secondsubb``: both sit
+    at 1.25 cm and they differ **only** by the flag, so a run that ignored
+    it, or one that applied it everywhere, fails here and nowhere else.
+    """
+    document = docx.Document(build(tmp_path))
+
+    def indents(text):
+        """Every paragraph opening with *text*, by left indent in cm.
+
+        A list rather than the first hit: dolor.txt and bootseal.txt each
+        land at more than one marker, and which of them took the indent is
+        the whole question.
+        """
+        found = [p.paragraph_format.left_indent for p in document.paragraphs
+                 if p.text.strip().startswith(text)]
+        assert found, f'{text!r} is not in the document'
+        return [None if left is None else round(left.cm, 2) for left in found]
+
+    # flagged, and nested: the block lands on the marker rather than at the
+    # margin between two paragraphs that sit well inside the subsection
+    assert indents('Here is a marker inside sub3') == [3.75]
+    assert indents('feed the marker for sub3section') == [3.75]
+    assert indents('Here is another marker inside subsub') == [2.5]
+    assert indents('feed the marker for subsubsection') == [2.5]
+
+    # the pair that only the flag separates: secondsuba's two markers and
+    # secondsubb's all sit at 1.25, and only the last is flagged
+    assert indents('Marker of secondsuba not taking care') == [1.25, 1.25]
+    assert indents('Marker of secondsubb, taking care') == [1.25]
+
+    # dolor.txt lands four times -- twice at secondsuba's unflagged markers,
+    # then at secondsubb's flagged one and once more through the _include_
+    # fragment spliced into it, which takes the indent like anything else
+    # added there
+    assert indents('Lorem ipsum') == [None, None, 1.25, 1.25]
+    assert indents('The moon fell') == [None, 1.25]
+
+    # both multi-paragraph blocks are added at an unflagged marker, so they
+    # keep the indent their blueprint was written at -- every paragraph of
+    # them, which is what tells a block moving as a unit from one flattened
+    assert indents('We may add more complex texts') == [None]
+    assert indents('Whenever we need to add a text') == [None]
+    assert indents('And we are able to enter lists') == [None]
+
+
 def test_a_linked_header_gets_its_global_text_once(tmp_path):
     """A section whose header and footer are linked to the previous one reads
     the same paragraphs, so the ``_global_`` text fills (report:id,
