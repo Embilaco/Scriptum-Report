@@ -10,7 +10,7 @@ Convert one or more video files to PowerPoint-friendly MP4 files, extract a
 poster frame image, and collect basic metadata (width/height).
 
 When PATH points to a directory, all supported video files inside it will be
-processed recursively. 
+processed recursively.
 
 Options:
   -o, --output DIR   Write converted files to DIR. Defaults to the directory of
@@ -36,7 +36,7 @@ ensure_dependency() {
   local cmd="$1"
   local url="$2"
   if ! command_exists "$cmd"; then
-    printf 'Error: required command "%s" not found on PATH.\n' "$cmd" >&2
+    printf 'ERROR: required command "%s" not found on PATH.\n' "$cmd" >&2
     printf '       Please install %s: %s\n' "$cmd" "$url" >&2
     exit 1
   fi
@@ -67,7 +67,7 @@ FORCE=0
 while (($#)); do
   case "$1" in
     -o|--output)
-      [[ $# -ge 2 ]] || { printf 'Error: missing argument for %s\n' "$1" >&2; exit 1; }
+      [[ $# -ge 2 ]] || { printf 'ERROR: missing argument for %s\n' "$1" >&2; exit 1; }
       OUTPUT_DIR="$2"
       shift 2
       ;;
@@ -87,7 +87,7 @@ while (($#)); do
       done
       ;;
     -*)
-      printf 'Error: unknown option %s\n\n' "$1" >&2
+      printf 'ERROR: unknown option %s\n\n' "$1" >&2
       usage
       exit 1
       ;;
@@ -141,7 +141,7 @@ for input_path in "${INPUTS[@]}"; do
   elif [[ -f "$input_path" ]]; then
     add_file "$input_path"
   else
-    printf 'Warning: %s is not a valid file or directory. Skipping.\n' "$input_path" >&2
+    printf 'WARNING: %s is not a valid file or directory. Skipping.\n' "$input_path" >&2
   fi
 done
 
@@ -203,7 +203,7 @@ process_file() {
 
   local dimensions
   if ! dimensions=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$mp4_path"); then
-    printf 'Warning: unable to determine dimensions for %s\n' "$mp4_path" >&2
+    printf 'WARNING: unable to determine dimensions for %s\n' "$mp4_path" >&2
     return
   fi
 

@@ -76,7 +76,7 @@ def ensure_dependency(command: str, url: str) -> None:
 
     if shutil.which(command) is None:
         raise DependencyError(
-            f'Error: required command "{command}" not found on PATH.\n'
+            f'ERROR: required command "{command}" not found on PATH.\n'
             f"       Please install {command}: {url}"
         )
 
@@ -93,7 +93,7 @@ def find_supported_files(inputs: Iterable[Path]) -> List[Path]:
         elif path.is_file():
             candidates = [path]
         else:
-            print(f"Warning: {path} is not a valid file or directory. Skipping.", file=sys.stderr)
+            print(f"WARNING: {path} is not a valid file or directory. Skipping.", file=sys.stderr)
             continue
 
         for candidate in candidates:
@@ -151,18 +151,18 @@ def probe_dimensions(video: Path) -> tuple[int, int] | None:
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError:
-        print(f"Warning: unable to determine dimensions for {video}", file=sys.stderr)
+        print(f"WARNING: unable to determine dimensions for {video}", file=sys.stderr)
         return None
 
     value = result.stdout.strip()
     if "x" not in value:
-        print(f"Warning: unexpected ffprobe output for {video}: {value}", file=sys.stderr)
+        print(f"WARNING: unexpected ffprobe output for {video}: {value}", file=sys.stderr)
         return None
     width_str, height_str = value.split("x", 1)
     try:
         return int(width_str), int(height_str)
     except ValueError:
-        print(f"Warning: invalid dimensions from ffprobe for {video}: {value}", file=sys.stderr)
+        print(f"WARNING: invalid dimensions from ffprobe for {video}: {value}", file=sys.stderr)
         return None
 
 
@@ -270,7 +270,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             process_file(file_path, args.output, args.force)
         except subprocess.CalledProcessError as exc:
-            print(f"Error processing {file_path}: {exc}", file=sys.stderr)
+            print(f"ERROR: processing {file_path}: {exc}", file=sys.stderr)
             return exc.returncode or 1
 
     print(f"\nProcessed {len(files)} file(s).")
