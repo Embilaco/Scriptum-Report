@@ -1,5 +1,11 @@
 # Tools and Validation helpers
 
+This page covers the scripts Scriptum **ships** — the six named in
+`pyproject.toml` under `script-files`, which a `pip install` puts within
+reach. Anything else in `scripts/` of the source tree is a development tool,
+belongs to the repository rather than to the distribution, and is described
+where it is used rather than here.
+
 ## Definition of templates
 
 Use the dedicated helpers in `scripts/` to verify that templates and report
@@ -50,13 +56,36 @@ make mechanically are pinned in `tests/02_basetest/yaml_loader/test_yaml_corpus.
 Use `scripts/convert_video.py` to convert video files to PowerPoint-friendly MP4 files.
 
 ```
-python scripts/convert_video.py video_file.xxx
+python scripts/convert_video.py [-o DIR] [-f] video_file.xxx [more ...]
 ```
 
-The script relies on `ffmpeg` and is able to convert 
+`scripts/convert_video.sh` does the same thing and takes the same options; it
+is the original Bash implementation, kept for machines where a shell is
+closer to hand than a Python. Either may be used, and both ship.
+
+- `-o`, `--output DIR` — write the results to `DIR` instead of beside each
+  input. The directory is created if it does not exist.
+- `-f`, `--force` — redo what is already there. Without it an existing MP4,
+  poster frame or metadata file is left alone and reported as skipped.
+
+A path may be a directory, in which case the supported files inside it are
+found recursively.
+
+The scripts rely on `ffmpeg` **and `ffprobe`** — the second reads the
+dimensions — and are able to convert
  `avi`, `mkv`, `mov`, `mpg`, `mpeg`, `wmv`, `flv`, `webm`, `m4v`, `gif`, `qt`, `3gp`
 
-It creates a "poster_frame_image" which is required when adding a video using `python-pptx`:
+`mp4` is accepted as well, but is **not converted**: the format is already the
+one being produced, and re-encoding it into itself would cost quality for
+nothing. What an MP4 is passed in for is the other two products — the poster
+frame and the metadata — which a video may not have yet, and those are made
+as for any other input.
+
+Each input yields three files named after it: `<name>.mp4`, the poster frame
+`<name>_poster.jpg`, and `<name>.metadata.json` carrying the source, the two
+file names and the video's width and height.
+
+The poster frame is required when adding a video using `python-pptx`:
 
 ```
 add_movie(movie_file: str | IO[bytes], left: Length, top: Length, width: Length, height: Length, poster_frame_image: str | IO[bytes] | None = None, mime_type: str = 'video/unknown')
