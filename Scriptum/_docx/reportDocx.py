@@ -16,7 +16,9 @@
 from docx import Document
 from docx.oxml.ns import qn
 from docx.shared import RGBColor
+from .paragraphs.element import renderedText
 from .section import Sections
+from .template import nodesAddedBefore, takeIndentFrom
 from ..rdf.tasks.report_task import GLOBAL_ROOT, ReportTask
 from ..tag import Tag, puretagOf
 
@@ -240,35 +242,14 @@ class ManagedDocx:
         #obj = determineElement(elem)
         value.load()
         #print('fillGeneric 1a:',elem,target,tag.puretag,value)
-        found = elem.replaceTagInAll(target, str(value))
+        # What the value says beyond str(value) -- shared with the
+        # placeholders of a text block, so a file renders the same wherever it
+        # is written. It goes *into* the replacement rather than over the run
+        # afterwards: `found.text = ...` overwrites the whole run, which ate
+        # the words either side of a tag that shared one with them.
+        text = renderedText(tag, value)
+        found = elem.replaceTagInAll(target, str(value) if text is None else text)
         #print('fillGeneric 1b:',found, elem, value.tostring)
-        if found and not value.tostring:
-            if value.type == 'file' and tag.tagtype in ['open','simple']:
-                #print('fillGeneric 2: sub',value.object.subtype)
-                if not value.object.exists:
-                    found.text = f'file {value.object.filename!r} not found'
-                elif value.subtype == 'text':
-                    found.text = value.object.content
-                elif value.subtype == 'video':
-                    found.text = f'{value.object.filename!r}: videos cannot be added to a word document'
-                elif value.subtype == 'unclear':
-                    found.text = f'{value.object.filename!r}: unclear what to do'
-                elif value.subtype == 'image':
-                    # images already done before
-                    pass
-                elif value.subtype == 'table':
-                    # never happens since we require an open/close tag around
-                    pass 
-
-            elif value.type == 'parfile':
-                if not value.object.exists:
-                    found.text = f'file {value.object.filename!r} not found'
-                else:
-                    # load() fills value.content; it used to be read as the
-                    # return value, which was None, so the word 'None' went
-                    # into the paragraph where the parameter belonged.
-                    value.load()
-                    found.text = str(value.content)
 
         # a color modifier paints the font of the text this fill wrote --
         # only where a run came back, so template text is never touched
@@ -276,6 +257,50 @@ class ManagedDocx:
             colour = actions.get('color')
             if colour is not None and colour.type == 'color':
                 found.font.color.rgb = RGBColor.from_string(colour.object.for_docx)
+
+    def structure(self, rdf):
+        """Expand the ladder and fill nothing: a document to *read*, not to ship.
+
+        Every instance the report document asks for is created and placed, and
+        then everything else is left alone, so the saved file shows the shape
+        the run is about to fill:
+
+        * each clone carries its instance number as the document addresses it
+          -- ``<subsection:content id=1>``, ``<subsection:content id=2>`` --
+          which is the thing hardest to picture from the document alone;
+        * a blueprint that was **not** used still stands, still saying
+          ``template``, so an unused one is visible as unused and *where* it
+          was unused -- inside which clone of its parent;
+        * every marker add sits in front of the ``<marker:content/>`` it
+          belongs to, already in its place;
+        * no value is written, so every fill tag is still readable as the
+          address it is.
+
+        It is the seven switches of :meth:`typesetting` in the one combination
+        that answers "what did it think I meant?" -- all of them off but the
+        add-and-copy stage. Nothing is cleaned, nothing is pruned, the
+        template section stays, and the document properties are not stamped:
+        the file is a diagnostic and is not a report.
+
+        Save it as usual::
+
+            managed = Scriptum.ManagedDocx('template.docx')
+            managed.structure(rdf)
+            managed.save('structure.docx')
+
+        **Word only.** ``ManagedPptx`` has no counterpart, and not by
+        oversight: a slide is created inside the fill pass (``add_slide`` from
+        ``applyTask``), so a PowerPoint run with the fill switched off
+        produces an empty deck rather than a structure to look at.
+        """
+        self.typesetting(rdf,
+                         addcopy=True,          # the only stage that runs
+                         directfill=False,      # leave the fill tags readable
+                         globalfill=False,      # and the header/footer ones
+                         cleanup=False,         # keep the tags as written
+                         removetemplate=False,  # show the blueprints too
+                         cleardust=False,       # keep the opening paragraphs
+                         setproperties=False)   # this is not a report
 
     def typesetting(self, rdf, 
                     addcopy=True, 
@@ -414,8 +439,25 @@ class ManagedDocx:
 
                         if tpl:
                             #print('   add tpl and anchor 1', parent)
+                            # `<marker:content takeindent/>`: the marker
+                            # donates its indentation to whatever is added
+                            # there. What was inserted is read back from the
+                            # document rather than from the return value --
+                            # each copy() answers with an element of its own
+                            # shape, and this has to reach every paragraph and
+                            # table of the clone alike.
+                            marker = where[0][0]
+                            takeindent = (isinstance(marker, Tag)
+                                          and 'takeindent' in (marker.args or {}))
+                            standing = anchor.thing._p.getprevious() if takeindent else None
+
                             newElement = tpl.copy(anchor, parent=parent, newpath=t.myAddress[:-1], newname=t.myAddress[-1], section=root)
-                            
+
+                            if takeindent:
+                                takeIndentFrom(anchor.thing,
+                                               nodesAddedBefore(anchor.thing._p,
+                                                                standing))
+
 
                     elif t.what == 'copy':
                         # 'copy' is used in any case we need to duplicate e.g. a section while the existing one is already in place

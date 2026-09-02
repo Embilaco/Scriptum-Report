@@ -42,9 +42,11 @@ Arguments after a ` ` blank cannot include colons `:` or blanks themselves; the 
 ## Other characters
 
  * Comma `,` or semicolon `;` are useful only in `<comment: bla, bla, bla/>` which is an ignored tag
- * The equal character `=` gives an argument a value: `width=`/`height=` on images, `name=` in the config-table tags.
+ * The equal character `=` gives an argument a value. Two kinds are read: `width=` and `height=` on an image — a number with a unit, `mm`, `cm`, `in`/`inch` or `pt`, as in `width=9cm`, and anything else is ignored — and `id=` below. Sizes and offsets can also come from the report document as *modifiers* (`width`, `height`, `top`, `left`, `bottom`, `right` — see [rdf.md](./rdf.md)); those are written in the document, never in the tag.
 
 ## Special arguments:
+
+ - `id=N` — the **instance number**. A tag without it is instance 1, which is what lets a pristine template be read without editing it; when a block is cloned, only the *opening* tag of the clone is numbered (`<subsection:foo id=2>`), never the closing one, exactly as XML puts attributes on the opening tag. Numbering rather than renaming is what keeps a `_global_` fill — which matches on the plain `namespace:name` — reaching every clone.
 
  - `template` (not used in Powerpoint)
 
@@ -59,7 +61,7 @@ Foo
 
  - `breakbefore` (not used in Powerpoint)
 
-when the element is copied a template it creates a pagebreak before that element
+Puts a page break in front of the block — in front of **every instance except the first**. Instance 1 starts wherever the blueprint stands and needs no break to get there; the ones that follow it do. So a block flagged this way but used only once comes out with no page break at all, and if the first one is to start on a fresh page too, the template says so itself with a break of its own in front of the blueprint.
 
 ### Example:
 
@@ -67,13 +69,29 @@ when the element is copied a template it creates a pagebreak before that element
 Foo
 </a>`
 
+
+ - `takeindent` — on a **marker** tag (not used in Powerpoint)
+
+Content added at the marker takes the marker's **indentation**. A blueprint carries the indent of wherever it was written, and `<section:template>` is nowhere in particular, so without this a block added at a marker deep inside a subsection arrives at the left margin between paragraphs that sit well inside it.
+
+The flag goes on the marker rather than on the block because the marker is what donates: one blueprint is added at many markers of many depths, and only the marker knows which of them it is. It is read per marker, so a flagged and an unflagged marker in the same template do not affect each other.
+
+The shift is **relative**. Everything added moves by the same amount — the marker's indent less the block's own first line — so a block that indents internally keeps its shape rather than being flattened onto a single measurement, and a table inside it moves with its caption. An indent is never driven below zero. The marker's own indent is read as Word shows it, whether it is written on the paragraph or comes from its style.
+
+Only the indentation is taken; everything else — the style, the fonts, the colours, the spacing — is still the block's own. See *Markers and adding content* in [rdf.md](./rdf.md).
+
+### Example:
+
+`<marker:content takeindent/>`
+
 ### Fixed tag naming
 These tags are predefined
- - Sections – `section:foo` - used in Word, together with `subsection:..`, `subsubsection:...`, `sub3section:...`, `sub4section:...`,`sub5section`.
+ - Sections – `section:foo` - used in Word, together with `subsection:...`, `subsubsection:...`, `sub3section:...`, `sub4section:...`, `sub5section:...`. The ladder is mandatory and has no gaps: to nest at depth two the depth-one parent has to be written.
  - Slide - `slide:foo` - used in Powerpoint, but only as the name of the slide template
  - Images – `image:foo`
  - Videos - `video:foo` (Powerpoint only)
  - Tables – `table:foo`
  - Markers – `marker:foo`
  - Comments - `comment`
- - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice
+ - Text - `text:foo` - in general everything might be a text, so `text` is not reserved, but good practice. An **open/close** `text:` block in `<section:template>` keeps several paragraphs together, and any tag standing inside it is a *placeholder* the report document fills by name — see *Text blocks and their placeholders* in [rdf.md](./rdf.md). Name a placeholder `<placeholder:one/>` rather than `<one/>`: a bare name shares its space with the source keys (`file`, `text`, `date`, `parfile`, `numbering`, `from`, `rows`) and the lengths (`width`, `height`, `top`, `left`, `bottom`, `right`), and a slot called `<text/>` will be read as one of those instead. A placeholder the document never names is removed with the rest of the markup.
+ - Ignore - `<ignore:foo all below/>` - everything after it in that section is left alone, tags and all. Written for a documentation section that shows tags as text and would otherwise report them as errors; it takes **both** arguments or it does nothing.

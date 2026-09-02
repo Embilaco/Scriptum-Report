@@ -213,6 +213,14 @@ DIGITS = re.compile(r'\d+')
 #: The default datetime format used to start with a weekday name, which no
 #: amount of digit-collapsing hides: a reference is captured on another day.
 WEEKDAY = re.compile(r'\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b')
+#: And a month name, for the same reason one calendar page later. A
+#: reference captured in August read '#. Aug #'; a run on 1 September read
+#: '#. Sep #', and three deck comparisons broke overnight after being
+#: latent for as long as the references had existed.
+MONTH = re.compile(r'\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?'
+                   r'|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?'
+                   r'|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?'
+                   r'|Dec(?:ember)?)\b')
 
 
 def said(path) -> list:
@@ -299,14 +307,20 @@ def comparable(lines) -> list:
 
 
 def normalise(lines) -> list:
-    """*lines* with runs of digits and weekday names collapsed to ``#``.
+    """*lines* with digits, weekday names and month names collapsed to ``#``.
 
-    Both are for dates: a document using ``date: now`` is evaluated when it is
-    built, and the reference was built on another day. What a comparison
-    exists for -- a text missing, an extra one, two in the wrong order --
-    survives it.
+    All three are for dates: a document using ``date: now`` is evaluated when
+    it is built, and the reference was built on another day -- or, as of
+    2026-09-01, in another month.  What a comparison exists for -- a text
+    missing, an extra one, two in the wrong order -- survives it.
+
+    The rule the month cost a morning to learn: **a date format that spells
+    any part of itself in letters dates the reference**, and the collapsing
+    has to cover every such part rather than the digits alone. Three deck
+    comparisons went red at midnight on a change nobody had made.
     """
-    return [WEEKDAY.sub('#', DIGITS.sub('#', line)) for line in lines]
+    return [MONTH.sub('#', WEEKDAY.sub('#', DIGITS.sub('#', line)))
+            for line in lines]
 
 
 def reference(path, normalised=True) -> list:

@@ -29,7 +29,7 @@ def _load_managed_pptx() -> type[object] | None:
     spec = importlib.util.find_spec("Scriptum._pptx.reportPptx")
     if spec is None:
         print(
-            "Error: Unable to import Scriptum PowerPoint support. Ensure python-pptx is installed.",
+            "ERROR: Unable to import Scriptum PowerPoint support. Ensure python-pptx is installed.",
             file=sys.stderr,
         )
         return None
@@ -37,7 +37,7 @@ def _load_managed_pptx() -> type[object] | None:
     module = importlib.import_module("Scriptum._pptx.reportPptx")
     managed_pptx = getattr(module, "ManagedPptx", None)
     if managed_pptx is None:
-        print("Error: ManagedPptx is not available from Scriptum._pptx.reportPptx.", file=sys.stderr)
+        print("ERROR: ManagedPptx is not available from Scriptum._pptx.reportPptx.", file=sys.stderr)
         return None
 
     return managed_pptx

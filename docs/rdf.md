@@ -197,8 +197,33 @@ anywhere in the document; if the same name exists in both places, the template
 section wins and the run warns about the ambiguity. A fill *outside* a marker
 never creates anything: it targets something the template already contains.
 Markers may repeat and may interleave with fills.
-Anything that is added by a marker will take its formatting from the template,
-not from the marker. This is a current limitation, ideas welcome.
+Anything added at a marker takes its formatting from the block in the
+template, not from the marker — the template owns how a thing looks, and the
+block is where that was decided.
+
+**Indentation is the exception a template can ask for.** A blueprint carries
+the indent of wherever it was written, and `<section:template>` is nowhere in
+particular, so a block added at a marker deep inside a subsection arrives at
+the left margin between paragraphs that sit well inside it. A marker that
+writes `takeindent` donates its own indentation to whatever is added there:
+
+```
+<marker:content takeindent/>
+```
+
+Everything added moves by the same amount — the marker's indent less the
+block's own first line — so a block that indents internally keeps its shape,
+and a table moves with its caption. Nothing else is taken: the style, the
+fonts, the colours and the spacing stay the block's own. The flag sits on the
+marker because the marker is the donor: one blueprint is added at many markers
+of many depths, and only the marker knows which of them it is. Word only — a
+PowerPoint paragraph indents by outline `level`, which is not a measurement.
+
+Taking the marker's *style* as well is a separate question and is deliberately
+not implemented: a marker paragraph's style would be imposed on every
+paragraph of a multi-paragraph block, flattening the one thing a block is for,
+and its character formatting belongs to a run nobody ever styled on purpose,
+the marker being invisible in the finished document.
 
 ### Includes
 
@@ -301,6 +326,95 @@ instead of appearing to work.)
 not; a block scalar (`|` keeps line breaks, `>` folds them) is best for
 genuinely multi-line text.
 
+#### Text blocks and their placeholders
+
+A `text:` block in `<section:template>` is several paragraphs the template
+keeps together — a standard clause, a disclaimer, a form of words — and a
+document adds it at a marker. The block **already carries its text**, so
+there is nothing for the document to supply except the gaps left in it. Those
+gaps are ordinary tags standing inside the block, and the document names them
+one by one:
+
+```
+<text:complex>                            - marker:content:
+We may add more complex texts with            - text:complex:
+a <placeholder:one/> or a                         placeholder:one: a first one
+<placeholder:two/>                                placeholder:two: {file: note.txt}
+or further text with more targets…
+</text:complex>
+```
+
+Each entry is a [modifier](#modifiers), matched to a tag by the name the
+template spells. It takes any form a value takes, so a placeholder may come
+from a file, a parameter file or a date just as a plain fill may.
+
+This is the one address that needs **no source key**: `file:`, `text:` and
+the rest name where bytes come from, and a text block has its bytes already.
+Every other namespace still requires one — for a picture or a table a missing
+source is a real mistake, and the run still says so.
+
+Writing a value **at the block** rather than at a placeholder — `- text:complex:
+some words` — puts it nowhere, and the run says that too:
+
+```
+WARNING: 'text:complex' is a text block and carries its own text, so 'some words'
+is written nowhere - name one of its placeholders instead: placeholder:one, placeholder:two
+```
+
+The document alone cannot be checked for this: `- text:green: some words` is
+the same line and perfectly right when `<text:green/>` is a plain tag rather
+than a block. Only the template says which it is, so only the run can tell
+you.
+
+A placeholder the document does not mention is **blanked**: the tag is
+removed and the prose closes over the gap. Nothing is reported, because a
+block is prose and a half-filled one is still prose; a visible
+`<placeholder:two/>` in a finished report is the worse outcome.
+
+Naming is free — `<placeholder:one/>` and a bare `<subtitle/>` are matched
+the same way — but a bare name shares its space with the source keys and the
+lengths (`file`, `text`, `date`, `parfile`, `numbering`, `from`, `rows`,
+`width`, `height`, `top`, `left`, `bottom`, `right`). A template that calls a
+slot `<text/>` or `<width/>` will be read as saying something else. Prefer
+the namespaced form; see [tags.md](./tags.md).
+
+**A block with no placeholders at all still needs a value written at it — a
+current limitation.** Such a block is prose the template owns entirely, and
+the document has nothing to say about it beyond *put it here*. There is no
+spelling for that. An entry needs a value, and the two ways of writing *no
+value* are both refused:
+
+```yaml
+- marker:content:
+    - text:standardclause:          # read as a container: "a marker adds
+                                    #  elements rather than levels"
+    - text:standardclause: {}       # "this needs a value"
+```
+
+What works is to write a value and let it go nowhere:
+
+```yaml
+- marker:content:
+    - text:standardclause: added    # lands correctly; the run notes that
+                                    # 'added' is written nowhere
+```
+
+The block is placed and filled exactly as it should be. The run says so at
+**INFO**, not `WARNING` — writing at the block is the only way to add it, so
+the words going nowhere is expected rather than a mistake:
+
+```
+INFO: 'text:standardclause' is a text block with no placeholders, so it carries
+its own text entire and 'added' is written nowhere
+```
+
+Where the block *does* have placeholders, the same line stays a `WARNING` and
+names them, because there a value written at the block is nearly always a slip.
+Until there is a spelling for *nothing to supply*, either accept the INFO or
+give such a block one placeholder even if the prose does not need it.
+
+`text:prefilled` in `tests/02_basetest/docx_basic/text` is this case end to end.
+
 ### Tables
 
 ```yaml
@@ -401,6 +515,11 @@ value (`description: {from: row1}`), but no modifiers of its own.
 **Lengths** — `width`, `height`, `top`, `left`, `bottom`, `right` — need a
 unit: `cm`, `mm`, `in` (or `inch`), `pt`. `width: 4` is an error, not four of
 something implied. A unit suffix on any other value is just text.
+
+**What a modifier carries.** A modifier whose name is a namespace of its own
+— `image:poster`, `table:x`, `color` — carries a value of that kind. Every
+other modifier carries **words**: `description: {file: caption.txt}` writes
+what the file says, and so does a placeholder in a text block.
 
 ## Quoting
 

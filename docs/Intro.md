@@ -42,7 +42,7 @@ Microsoft Office files are themselves based on a XML-Spec (https://en.wikipedia.
 
 ### 2.1 Word templates
 
-Word can structure documents in so-called "sections" (Layout -> Breaks -> Section Breaks) which are used in the templates and "connected" to the XML `<section:name>`+`</section:name>`. A Word template requires a `<section:title>` and a `<section:template>`. In addition any kind of further `<section:xxx>` can be created and used. Any tag between a closing section and the next opening is ignored. All text in that space between may appear or not in the final document.
+Word can structure documents in so-called "sections" (Layout -> Breaks -> Section Breaks) which are used in the templates and "connected" to the XML `<section:name>`+`</section:name>`. A Word template needs no particular section. `<section:template>` is where blueprints that belong to no section of its own live — everything that can be added at a `<marker:foo/>` — and typesetting removes it at the end of the run; a template without one builds normally and says so once, since a blueprint flagged `template` anywhere in the content works just as well. The content sections may be named anything and there may be any number of them, `<section:title>` being a convention of the shipped templates rather than a rule. Any tag between a closing section and the next opening is ignored. All text in that space between may appear or not in the final document.
 
 The `<section:template>` contains several templates for tables, figures and paragraphs that can be reused at most locations in the document. The `<section:title>` contains - o wonder - the title and things in that context like a table of contents if required. 
 
@@ -50,7 +50,7 @@ Every other `<section:xxx>` stays where it is and as it is.
 
 Nesting elements like `<subsection:...>` can be reused inside the parent element as long as there is a `template` argument in the nesting element. It will be just handled as a template and reused when requested. Every element the report document addresses needs such a blueprint of its own, standing under the parent the document names it under and carrying a name that is unique in the document: an address is positional, so a `<sub3section:step>` that sits under `<subsection:alpha>` cannot be addressed under `<subsection:beta>` — that entry is dropped with a warning. Content that exists in no section at all can only be placed through a `<marker:foo/>`, from a blueprint in the `<section:template>` at the end of the template.
 
-A `breakbefore` argument will trigger a pagebreak before this element whenever a second or a third of these elements is created.
+A `breakbefore` argument puts a page break in front of the element, before every instance of it **except the first** — that one starts where the blueprint stands and needs no break to get there. A block flagged this way and used once therefore gets no page break; put one in the template itself, in front of the blueprint, if the first is to start on a fresh page as well.
 
 A `<marker:foo/>` tag is used to place the content into different nested levels. 
 
@@ -111,4 +111,44 @@ myppt.save('result_powerpoint.pptx',finish=True, createpdf=True)
 
 
 The arguments `finish=True` and `createpdf=True` take effect on Windows only, with an installed Word or PowerPoint respectively: the finished file is re-saved by the Office application itself and, with `createpdf=True`, exported as a PDF beside it. Elsewhere they are ignored with a message.
+
+## 5. Looking at the structure — `structure()`
+
+When a document does not come out as expected, the question is usually *what
+did it think I meant?* — which blocks it decided to create, how many of each,
+and where it put them. `ManagedDocx.structure()` answers it: it runs only the
+step that creates and places the instances, and then leaves everything else
+alone.
+
+```python
+import Scriptum
+rdf = Scriptum.ReportDataFile('report_word.yaml')
+mydoc = Scriptum.ManagedDocx('template.docx')
+mydoc.structure(rdf)
+mydoc.save('structure.docx')
+```
+
+Open `structure.docx` in Word and you see the tags, not a report:
+
+```
+<subsection:content id=1>...
+<subsection:content id=2>...
+<subsection:content template>...
+```
+
+- each **clone carries the instance number** the document addresses it by,
+  `id=1`, `id=2`, and so on — a tag without one is instance 1;
+- a **blueprint that was not used is still there**, still carrying
+  `template`, so you can see which ones went unused and inside which parent;
+- every **marker entry is already placed**, in front of the
+  `<marker:foo/>` it belongs to;
+- **nothing is filled**, so every fill tag is still readable as the address
+  it is;
+- and the run still reports an address it could not place, which is what
+  most often sent you looking in the first place.
+
+The file is a diagnostic, not a report: no tag is cleaned, no blueprint is
+pruned, the `<section:template>` stays and the document properties are not
+set. Word only — a PowerPoint slide is created while the content is filled,
+so there is no structure to look at before it.
 

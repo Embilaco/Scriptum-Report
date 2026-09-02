@@ -446,10 +446,17 @@ class StructuredElement:
 
         #print('anchor:',anchor.thing.text)
 
-        # if we create a new structure and the first element posesses the 'breakbefore' tag
-        # we add a new page_break
+        # `breakbefore` on the block's first element puts a page break in
+        # front of this instance -- except in front of instance 1, which
+        # starts wherever the blueprint stood and needs no break to get
+        # there. Firing on ::1 as well was the rule until 2026-08-31 and it
+        # cost a template one break it never asked for: the essay's first
+        # content section came out behind three of them, the two its own
+        # template carries and this one. "Each of these starts on a new page"
+        # is about the ones that follow; the first starts where it is.
+        instance = newname.rsplit(':', 1)[-1] if newname else '1'
         try:
-            if (text:= self.deepcopy[0].text):
+            if instance != '1' and (text := self.deepcopy[0].text):
                 tag = getTag(text)[0]
                 if 'breakbefore' in tag.args:
                     #print('add a page break...')

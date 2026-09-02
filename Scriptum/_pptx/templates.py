@@ -95,7 +95,7 @@ def makeTemplate(shapes: list, ttype='__undefined__') -> dict:
         pass
 
     else: 
-        print(f'Warning: Template type is unknown is yet not implemented: {ttype!r}')
+        print(f'WARNING: Template type is unknown is yet not implemented: {ttype!r}')
                 
     return template
 

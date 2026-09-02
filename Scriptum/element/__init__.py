@@ -3,7 +3,6 @@
 
 from .element_paragraph import ParagraphElement
 from .element_table import TableElement
-from .element_image import ImageElement
 from .base import Element
 from .protocols import TableContent, TableSource
 
@@ -14,7 +13,6 @@ __all__ = [
     'Element',
     'ParagraphElement',
     'TableElement',
-    'ImageElement',
     'TableContent',
     'TableSource',
     ]

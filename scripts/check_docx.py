@@ -29,7 +29,7 @@ def _load_managed_docx() -> type[object] | None:
     spec = importlib.util.find_spec("Scriptum._docx.reportDocx")
     if spec is None:
         print(
-            "Error: Unable to import Scriptum Word support. Ensure python-docx is installed.",
+            "ERROR: Unable to import Scriptum Word support. Ensure python-docx is installed.",
             file=sys.stderr,
         )
         return None
@@ -37,7 +37,7 @@ def _load_managed_docx() -> type[object] | None:
     module = importlib.import_module("Scriptum._docx.reportDocx")
     managed_docx = getattr(module, "ManagedDocx", None)
     if managed_docx is None:
-        print("Error: ManagedDocx is not available from Scriptum._docx.reportDocx.", file=sys.stderr)
+        print("ERROR: ManagedDocx is not available from Scriptum._docx.reportDocx.", file=sys.stderr)
         return None
 
     return managed_docx

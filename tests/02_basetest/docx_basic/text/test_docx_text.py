@@ -5,14 +5,16 @@ section whose marker takes a text fill, a second section with a marker of
 its own, and two instances of the blueprint ``subsection:secondsuba`` -- the
 first nesting a ``subsubsection:secondsubsub1`` and, inside that, a
 ``sub3section:secondsub3i``, each of those three feeding a marker of its
-own -- plus four ``_global_`` values the headers and footers use. Both
-subsection markers take their text fills from files, and one of those files
-exists nowhere on purpose, asked for by both and announced in place. The
-template's third blueprint, ``subsection:secondsubb``, is named nowhere in
-the document: it is pruned, and the ordinary paragraphs around it stay. The
-case builds from its own ``data/`` -- the workspace its ``CheckReport.ipynb``
-prepares. A test that only checks the file is there proves none of that, so
-this module reads the document back:
+own -- plus four ``_global_`` values the headers and footers use. Every
+subsection marker takes text fills from files, and one of those files exists
+nowhere on purpose, asked for three times and announced in place each time.
+``subsection:secondsubb`` closes the section, and its marker is where the
+``_include_`` fragment splices its three fills in; one of them is the same
+missing file again. The first ``secondsuba`` marker also adds
+``text:complex``, a **text block** whose placeholders the document fills by
+name. The case builds from its own ``data/`` -- the workspace its
+``CheckReport.ipynb`` prepares. A test that only checks the file is there
+proves none of that, so this module reads the document back:
 
 * what it *says*, against ``expected/word_text.json``, re-captured whenever
   the template or the document is rewritten: in `f143b8b` after the depth-3
@@ -104,18 +106,26 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
         ('Heading 3', 'SUBSUB secondsubsub1This is s subsection ITEM head'),
         ('Heading 4', 'SUB3 secondsub3iThis is s sub3section SUBITEM head'),
         ('Heading 2', ' - SUB SECONDA - Header 2'),
+        ('Heading 2', ' - SUB SECONDB - Header 3'),
     ]
 
-    # from the case's own data/: dolor.txt lands twice -- once in each
-    # instance of secondsuba -- bootseal.txt once and title.txt once; only
-    # donotexist.txt exists nowhere, and both instances asking for it are
-    # answered where they asked
+    # from the case's own data/: dolor.txt lands four times -- once in each
+    # instance of secondsuba, once in secondsubb's own marker and once more
+    # through the _include_ fragment -- bootseal.txt twice, once directly and
+    # once from the fragment, and title.txt twice, once as the title's
+    # description and once as a placeholder of the text block. Only
+    # donotexist.txt exists nowhere, and each of the three asking for it is
+    # answered where it asked.
     texts = [p.text.strip() for p in document.paragraphs]
-    assert sum(text.startswith('Lorem ipsum') for text in texts) == 2
-    assert sum(text.startswith('The moon fell') for text in texts) == 1
-    assert sum(text.startswith('A title is everything') for text in texts) == 1
+    assert sum(text.startswith('Lorem ipsum') for text in texts) == 4
+    assert sum(text.startswith('The moon fell') for text in texts) == 2
+    # counted by occurrence rather than by paragraph: the second one is a
+    # placeholder *inside* a sentence of the text block, and that is the case
+    # worth having -- it proves a value renders where its tag stood instead
+    # of replacing the whole run it shared with the words either side of it
+    assert sum('A title is everything' in text for text in texts) == 2
     announced = [text for text in texts if text.startswith('file ') and text.endswith('not found')]
-    assert len(announced) == 2
+    assert len(announced) == 3
     # the two instances of secondsuba stand together where the blueprint
     # stood, and every ordinary paragraph the template holds after it stays
     # behind both -- 'Between the subsections' used to land in the gap
@@ -128,8 +138,7 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
               '- SUB SECONDA - Header 1',
               '- SUB SECONDA - Header 2',
               'Between the subsections',
-              'Subsection secondsubb is not really used and thus it will '
-              'vanish in the final document:',
+              '- SUB SECONDB - Header 3',
               'This is just behind that missing subsection secondsubb',
               'After the subsections',
               'Where will this end?')]
@@ -143,6 +152,57 @@ def test_the_outline_the_fills_and_the_headers(tmp_path):
         assert 'Report ID 4711' in header and 'Date published: 01. August 2020' in header
         assert [drawings(p) for p in section.header.paragraphs if drawings(p)] == [[(0.8, 1.25)]]
         assert [p.text for p in section.footer.paragraphs if p.text.strip()] == ['Foot sec title ID 4711']
+
+
+def test_takeindent_places_what_each_marker_adds(tmp_path):
+    """Where the added content sits, which the reference cannot see.
+
+    An indent is not text, so no ``expected/*.json`` can hold this in either
+    direction -- the same blind spot as the page breaks and the clone
+    placement before it. The template flags three of its six markers, and
+    the pair worth having is ``secondsuba`` against ``secondsubb``: both sit
+    at 1.25 cm and they differ **only** by the flag, so a run that ignored
+    it, or one that applied it everywhere, fails here and nowhere else.
+    """
+    document = docx.Document(build(tmp_path))
+
+    def indents(text):
+        """Every paragraph opening with *text*, by left indent in cm.
+
+        A list rather than the first hit: dolor.txt and bootseal.txt each
+        land at more than one marker, and which of them took the indent is
+        the whole question.
+        """
+        found = [p.paragraph_format.left_indent for p in document.paragraphs
+                 if p.text.strip().startswith(text)]
+        assert found, f'{text!r} is not in the document'
+        return [None if left is None else round(left.cm, 2) for left in found]
+
+    # flagged, and nested: the block lands on the marker rather than at the
+    # margin between two paragraphs that sit well inside the subsection
+    assert indents('Here is a marker inside sub3') == [3.75]
+    assert indents('feed the marker for sub3section') == [3.75]
+    assert indents('Here is another marker inside subsub') == [2.5]
+    assert indents('feed the marker for subsubsection') == [2.5]
+
+    # the pair that only the flag separates: secondsuba's two markers and
+    # secondsubb's all sit at 1.25, and only the last is flagged
+    assert indents('Marker of secondsuba not taking care') == [1.25, 1.25]
+    assert indents('Marker of secondsubb, taking care') == [1.25]
+
+    # dolor.txt lands four times -- twice at secondsuba's unflagged markers,
+    # then at secondsubb's flagged one and once more through the _include_
+    # fragment spliced into it, which takes the indent like anything else
+    # added there
+    assert indents('Lorem ipsum') == [None, None, 1.25, 1.25]
+    assert indents('The moon fell') == [None, 1.25]
+
+    # both multi-paragraph blocks are added at an unflagged marker, so they
+    # keep the indent their blueprint was written at -- every paragraph of
+    # them, which is what tells a block moving as a unit from one flattened
+    assert indents('We may add more complex texts') == [None]
+    assert indents('Whenever we need to add a text') == [None]
+    assert indents('And we are able to enter lists') == [None]
 
 
 def test_a_linked_header_gets_its_global_text_once(tmp_path):

@@ -2,7 +2,6 @@
 
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
-#from ...element.element_image import ImageElement
 from ...rdf import ReportTask
 from ...rdf.values import ImageValue
 from ...tag import Tag
@@ -10,7 +9,7 @@ from ..base import PptElement
 from ..units import units
 
 
-class PptImageElement(PptElement):# , ImageElement):
+class PptImageElement(PptElement):
     """Image and video handling for PowerPoint shapes."""
 
     def __init__(self, elem: Any, tags: Sequence[Tag]):
