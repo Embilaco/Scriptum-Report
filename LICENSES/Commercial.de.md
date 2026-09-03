@@ -30,7 +30,7 @@ SCRIPTUM wird von einer einzelnen Person entwickelt und gepflegt. Ob es
 weiterentwickelt, an neue Office-Versionen angepasst und beantwortet wird,
 hängt davon ab, ob diejenigen, die damit arbeiten und Geld verdienen, etwas
 zurückgeben. Wer die Software kommerziell einsetzt, ist daher gebeten, das
-Projekt freiwillig zu unterstützen — als Richtwert **10 bis 50 Euro je Monat
+Projekt freiwillig zu unterstützen — als Vorschlag **10 bis 20 Euro je Monat
 und Nutzer**, nach eigenem Ermessen, in jeder Höhe und auch gar nicht. Die
 Wege dazu stehen in Ziffer 6.
 
@@ -154,7 +154,7 @@ bearbeitete Software unterliegt weiterhin dieser Lizenz.
 ## 6. Freiwillige Unterstützung
 
 Wer die Software kommerziell nutzt, ist gebeten, das Projekt freiwillig zu
-unterstützen. Als Orientierung nennt der Lizenzgeber **10 bis 50 Euro je Monat
+unterstützen. Als Vorschlag nennt der Lizenzgeber **10 bis 20 Euro je Monat
 und Nutzer**; jeder Betrag ist willkommen, auch ein einmaliger.
 
 Wege dorthin:

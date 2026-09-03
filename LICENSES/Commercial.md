@@ -29,7 +29,7 @@ SCRIPTUM is written and maintained by one person. Whether it keeps being
 developed, kept working against new Office versions, and answered when you
 ask, depends on whether those who work with it and earn with it give something
 back. If you use the Software commercially you are asked to support the
-project voluntarily — as a guide, **10 to 50 euros per month and user**, at
+project voluntarily — as a suggestion, **10 to 20 euros per month and user**, at
 your own discretion, in any amount, or not at all. Section 6 says how.
 
 **This request creates no obligation to pay.** The rights granted in Section 2
@@ -142,7 +142,7 @@ this license.
 ## 6. Voluntary support
 
 If you use the Software commercially, you are asked to support the project
-voluntarily. As a guide the Licensor suggests **10 to 50 euros per month and
+voluntarily. As a suggestion the Licensor names **10 to 20 euros per month and
 user**; any amount is welcome, including a one-off one.
 
 Where to do it:
