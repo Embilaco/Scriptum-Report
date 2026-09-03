@@ -46,7 +46,7 @@ This project is dual-licensed, and **both licenses are free of charge**:
 
 Commercial use costs nothing and the software is provided **as is**. If you
 earn with it, you are *asked* — not required — to support the project:
-10–50 € per month and user is the suggested range, any amount is welcome, and
+10–20 € per month and user is the suggestion, any amount is welcome, and
 paying nothing breaches nothing. See section 6 of the license.
 
 SPDX identifiers:
