@@ -531,7 +531,7 @@ global
 section:title
   #.author='James Bond'
   #.report:id='ID 007'
-  .date:creation=date:now
+  .date:creation=date:today
   .table:inline=file:instructiongeneral.csv+description='temperatures'
   @marker:content
     +table:generic=file:instruction2.csv+description='instruction two'

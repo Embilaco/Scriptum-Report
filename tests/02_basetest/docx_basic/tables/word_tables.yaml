@@ -12,7 +12,7 @@ _global_:
 
 _content_:
   - section:title:
-      - date:creation: {date: now}
+      - date:creation: {date: today}
       - table:inline: {file: instructionsrocket.csv, description: rocket preparation}
       - marker:content:
           - table:generic: {file: technologies.csv, description: 'tech isn''t it' }

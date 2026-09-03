@@ -94,8 +94,11 @@ def test_the_tables_their_content_and_the_in_content_blueprint(tmp_path, capsys)
     assert [(len(t.rows), len(t.columns)) for t in tables] == [
         (1, 2), (5, 3), (4, 3), (8, 3), (6, 4), (6, 4)]
 
-    # date:creation is `date: now` in the default ISO datetime format
-    assert re.search(r'^Date: \d{4}-\d{2}-\d{2} \d{2}:\d{2}', tables[0].cell(0, 1).text)
+    # date:creation is `date: today` in the default ISO date format. It was
+    # `date: now` until the seconds made a CI run flaky -- this fixture is
+    # compared against its hand translation in two separate loads, and a
+    # second ticking between them failed the comparison.
+    assert re.search(r'^Date: \d{4}-\d{2}-\d{2}$', tables[0].cell(0, 1).text)
 
     # the fixed revisions table took the _global_ author
     assert [c.text for c in tables[1].rows[0].cells] == ['Date', 'Who', 'What']
