@@ -25,6 +25,7 @@ exist, and the corpus points at a ``data`` beside the document.
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,41 @@ from Scriptum.rdf.loader import load
 
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 DATA_SOURCE = TESTS_ROOT / 'data_source'
+
+
+def tracked(pattern):
+    """Every **tracked** file under ``tests/`` matching *pattern*, as posix
+    paths relative to ``tests/``.
+
+    ``git ls-files`` rather than ``rglob``, which is the same choice
+    ``test_repo_hygiene`` made and for the same reason: what is not tracked is
+    not this file's business. The two checks below classify the *corpus*, and
+    a developer's untracked scratch directory is not part of it -- the
+    ``Scriptum-Report-main`` worktree carries two gitignored folders of
+    retired ``.rdf`` files, and while these walked the filesystem they failed
+    there and passed everywhere else. A suite that is green in one worktree
+    and red in another, over files git was never asked about, teaches nobody
+    anything.
+
+    Run from ``tests/`` so the pathspec needs no prefix and the output is
+    already relative to it; git's ``*`` matches across directories, so one
+    pattern reaches the whole tree.
+
+    A failure of git itself is a **skip**, carrying git's own words. The case
+    that costs an afternoon is running the suite in WSL against a *worktree*:
+    its ``.git`` is a file whose ``gitdir:`` names the main checkout with a
+    Windows path, which WSL's git resolves against the current directory and
+    cannot follow. Both checks then quietly stop being enforced, and only the
+    message says so. They run on every Windows run and on every CI leg, where
+    the checkout is ordinary.
+    """
+    listed = subprocess.run(['git', 'ls-files', pattern], cwd=TESTS_ROOT,
+                            capture_output=True, text=True)
+    if listed.returncode != 0:
+        said = ' '.join(listed.stderr.split())
+        pytest.skip(f'git ls-files failed, nothing to classify here: '
+                    f'{said or f"exit {listed.returncode}, nothing on stderr"}')
+    return {line.replace('\\', '/') for line in listed.stdout.splitlines() if line}
 
 #: Root documents: a ``_scriptum_`` mapping, loadable on their own.
 ROOT_DOCUMENTS = [
@@ -112,11 +148,11 @@ def test_a_fragment_is_not_a_root_document(relative, tmp_path):
 
 def test_every_yaml_fixture_is_accounted_for():
     """The counterpart of test_all_rdf_files_are_accounted_for: a fixture
-    added without a classification is a fixture nothing loads."""
-    found = {
-        str(path.relative_to(TESTS_ROOT)).replace('\\', '/')
-        for path in TESTS_ROOT.rglob('*.yaml')
-    }
+    added without a classification is a fixture nothing loads.
+
+    Tracked files only -- see :func:`tracked` for why.
+    """
+    found = tracked('*.yaml')
     classified = set(ROOT_DOCUMENTS) | set(FRAGMENTS)
 
     assert not found - classified, 'unclassified YAML fixtures'
@@ -129,10 +165,14 @@ def test_no_rdf_fixture_is_left():
     This began as "every ``.rdf`` still has a ``.yaml`` beside it", the check
     that nothing was left untranslated while the two corpora sat side by side.
     The last ``.rdf`` went with the parser, so what has to hold now is the
-    other thing: a ``.rdf`` appearing anywhere under ``tests/`` is a file
-    nothing reads, and it should be noticed rather than carried.
+    other thing: a ``.rdf`` **committed** under ``tests/`` is a file nothing
+    reads, and it should be noticed rather than carried.
+
+    Committed is the operative word. A retired ``.rdf`` kept locally and
+    gitignored is a private note, not a corpus fixture, and it is not this
+    test's business -- see :func:`tracked`.
     """
-    assert not list(TESTS_ROOT.rglob('*.rdf')), 'no reader exists for these'
+    assert not tracked('*.rdf'), 'no reader exists for these'
 
 
 # --------------------------------------------------- the interesting ones

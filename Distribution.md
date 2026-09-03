@@ -33,6 +33,17 @@ itself is two commands, everything around it is what makes the upload boring.
 - Tag on main: `git tag -a v2.0.0 -m "2.0.0"`; push branches and the tag
   (`git push origin main dev v2.0.0`).
 
+**CI runs on the tag, and only on the tag** (since 2026-09-03; before that,
+on every push). Pushing `v2.x.y` is what starts the matrix — windows +
+ubuntu × 3.10/3.14 — so the run reports *after* the tag exists rather than
+before. That is why the step above it matters: verify the tagged tree from a
+`git archive` export locally first, because the export is the gate and CI is
+the cross-platform confirmation behind it. A red run at that point costs a
+moved tag or a patch version, never a bad upload — nothing reaches PyPI
+until `twine upload`, which comes last. To exercise the matrix without
+inventing a tag, run the workflow by hand (`workflow_dispatch`, the *Run
+workflow* button).
+
 ## 2. Build
 
 From the root of the worktree that holds the release commit:

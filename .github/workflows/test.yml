@@ -3,11 +3,30 @@
 # the runners have no Office, so the two finish smokes (wordreport,
 # pptx simple) take the designed no-pywin32 path and report xfailed;
 # everything else must pass everywhere.
+#
+# WHEN IT RUNS: on a version tag, and on demand. Not on every push --
+# decided 2026-09-03. The suite is run locally on both venvs and in WSL
+# before anything is committed, so a run per push mostly re-proved what was
+# already known. What only CI can show is the matrix: the two interpreters
+# on an OS this machine is not, which is exactly what matters at a release.
+#
+# The cost of that choice: the tag exists before CI reports on it. The
+# release procedure already covers this -- Distribution.md verifies the
+# tagged tree from a `git archive` export *before* tagging, and that export
+# is now the gate. CI is the cross-platform confirmation behind it, and a
+# red run means the tag moves or the next patch version fixes it; nothing is
+# published until `twine upload`, which comes after.
+#
+# workflow_dispatch stays so a run can be asked for without inventing a tag.
+# `pull_request` was dropped with the push trigger; restore it the day an
+# outside contribution arrives, because that is the one case where the
+# author cannot run this suite the way the maintainer does.
 name: test
 
 on:
   push:
-  pull_request:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:
